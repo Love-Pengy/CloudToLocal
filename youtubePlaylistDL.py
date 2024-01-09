@@ -1,11 +1,22 @@
 from pytube import Playlist
+from yt_dlp import YoutubeDL
 #import tkinter as tk 
 #from tkinter import ttk
 from time import sleep
 import os
+#import re
+
 
 playString = ''
 outputPath = ''
+
+'''
+not sure if this will be needed later
+
+def strParser(string): 
+    escapedString = re.escape(string)
+    return(re.sub("/", ".", escapedString))
+'''
 
 if((os.path.isfile("songDir")) and (os.path.getsize("songDir") != 0)): 
     with open("songDir", "r") as f: 
@@ -15,21 +26,26 @@ else:
     print("songDir is not properly specified")
     exit()
 
-if((os.path.isfile("playlist")) and (os.path.getsize("playlist") != 0)): 
-    with open("playlist", "r") as f: 
+if((os.path.isfile("youtubePlaylist")) and (os.path.getsize("youtubePlaylist") != 0)): 
+    with open("youtubePlaylist", "r") as f: 
         playString = f.readline()
 else: 
     print("playString is not properly specified")
     exit()
 
-playlist = Playlist(playString)
+#--output "~/Desktop/%(title)s.%(ext)s"
+path = dict()
+path["output"] = outputPath
 
-for i, youtube in enumerate(playlist.videos): 
-    sleep(.5)
-    stream = youtube.streams.get_by_itag(140) 
-    stream.download(outputPath)
-    print(stream.title)
-    if((i % 100) == 0): 
-        sleep(20)
+opts = {
+    'format': 'm4a/bestaudio/best',
+    # ℹ️ See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
+    'postprocessors': [{  # Extract audio using ffmpeg
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'm4a',
+    }], 
+    'outtmpl': './songs/%(title)s.%(ext)s'
+}
 
-
+dlClass = YoutubeDL(opts)
+dlClass.download(playString)

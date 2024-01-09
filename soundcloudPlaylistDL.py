@@ -4,8 +4,6 @@ import os
 import re
 
 def strParser(string): 
-    #str1 = re.sub("(!|\$|#|&|\"|\'|\(|\)|\||<|>|`|\\\|;)", r"\\1", string)
-    #return(re.sub(" ", "", str1))
     escapedString = re.escape(string)
     return(re.sub("/", ".", escapedString))
  
