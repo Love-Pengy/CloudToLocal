@@ -4,7 +4,11 @@ import os
 import re
 
 def strParser(string): 
-    return(re.sub("(!|\$|#|&|\"|\'|\(|\)|\||<|>|`|\\\|;)", r"\\\1", string))
+    #str1 = re.sub("(!|\$|#|&|\"|\'|\(|\)|\||<|>|`|\\\|;)", r"\\1", string)
+    #return(re.sub(" ", "", str1))
+    escapedString = re.escape(string)
+    return(re.sub("/", ".", escapedString))
+ 
 
 playString = ''
 outputPath = ''
@@ -36,6 +40,7 @@ for i, song in enumerate(playlist):
     filename = f'{outputPath}/{strParser(song.artist)} - {strParser(song.title)}.mp3'
     with open(filename, 'wb+') as f:
         song.write_mp3_to(f)
+        print(f"wrote {filename}")
     if((i % 100) == 0): 
         sleep(20)
 
