@@ -44,7 +44,10 @@ opts = {
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'm4a',
     }], 
-    'outtmpl': './songs/%(title)s.%(ext)s'
+    'outtmpl_na_placeholder': '', 
+    'outtmpl': './songs/%(title)s %(creator)s.%(ext)s', 
+    'cookies-from-browser': 'firefox',  
+    'ignoreerrors': 'true'
 }
 
 dlClass = YoutubeDL(opts)
