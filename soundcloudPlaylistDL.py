@@ -2,34 +2,36 @@ from sclib import SoundcloudAPI, Track, Playlist
 from time import sleep
 import os
 import re
-
+import json
+ 
 def strParser(string): 
     escapedString = re.escape(string)
     return(re.sub("/", ".", escapedString))
- 
+
+
 
 def soundcloudDownloader(): 
     playString = ''
     outputPath = ''
 
-    if((os.path.isfile("songDir")) and (os.path.getsize("songDir") != 0)): 
-        with open("songDir", "r") as f: 
-            outputPath = f.readline()
-            outputPath = outputPath.rstrip('\n')
-    else: 
-        print("soundcloud songDir is not properly specified")
-        exit()
+    try: 
+        with open("config.json", "r") as f:     
+            jsonList = json.load(f)
+        configDict = jsonList[0]
+        test = configDict["songDir"]
+        test = configDict["soundcloudURL"]
+        del(test)
+    except Exception as e: 
+        print("Json not configured for youtube correctly:")
+        print(e)
+        quit()
 
-    if((os.path.isfile("soundcloudPlaylist")) and (os.path.getsize("soundcloudPlaylist") != 0)): 
-        with open("soundcloudPlaylist", "r") as f: 
-            playString = f.readline()
-            playString = playString.rstrip('\n')
-    else: 
-        print("soundcloud playlist is not properly specified")
-        exit()
+
+    outputPath = configDict["songDir"]
+    playString = configDict["soundcloudURL"]
 
     api = SoundcloudAPI()
-
+    
     playlist = api.resolve(playString)
 
     assert type(playlist) is Playlist

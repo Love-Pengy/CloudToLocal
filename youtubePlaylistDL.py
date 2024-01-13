@@ -1,27 +1,29 @@
-from pytube import Playlist
+#from pytube import Playlist
 from yt_dlp import YoutubeDL
-from time import sleep
-import os
+#from time import sleep
+#import os
+import json
 
 
 def youtubeDownloader(): 
     playString = ''
     outputPath = ''
 
-    if((os.path.isfile("songDir")) and (os.path.getsize("songDir") != 0)): 
-        with open("songDir", "r") as f: 
-            outputPath = f.readline()
-            outputPath = outputPath.rstrip('\n')
-    else: 
-        print("songDir is not properly specified")
-        exit()
 
-    if((os.path.isfile("youtubePlaylist")) and (os.path.getsize("youtubePlaylist") != 0)): 
-        with open("youtubePlaylist", "r") as f: 
-            playString = f.readline()
-    else: 
-        print("playString is not properly specified")
-        exit()
+    try: 
+        with open("config.json", "r") as f:     
+            jsonList = json.load(f)
+        configDict = jsonList[0]
+        test = configDict["songDir"]
+        test = configDict["youtubeURL"]     
+    except Exception as e: 
+        print("Json not configured for youtube correctly:")
+        print(e)
+        quit()
+
+
+    outputPath = configDict["songDir"]
+    playString = configDict["youtubeURL"]
 
     opts = {
         'format': 'm4a/bestaudio/best',
@@ -31,7 +33,7 @@ def youtubeDownloader():
             'preferredcodec': 'm4a',
         }], 
         'outtmpl_na_placeholder': '', 
-        'outtmpl': './songs/%(title)s %(creator)s.%(ext)s', 
+        'outtmpl': f'{outputPath}/%(title)s %(creator)s.%(ext)s', 
         'cookies-from-browser': 'firefox',  
         'ignoreerrors': 'true'
     }
