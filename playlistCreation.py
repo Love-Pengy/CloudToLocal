@@ -4,6 +4,23 @@ from selenium import webdriver
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
+from yt_dlp import YoutubeDL
+import os 
+import shutil
+import json
+
+
+try: 
+    with open("config.json", "r") as f:     
+        jsonList = json.load(f)
+    configDict = jsonList[0]
+    test = configDict["songDir"]
+except Exception as e: 
+    print("Json not configured for playlist creation correctly:")
+    print(e)
+    quit()
+
+outputPath = configDict["songDir"]
 
 options = webdriver.ChromeOptions()
 options.add_argument("--headless")
@@ -24,14 +41,25 @@ driver.quit()
 
 
 div = soup.find('div', id="playlist_content")
+div2 = soup.find('div', id="playlist_header")
 
+playlistName = div2.find_all('div', id="playlist_header_title")
 trackList = div.find_all('a', href=True)
 
+checkList = list()
 for element in trackList: 
-    print(element['href'])
-print(len(trackList))
-#print(soup.prettify())
+    checkList.append(element['href'])
 
-#content = driver.find_element(By.CSS_SELECTOR, "div[class*='playlist_content'")
+for link in checkList: 
+    info = YoutubeDL({}).extract_info(link, download=False)
+    if(info.get('creator') is None): 
+        filePath = f'{outputPath}/{(info.get('title'))} + " .m4a"'   
+        if(os.path.exists(filePath)): 
+            newPath = shutil.move(filePath, f'{playlistName}/{(info.get('title'))} + " .m4a"')
+    else: 
+        filePath = f'{outputPath}/{(info.get('title'))} + " " + {(info.get('creator'))} + ".m4a"'   
+        if(os.path.exists(filePath)):
+            newPath = shutil.move(filePath, f'{playlistName}/{(info.get('title'))} + " " + {info.get('creator')} + " .m4a"')                
+            
 
-#print(dir(driver))
+

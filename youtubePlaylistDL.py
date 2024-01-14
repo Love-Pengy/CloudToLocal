@@ -24,7 +24,7 @@ def youtubeDownloader():
 
     outputPath = configDict["songDir"]
     playString = configDict["youtubeURL"]
-
+    
     opts = {
         'format': 'm4a/bestaudio/best',
         # ℹ️ See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
@@ -40,3 +40,4 @@ def youtubeDownloader():
 
     dlClass = YoutubeDL(opts)
     dlClass.download(playString)
+youtubeDownloader()
