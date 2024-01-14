@@ -16,50 +16,62 @@ try:
     configDict = jsonList[0]
     test = configDict["songDir"]
 except Exception as e: 
-    print("Json not configured for playlist creation correctly:")
+    print("Json not configured for playlist creation  correctly (songDir):")
+    print(e)
+    quit()
+
+try: 
+    with open("config.json", "r") as f:     
+        jsonList = json.load(f)
+    configDict = jsonList[0]
+    test = configDict["musiPlaylists"]
+except Exception as e: 
+    print("Json not configured for musiPlaylists correctly:")
     print(e)
     quit()
 
 outputPath = configDict["songDir"]
+playlists = configDict["musiPlaylists"]
 
-options = webdriver.ChromeOptions()
-options.add_argument("--headless")
+for playlist in playlists: 
 
-options.page_load_stategy = "none"
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")
 
-driver = Chrome(options=options)
+    options.page_load_stategy = "none"
 
-driver.implicitly_wait(5)
+    driver = Chrome(options=options)
 
-url = "https://feelthemusi.com/playlist/h8nsjf"
+    driver.implicitly_wait(5)
 
-driver.get(url)
-time.sleep(20)
+    driver.get(playlist)
+    time.sleep(20)
 
-soup = BeautifulSoup(driver.page_source, 'html.parser')
-driver.quit()
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    driver.quit()
 
 
-div = soup.find('div', id="playlist_content")
-div2 = soup.find('div', id="playlist_header")
+    div = soup.find('div', id="playlist_content")
+    div2 = soup.find('div', id="playlist_header")
 
-playlistName = div2.find_all('div', id="playlist_header_title")
-trackList = div.find_all('a', href=True)
+    playlistName = div2.find_all('div', id="playlist_header_title")
+    trackList = div.find_all('a', href=True)
 
-checkList = list()
-for element in trackList: 
-    checkList.append(element['href'])
+    checkList = list()
 
-for link in checkList: 
-    info = YoutubeDL({}).extract_info(link, download=False)
-    if(info.get('creator') is None): 
-        filePath = f'{outputPath}/{(info.get('title'))} + " .m4a"'   
-        if(os.path.exists(filePath)): 
-            newPath = shutil.move(filePath, f'{playlistName}/{(info.get('title'))} + " .m4a"')
-    else: 
-        filePath = f'{outputPath}/{(info.get('title'))} + " " + {(info.get('creator'))} + ".m4a"'   
-        if(os.path.exists(filePath)):
-            newPath = shutil.move(filePath, f'{playlistName}/{(info.get('title'))} + " " + {info.get('creator')} + " .m4a"')                
+    for element in trackList: 
+        checkList.append(element['href'])
+
+    for link in checkList: 
+        info = YoutubeDL({}).extract_info(link, download=False)
+        if(info.get('creator') is None): 
+            filePath = f'{outputPath}/{(info.get('title'))} + " .m4a"'   
+            if(os.path.exists(filePath)): 
+                newPath = shutil.copy(filePath, f'{playlistName}/{(info.get('title'))} + " .m4a"')
+        else: 
+            filePath = f'{outputPath}/{(info.get('title'))} + " " + {(info.get('creator'))} + ".m4a"'   
+            if(os.path.exists(filePath)):
+                newPath = shutil.copy(filePath, f'{playlistName}/{(info.get('title'))} + " " + {info.get('creator')} + " .m4a"')                
             
 
 

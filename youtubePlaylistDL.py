@@ -23,7 +23,7 @@ def youtubeDownloader():
 
 
     outputPath = configDict["songDir"]
-    playString = configDict["youtubeURL"]
+    playlists = configDict["youtubeURL"]
     
     opts = {
         'format': 'm4a/bestaudio/best',
@@ -37,7 +37,7 @@ def youtubeDownloader():
         'cookies-from-browser': 'firefox',  
         'ignoreerrors': 'true'
     }
+    for playlist in playlists: 
+        dlClass = YoutubeDL(opts)
+        dlClass.download(playlist)
 
-    dlClass = YoutubeDL(opts)
-    dlClass.download(playString)
-youtubeDownloader()

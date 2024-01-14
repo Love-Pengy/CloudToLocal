@@ -8,8 +8,6 @@ def strParser(string):
     escapedString = re.escape(string)
     return(re.sub("/", ".", escapedString))
 
-
-
 def soundcloudDownloader(): 
     playString = ''
     outputPath = ''
@@ -27,22 +25,26 @@ def soundcloudDownloader():
         quit()
 
 
-    outputPath = configDict["songDir"]
-    playString = configDict["soundcloudURL"]
 
-    api = SoundcloudAPI()
+
     
-    playlist = api.resolve(playString)
+    outputPath = configDict["songDir"]
+    playlists = configDict["soundcloudURL"]
 
-    assert type(playlist) is Playlist
 
-    for i, song in enumerate(playlist): 
-        sleep(.5)
-        filename = f'{outputPath}/{strParser(song.artist)} - {strParser(song.title)}.mp3'
-        with open(filename, 'wb+') as f:
-            song.write_mp3_to(f)
-            #print(f"wrote {filename}")
-        if((i % 100) == 0): 
-            sleep(20)
+    for playString in playlists: 
+
+        api = SoundcloudAPI()
+        playlist = api.resolve(playString)
+
+        assert type(playlist) is Playlist
+
+        for i, song in enumerate(playlist): 
+            sleep(.5)
+            filename = f'{outputPath}/{strParser(song.artist)} - {strParser(song.title)}.mp3'
+            with open(filename, 'wb+') as f:
+                song.write_mp3_to(f)
+            if((i % 100) == 0): 
+                sleep(20)
 
 
