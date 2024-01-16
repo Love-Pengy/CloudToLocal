@@ -13,9 +13,9 @@ def youtubeDownloader():
     try: 
         with open("config.json", "r") as f:     
             jsonList = json.load(f)
-        configDict = jsonList[0]
-        test = configDict["songDir"]
-        test = configDict["youtubeURL"]     
+            configDict = jsonList[0]
+            test = configDict["songDir"]
+            test = configDict["youtubePlaylists"]     
     except Exception as e: 
         print("Json not configured for youtube correctly:")
         print(e)
@@ -23,7 +23,8 @@ def youtubeDownloader():
 
 
     outputPath = configDict["songDir"]
-    playlists = configDict["youtubeURL"]
+    playlists = configDict["youtubePlaylists"]
+    
     
     opts = {
         'format': 'm4a/bestaudio/best',
@@ -33,7 +34,7 @@ def youtubeDownloader():
             'preferredcodec': 'm4a',
         }], 
         'outtmpl_na_placeholder': '', 
-        'outtmpl': f'{outputPath}/%(title)s %(creator)s.%(ext)s', 
+        'outtmpl': f'{outputPath}/%(title)s_%(uploader)s.%(ext)s', 
         'cookies-from-browser': 'firefox',  
         'ignoreerrors': 'true'
     }
