@@ -17,19 +17,16 @@ def soundcloudDownloader():
             jsonList = json.load(f)
         configDict = jsonList[0]
         test = configDict["songDir"]
-        test = configDict["soundcloudURL"]
+        test = configDict["soundcloudPlaylists"]
         del(test)
     except Exception as e: 
         print("Json not configured for youtube correctly:")
         print(e)
         quit()
 
-
-
-
     
     outputPath = configDict["songDir"]
-    playlists = configDict["soundcloudURL"]
+    playlists = configDict["soundcloudPlaylists"]
 
 
     for playString in playlists: 
@@ -44,6 +41,7 @@ def soundcloudDownloader():
             filename = f'{outputPath}/{strParser(song.artist)} - {strParser(song.title)}.mp3'
             with open(filename, 'wb+') as f:
                 song.write_mp3_to(f)
+                print(f'{strParser(song.artist)} - {strParser(song.title)}.mp3')
             if((i % 100) == 0): 
                 sleep(20)
 
