@@ -9,6 +9,7 @@ def strParser(string):
     return(re.sub("/", ".", escapedString))
 
 def soundcloudDownloader(): 
+
     playString = ''
     outputPath = ''
 
@@ -23,11 +24,15 @@ def soundcloudDownloader():
         print("Json not configured for youtube correctly:")
         print(e)
         quit()
+# create the song dir if it doesnt exist 
 
+#os.makedirs(fullDir)
     
     outputPath = configDict["songDir"]
     playlists = configDict["soundcloudPlaylists"]
 
+    if(not os.path.exists(outputPath)): 
+        os.makedirs(outputPath)
 
     for playString in playlists: 
 

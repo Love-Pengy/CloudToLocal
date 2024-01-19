@@ -51,8 +51,10 @@ if __name__ == "__main__":
     soundcloudDownloader()
 
     if(scMaps is not None): 
+        print("Playlist Creator Moving")
         soundcloudPlaylistCreator()
-    
+
+    '''
     print("youtube downdloader starting")
     youtubeDownloader()
 
@@ -61,6 +63,6 @@ if __name__ == "__main__":
 
     if(musiPlaylists is not None): 
         musiPlaylistCreator()
-    
+    '''
 
 

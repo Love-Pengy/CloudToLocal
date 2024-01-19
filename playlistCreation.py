@@ -158,7 +158,9 @@ def soundcloudPlaylistCreator():
     playlists = configDict["soundcloudPlaylists"]
     mappings = configDict["soundcloudSongMapping"]
     outputPath = configDict["songDir"] 
+
     #O(n)^4 is fucking nuts :skull:
+    # in the current state this is putting the songs into a dir with the name of the soundclod playlist, not what its mapped to
     for i, mapping in enumerate(mappings):  
         for mapKey in mapping.keys(): 
             for playlist in playlists: 
@@ -170,16 +172,18 @@ def soundcloudPlaylistCreator():
                         sleep(.5)
                         filename = f'{outputPath}/{strParser(song.artist)} - {strParser(song.title)}.mp3'
                         if(os.path.exists(filename)):  
-                            for playlistName in mapping: 
-                                if(os.path.exists(f'./{playlistName}')): 
-                                    coppiedPath = shutil.copy(filename, f'{playlistName}/{strParser(song.artist)} - {strParser(song.title)}.mp3')
-                                else: 
-                                    curDir = os.getcwd()
-                                    fullDir = curDir + "/" + playlistName
-                                    os.makedirs(fullDir)
-                                    for playlistName in mapping: 
-                                        if(os.path.exists(f'./{playlistName}')): 
-                                            coppiedPath = shutil.copy(filename, f'{playlistName}/{strParser(song.artist)} - {strParser(song.title)}.mp3')
+                            for playlistList in mapping: 
+                                for playlistName in mapping[playlistList]: 
+                                    print("TEST:", playlistName)
+                                    if(os.path.exists(f'./{playlistName}')): 
+                                        coppiedPath = shutil.copy(filename, f'{playlistName}/{strParser(song.artist)} - {strParser(song.title)}.mp3')
+                                    else: 
+                                        curDir = os.getcwd()
+                                        fullDir = curDir + "/" + playlistName
+                                        os.makedirs(fullDir)
+                                        for playlistName in mapping: 
+                                            if(os.path.exists(f'./{playlistName}')): 
+                                                coppiedPath = shutil.copy(filename, f'{playlistName}/{strParser(song.artist)} - {strParser(song.title)}.mp3')
                 
 
 

@@ -3,7 +3,7 @@ from yt_dlp import YoutubeDL
 #from time import sleep
 #import os
 import json
-
+import os
 
 def youtubeDownloader(): 
     playString = ''
@@ -24,8 +24,10 @@ def youtubeDownloader():
 
     outputPath = configDict["songDir"]
     playlists = configDict["youtubePlaylists"]
-    
-    
+        
+    if(not os.path.exists(outputPath)): 
+        os.makedirs(outputPath)
+
     opts = {
         'format': 'm4a/bestaudio/best',
         # ℹ️ See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
