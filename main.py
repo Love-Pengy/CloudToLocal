@@ -4,6 +4,15 @@ import json
 from playlistCreation import youtubePlaylistCreator
 from playlistCreation import musiPlaylistCreator
 from playlistCreation import soundcloudPlaylistCreator
+from time import time
+
+#this needs to be on the function defs
+def timer(function): 
+    def functionality(): 
+        startTime = time()         
+        function()
+        finalTime = time()
+        return((finalTime - startTime)/60)
 
 if __name__ == "__main__": 
     try: 
@@ -47,22 +56,30 @@ if __name__ == "__main__":
 
 
 
+    '''
     print("soundCloud downloader starting")
     soundcloudDownloader()
 
-    if(scMaps is not None): 
-        print("Playlist Creator Moving")
+        print("Soundcloud Playlist Creator Moving Items")
         soundcloudPlaylistCreator()
-
     '''
+
     print("youtube downdloader starting")
     youtubeDownloader()
 
+    '''
     if(youtubePlaylists is not None): 
+        print("Youtube Playlist Creator Moving Items")
         youtubePlaylistCreator()
 
     if(musiPlaylists is not None): 
         musiPlaylistCreator()
+
+
+
+    "https://youtube.com/playlist?list=PLN0r2zeXfMwAI4xwHW2zobG5lPVWa37G-&si=69xreI0pt3qN6oE_", 
+    "https://youtube.com/playlist?list=PLN0r2zeXfMwBKK9973al4wKwSTSBG5GnO&si=4wf-VoQSSANnO_hy" 
+
     '''
 
 

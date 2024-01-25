@@ -1,5 +1,5 @@
 import time
-import pandas as pd
+#import pandas as pd
 from selenium import webdriver
 from selenium.webdriver import Chrome
 #from selenium.webdriver.common.by import By
@@ -38,7 +38,20 @@ def musiPlaylistCreator():
 
     outputPath = configDict["songDir"]
     playlists = configDict["musiPlaylists"]
-   
+
+    ydl_opts = {
+        'format': 'm4a/bestaudio/best',
+        # ℹ️ See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
+        'postprocessors': [{  # Extract audio using ffmpeg
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'm4a',
+        }], 
+        'outtmpl_na_placeholder': '', 
+        'outtmpl': f'{outputPath}/%(title)s_%(uploader)s.%(ext)s', 
+        'cookies-from-browser': 'chrome',  
+        'ignoreerrors': 'true'
+    } 
+
     if(playlists is not None): 
         for playlist in playlists: 
             options = webdriver.ChromeOptions()
@@ -51,7 +64,11 @@ def musiPlaylistCreator():
             driver.implicitly_wait(5)
 
             driver.get(playlist)
-            time.sleep(20)
+            
+
+
+            # this ensures that the webpage has time to generate everything with the js that I need 
+            time.sleep(60)
 
             soup = BeautifulSoup(driver.page_source, 'html.parser')
             driver.quit()
@@ -69,14 +86,37 @@ def musiPlaylistCreator():
                 checkList.append(element['href'])
 
             for link in checkList: 
-                info = YoutubeDL({}).extract_info(link, download=False)
-                if(info.get('uploader') is None): 
-                    filePath = f'{outputPath}/{info.get("title")}_.m4a'
+                info = YoutubeDL(ydl_opts).extract_info(link, download=False)
+                if(info['uploader'] is None): 
+                    filePath = f'{outputPath}/{info["title"]}_.m4a'
+                    if(os.path.exists(f"./{playlistName}")): 
+                        if(os.path.isfile(filePath)): 
+                            newPath = shutil.copy(filePath, f"{playlistName}/{info['title']}_.m4a")
+                    else: 
+                        curDir = os.getcwd()
+                        fullDir = curDir + "/" + playlistName
+                        os.makedirs(fullDir)
+                        fPath = f"{outputPath}/{info['title']}_.{info['ext']}"
+                        if(os.path.isfile(fPath)): 
+                            newPath = shutil.copy(fPath, f"{playlistName}/{info['title']}_.m4a")                
                 else: 
-                    filePath = f'{outputPath}/{(info.get("title"))}_{(info.get("uploader"))}.m4a'   
-                    if(os.path.exists(filePath)):
-                        newPath = shutil.copy(filePath, f'{playlistName}/{(info.get("title"))}_{info.get("creator")}.m4a')                
-                
+                    filePath = f'{outputPath}/{info["title"]}_{info["uploader"]}.m4a'
+                    if(os.path.exists(f"./{playlistName}")): 
+                        if(os.path.isfile(filePath)): 
+                            newPath = shutil.copy(filePath, f"{playlistName}/{info['title']}_{info['uploader']}.m4a")
+                    else: 
+                        curDir = os.getcwd()
+                        fullDir = curDir + "/" + playlistName
+                        os.makedirs(fullDir)
+                        fPath = f"{outputPath}/{info['title']}_.{info['ext']}"
+                        if(os.path.isfile(fPath)): 
+                            newPath = shutil.copy(fPath, f"{playlistName}/{info['title']}_{info['uploader']}.m4a")                
+
+
+
+
+
+
 
 def youtubePlaylistCreator(): 
 
@@ -103,8 +143,18 @@ def youtubePlaylistCreator():
     songDir = configDict["songDir"]
 
     #"outtmpl": '~/Projects/CloudToLocal/songs/%(uploader)s_%(title)s.%(ext)s',  # this is where you can edit how you'd like the filenames to be formatted
+    # this needs to specify that its the m4a file type or else its not going to work 
     ydl_opts = {
-        "ignoreerrors": "True"
+        'format': 'm4a/bestaudio/best',
+        # ℹ️ See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
+        'postprocessors': [{  # Extract audio using ffmpeg
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'm4a',
+        }], 
+        'outtmpl_na_placeholder': '', 
+        'outtmpl': f'{songDir}/%(title)s_%(uploader)s.%(ext)s', 
+        'cookies-from-browser': 'chrome',  
+        'ignoreerrors': 'true'
     } 
 
     for playlistURL in playlists: 
@@ -122,15 +172,29 @@ def youtubePlaylistCreator():
                         
                         if(info.get('uploader') is None): 
                             fPath = f"{songDir}/{info['title']}_.{info['ext']}"
-                            if(os.path.isfile(fPath)): 
-                                    newPath = shutil.copy(fPath, f'{playlistName}/{(info.get("title"))}_{info.get("creator")}.m4a')                
+                            if(os.path.exists(f"./{playlistName}")): 
+                                if(os.path.isfile(fPath)): 
+                                    newPath = shutil.copy(fPath, f"{playlistName}/{info['title']}_.m4a")                 
                             else: 
                                 curDir = os.getcwd()
                                 fullDir = curDir + "/" + playlistName
                                 os.makedirs(fullDir)
-                                fPath = f"{songDir}/{info['title']} {info['uploader']}.{info['ext']}"
+                                fPath = f"{songDir}/{info['title']}_.{info['ext']}"
                                 if(os.path.isfile(fPath)): 
-                                    newPath = shutil.copy(fPath, f'{playlistName}/{(info.get("title"))}_{info.get("creator")}.m4a')                
+                                    newPath = shutil.copy(fPath, f"{playlistName}/{info['title']}_.m4a")                
+                        else: 
+                            fPath = f"{songDir}/{info['title']}_{info['uploader']}.{info['ext']}"
+                            if(os.path.exists(f"./{playlistName}")): 
+                                if(os.path.isfile(fPath)): 
+                                        newPath = shutil.copy(fPath, f"{playlistName}/{info['title']}_{info['uploader']}.m4a")                
+                            else: 
+                                curDir = os.getcwd()
+                                fullDir = curDir + "/" + playlistName
+                                os.makedirs(fullDir)
+                                fPath = f"{songDir}/{info['title']}_{info['uploader']}.{info['ext']}"
+                                if(os.path.isfile(fPath)): 
+                                    newPath = shutil.copy(fPath, f"{playlistName}/{info['title']}_{info['uploader']}.m4a")                
+                            
 
 
 def soundcloudPlaylistCreator(): 
@@ -138,7 +202,7 @@ def soundcloudPlaylistCreator():
         with open("config.json", "r") as f:     
             jsonList = json.load(f)
             configDict = jsonList[0]
-            test = configDict["soundcloudSongMapping"]
+            test = configDict["soundcloudPlaylistMapping"]
             test = configDict["soundcloudPlaylists"]
     except Exception as e: 
         print("Soundcloud Song Mappings Not Specified")
@@ -156,7 +220,7 @@ def soundcloudPlaylistCreator():
         return
  
     playlists = configDict["soundcloudPlaylists"]
-    mappings = configDict["soundcloudSongMapping"]
+    mappings = configDict["soundcloudPlaylistMapping"]
     outputPath = configDict["songDir"] 
 
     #O(n)^4 is fucking nuts :skull:
