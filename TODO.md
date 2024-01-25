@@ -9,10 +9,10 @@
 + redundant code that can be optmized with vars after fetching info 
 
 # Bug fixes
-+ need to fix the youtube playlist system it is not categorizing properly
++ ~~need to fix the youtube playlist system it is not categorizing properly~~
 
 
 # In Progress
 + working on moving the playlists creators over into the downloaders
-    + Soundcloud ~~ Implemented Needs Extensive 
-    + musi && youtube ~~ Working On Now
+    + Soundcloud ~~ Done But needs to be refactored
+    + musi && youtube ~~ Done

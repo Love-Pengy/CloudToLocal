@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import re 
+from helpers import timer
 
 class FilenameManager:
     def __init__(self): 
@@ -36,6 +37,7 @@ def strParser(string):
     # escapedString  = re.sub(r"\+{;\"\=?~()<>&*|$", " ", string)
     return(escapedString)
 
+@timer
 def youtubeDownloader(): 
     playString = ''
     outputPath = ''

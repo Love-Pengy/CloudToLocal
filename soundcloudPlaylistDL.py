@@ -4,11 +4,12 @@ import os
 import re
 import json
 import shutil
-
+from helpers import timer
 def strParser(string): 
     escapedString = re.escape(string)
     return(re.sub("/", ".", escapedString))
 
+@timer
 def soundcloudDownloader(): 
 
     playString = ''
