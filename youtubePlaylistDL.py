@@ -18,14 +18,14 @@ class FilenameManager:
                 self.currentPlaylistName = d['info_dict']['playlist_title']
                 self.filenames.append(d['filename'])
 
-            elif(self.currentPlaylistName == d['info_dict']['playlist_title']): 
-                if(d['status'] == 'finished'): 
-                    self.filenames.append(d['filename'])
-            else: 
-                if(d['status'] == 'finished'): 
-                    self.currentPlaylistName = d['info_dict']['playlist_title']
-                    self.filenames = list()
-                    self.filenames.append(d['filename'])
+        elif(self.currentPlaylistName == d['info_dict']['playlist_title']): 
+            if(d['status'] == 'finished'): 
+                self.filenames.append(d['filename'])
+        else: 
+            if(d['status'] == 'finished'): 
+                self.currentPlaylistName = d['info_dict']['playlist_title']
+                self.filenames = list()
+                self.filenames.append(d['filename'])
 
 
 '''
@@ -99,10 +99,12 @@ def youtubeDownloader():
     for i, playlist in enumerate(youtubePlaylists): 
         ydl.download(playlist)
         for i,name in enumerate(fNameManager.filenames): 
+            print("TEST:", name)
+            curDir = os.getcwd()
+            fullDir = curDir + "/" + fNameManager.currentPlaylistName
             if(not (os.path.exists(f"./{fNameManager.currentPlaylistName}"))): 
-                curDir = os.getcwd()
-                fullDir = curDir + "/" + fNameManager.currentPlaylistName
                 os.makedirs(fullDir)
+            print("TEST2:", fullDir)
             shutil.copy(fNameManager.filenames[i], fullDir)
             
        # with YoutubeDL(opts) as ydl: 
