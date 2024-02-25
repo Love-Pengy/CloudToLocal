@@ -14,5 +14,6 @@
 
 # In Progress
 + working on moving the playlists creators over into the downloaders
-    + Soundcloud ~~ Done But needs to be refactored
-    + musi && youtube ~~ Done
+    + Soundcloud ~~ Done But needs to be refactored and tested with mutliple playlists
+    + musi  
+    + youtube ~~ done but needs to be tested extensively 

@@ -1,9 +1,6 @@
 from soundcloudPlaylistDL import soundcloudDownloader
 from youtubePlaylistDL import youtubeDownloader
 import json
-from playlistCreation import youtubePlaylistCreator
-from playlistCreation import musiPlaylistCreator
-from playlistCreation import soundcloudPlaylistCreator
 from time import time
 
 #this needs to be on the function defs
@@ -59,19 +56,12 @@ if __name__ == "__main__":
     '''
     print("soundCloud downloader starting")
     soundcloudDownloader()
-
-        print("Soundcloud Playlist Creator Moving Items")
-        soundcloudPlaylistCreator()
     '''
 
     print("youtube downdloader starting")
     youtubeDownloader()
 
     '''
-    if(youtubePlaylists is not None): 
-        print("Youtube Playlist Creator Moving Items")
-        youtubePlaylistCreator()
-
     if(musiPlaylists is not None): 
         musiPlaylistCreator()
 
