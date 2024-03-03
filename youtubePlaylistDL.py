@@ -155,7 +155,7 @@ def youtubeDownloader():
                 checkList.append(element['href'])
 
             for link in checkList: 
-                if(link in FilenameManager.urls): 
+                if(link in fNameManager.urls): 
                     curDir = os.getcwd()
                     fullDir = curDir + "/" + playlistName
                     if(not (os.path.exists(f"./{playlistName}"))): 
