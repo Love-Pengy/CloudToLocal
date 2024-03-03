@@ -155,6 +155,7 @@ def youtubeDownloader():
                 checkList.append(element['href'])
 
             for link in checkList: 
+                print(f"WE ARE CHECKING BETWEEN: {link=} and {fNameManager.urls}")
                 if(link in fNameManager.urls): 
                     curDir = os.getcwd()
                     fullDir = curDir + "/" + playlistName
