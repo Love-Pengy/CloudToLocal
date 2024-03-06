@@ -11,6 +11,7 @@
 # Bug fixes
 + ~~need to fix the youtube playlist system it is not categorizing properly~~
 ~~+ getting a bug on line 158 of youtubePlaylistDL.py that FilenameManager has no attribute urls~
++ need to make a windows and linux mode because the windows file system fucking sucks 
 
 
 # In Progress

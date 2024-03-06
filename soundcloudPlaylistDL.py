@@ -5,6 +5,8 @@ import re
 import json
 import shutil
 from helpers import timer
+import platform
+
 def strParser(string): 
     escapedString = re.escape(string)
     return(re.sub("/", ".", escapedString))
@@ -31,6 +33,7 @@ def soundcloudDownloader():
     outputPath = configDict["songDir"]
     playlists = configDict["soundcloudPlaylists"]
     mappings = configDict["soundcloudSongMapping"]
+    sysPlatform = platform.system()
 
     if(not os.path.exists(outputPath)): 
         os.makedirs(outputPath)
@@ -46,7 +49,11 @@ def soundcloudDownloader():
                     
                     for i, song in enumerate(playlist): 
                         sleep(.5)
-                        filename = f'{outputPath}/{strParser(song.artist)} - {strParser(song.title)}.mp3'
+                        if(sysPlatform == 'Windows'):
+                            filename = f'{outputPath}\{strParser(song.artist, sysPlatform)} - {strParser(song.title, sysPlatform)}.mp3'    
+                        else:
+                            filename = f'{outputPath}\{strParser(song.artist, sysPlatform)} - {strParser(song.title, sysPlatform)}.mp3'
+
                         with open(filename, 'wb+') as f:
                             song.write_mp3_to(f)
                             print(f"{filename} downloaded")

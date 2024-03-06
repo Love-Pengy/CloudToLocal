@@ -8,6 +8,7 @@ from selenium import webdriver
 from selenium.webdriver import Chrome
 from bs4 import BeautifulSoup 
 import time
+import platform
 
 class FilenameManager:
     def __init__(self): 
@@ -67,6 +68,7 @@ def youtubeDownloader():
     outputPath = configDict["songDir"]
     youtubePlaylists = configDict["youtubePlaylists"]
     musiPlaylists = configDict["musiPlaylists"]
+    sysPlatform = platform.system()
        
 
 

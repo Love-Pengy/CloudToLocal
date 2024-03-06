@@ -59,15 +59,5 @@ if __name__ == "__main__":
     print("youtube downdloader starting")
     youtubeDownloader()
 
-    '''
-    if(musiPlaylists is not None): 
-        musiPlaylistCreator()
-
-
-
-    "https://youtube.com/playlist?list=PLN0r2zeXfMwAI4xwHW2zobG5lPVWa37G-&si=69xreI0pt3qN6oE_", 
-    "https://youtube.com/playlist?list=PLN0r2zeXfMwBKK9973al4wKwSTSBG5GnO&si=4wf-VoQSSANnO_hy" 
-
-    '''
 
 
