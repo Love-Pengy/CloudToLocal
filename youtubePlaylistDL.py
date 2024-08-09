@@ -1,9 +1,9 @@
 import json
 import os
+import platform
 import re
 import shutil
 import time
-import platform
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -86,7 +86,8 @@ def youtubeDownloader():
         "outtmpl_na_placeholder": "",
         "writethumbnail": "true",
         "outtmpl": f"{outputPath}/%(title)s_%(uploader)s.%(ext)s",
-        "cookiesfrombrowser": ["chromium"],
+        #"cookiesfrombrowser": ["chromium"],
+        "age_limit": 23,
         "ignoreerrors": "true",
         "restrictfilenames": "true",
         "no_overwrites": "true",
@@ -94,17 +95,18 @@ def youtubeDownloader():
         "no_warnings": "true",
         "progress": "true",
         "check_format": "true",
-        "sleep_interval_requests": 3, 
-        "sleep_interval": 5, 
-        "max_sleep_interval": 30, 
-        "convert-thumbnails": "png", 
+        # Trying not to surpass the thershold for maximum requests in an hour
+        "sleep_interval_requests": 1,
+        "sleep_interval": 5,
+        "max_sleep_interval": 30,
+        ####################################################################
+        "convert-thumbnails": "png",
     }
-
-    ydl = YoutubeDL(opts)
 
     # musi idea is to create a list of playlists that we can check if a file is in
 
     for i, playlist in enumerate(youtubePlaylists):
+        ydl = YoutubeDL(opts)
         ydl.download(playlist)
         for i, name in enumerate(fNameManager.filenames):
             curDir = os.getcwd()
@@ -112,11 +114,6 @@ def youtubeDownloader():
             if not (os.path.exists(f"./{fNameManager.currentPlaylistName}")):
                 os.makedirs(fullDir)
             shutil.copy(fNameManager.filenames[i], fullDir)
-            # if ((i % 1000) == 0) and i != 0:
-            #     print(i)
-            #     # try to give time so we don't hit the request limit
-            #     print("HONK SHOO MI MI")
-            #     time.sleep(300)
 
         if musiPlaylists is not None:
             print("Checking Musi Presence")
@@ -155,19 +152,16 @@ def youtubeDownloader():
 
                 for link in checkList:
                     if not "www" in link:
-                        print("WE AINT GOT IT")
                         link = link[:8] + "www." + link[8:]
                         print(link)
                     logFile.write(f"{link}: {fNameManager.urls}\n\n")
                     if link in fNameManager.urls:
-                        logFile.write(
-                            f"WE ARE CHECKING BETWEEN: {link=} and {fNameManager.urls}\n"
-                        )
                         curDir = os.getcwd()
                         fullDir = curDir + "/" + playlistName
                         if not (os.path.exists(f"./{playlistName}")):
                             logFile.write(f"CREATING PLAYLIST DIR: {playlistName}\n")
                             os.makedirs(fullDir)
+                        print(fNameManager.urls.index(link))
                         newPath = shutil.copy(
                             fNameManager.filenames[fNameManager.urls.index(link)],
                             fullDir,
@@ -177,4 +171,5 @@ def youtubeDownloader():
                             + newPath
                             + " because of presence in musi playlist\n"
                         )
+        del ydl
     logFile.close()

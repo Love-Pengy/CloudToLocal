@@ -14,22 +14,18 @@
   + reduce amount of time needed because only one youtube and soundcloud dl operation needs to be done
   + song directory can be deleted automatically afterwards
 + make the songdir be based off of the current working dir or make it automatic
-+ add timer dataclass to quantify runtime
-+ Switches to toggle between linux and windows would also be nice
++ ~~add timer dataclass to quantify runtime~~
++ ~~Switches to toggle between linux and windows would also be nice~~   
+    + don't care about windows
 + redundant code that can be optmized with vars after fetching info
 
 ## Bug fixes
 
 + ~~need to fix the youtube playlist system it is not categorizing properly~~
 ~~+ getting a bug on line 158 of youtubePlaylistDL.py that FilenameManager has no attribute urls~
-+ need to make a windows and linux mode because the windows file system fucking sucks 
++ ~~need to make a windows and linux mode because the windows file system sucks~~ 
+    + scrapped don't care about windows
 
-## In Progress
-
-+ working on moving the playlists creators over into the downloaders
-  + Soundcloud ~~ Done But needs to be refactored and tested with mutliple playlists
-  + youtube ~~ done but needs to be tested extensively~~
-  + musi  Needs to be tested
 
 ## ACTUAL TODO
 
@@ -38,3 +34,4 @@
 + allow specification of how much quality you want
 + add length mapping (for sets)
 + allow specification of file type
++ to conserve memory output the FilenameManager thingies to a file
