@@ -1,6 +1,5 @@
 import json
 import os
-import platform
 import re
 import shutil
 import time
@@ -14,6 +13,7 @@ from helpers import timer
 
 
 class FilenameManager:
+
     def __init__(self):
         self.currentPlaylistName = None
         self.filenames = list()
@@ -23,18 +23,23 @@ class FilenameManager:
         if d["info_dict"]["filename"] not in self.filenames:
             if self.currentPlaylistName is None:
                 if d["status"] == "finished":
-                    self.filenames.append(d["info_dict"]["filename"])
-                    self.urls.append(d["info_dict"]["webpage_url"])
+                    if(d["info_dict"]["filename"] not in self.filenames):
+                        self.filenames.append(d["info_dict"]["filename"])
+                    if(d["info_dict"]["webpage_url"] not in self.urls):
+                        self.urls.append(d["info_dict"]["webpage_url"])
                     self.currentPlaylistName = d["info_dict"]["playlist_title"]
 
             elif self.currentPlaylistName == d["info_dict"]["playlist_title"]:
                 if d["status"] == "finished":
-                    self.filenames.append(d["info_dict"]["filename"])
-                    self.urls.append(d["info_dict"]["webpage_url"])
+                    if(d["info_dict"]["filename"] not in self.filenames):
+                        self.filenames.append(d["info_dict"]["filename"])
+                    if(d["info_dict"]["webpage_url"] not in self.urls):
+                        self.urls.append(d["info_dict"]["webpage_url"])
             else:
                 if d["status"] == "finished":
                     self.currentPlaylistName = d["info_dict"]["playlist_title"]
                     self.filenames = list()
+                    self.urls = list()
                     self.filenames.append(d["info_dict"]["filename"])
                     self.urls.append(d["info_dict"]["webpage_url"])
 
@@ -86,7 +91,7 @@ def youtubeDownloader():
         "outtmpl_na_placeholder": "",
         "writethumbnail": "true",
         "outtmpl": f"{outputPath}/%(title)s_%(uploader)s.%(ext)s",
-        #"cookiesfrombrowser": ["chromium"],
+        # "cookiesfrombrowser": ["chromium"],
         "age_limit": 23,
         "ignoreerrors": "true",
         "restrictfilenames": "true",
@@ -100,7 +105,6 @@ def youtubeDownloader():
         "sleep_interval": 5,
         "max_sleep_interval": 30,
         ####################################################################
-        "convert-thumbnails": "png",
     }
 
     # musi idea is to create a list of playlists that we can check if a file is in
@@ -153,7 +157,6 @@ def youtubeDownloader():
                 for link in checkList:
                     if not "www" in link:
                         link = link[:8] + "www." + link[8:]
-                        print(link)
                     logFile.write(f"{link}: {fNameManager.urls}\n\n")
                     if link in fNameManager.urls:
                         curDir = os.getcwd()
@@ -161,7 +164,6 @@ def youtubeDownloader():
                         if not (os.path.exists(f"./{playlistName}")):
                             logFile.write(f"CREATING PLAYLIST DIR: {playlistName}\n")
                             os.makedirs(fullDir)
-                        print(fNameManager.urls.index(link))
                         newPath = shutil.copy(
                             fNameManager.filenames[fNameManager.urls.index(link)],
                             fullDir,

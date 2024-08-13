@@ -59,8 +59,7 @@ if __name__ == "__main__":
     print("youtube downdloader starting")
     youtubeDownloader()
 
-    # print("soundCloud downloader starting")
-    # soundcloudDownloader()
-    #
+    print("soundCloud downloader starting")
+    soundcloudDownloader()
 
 
