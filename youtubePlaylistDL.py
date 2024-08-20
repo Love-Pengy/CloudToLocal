@@ -1,4 +1,5 @@
 import json
+import linecache
 import os
 import re
 import shutil
@@ -8,9 +9,36 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver import Chrome
 from yt_dlp import YoutubeDL
+import tracemalloc
 
 from helpers import timer
 
+def display_top(snapshot, key_type="lineno", limit=10):
+    snapshot = snapshot.filter_traces(
+        (
+            tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+            tracemalloc.Filter(False, "<unknown>"),
+        )
+    )
+    top_stats = snapshot.statistics(key_type)
+
+    print("Top %s lines" % limit)
+    for index, stat in enumerate(top_stats[:limit], 1):
+        frame = stat.traceback[0]
+        print(
+            "#%s: %s:%s: %.1f KiB"
+            % (index, frame.filename, frame.lineno, stat.size / 1024)
+        )
+        line = linecache.getline(frame.filename, frame.lineno).strip()
+        if line:
+            print("    %s" % line)
+
+    other = top_stats[limit:]
+    if other:
+        size = sum(stat.size for stat in other)
+        print("%s other: %.1f KiB" % (len(other), size / 1024))
+    total = sum(stat.size for stat in top_stats)
+    print("Total allocated size: %.1f KiB" % (total / 1024))
 
 class FilenameManager:
 
@@ -23,21 +51,23 @@ class FilenameManager:
         if d["info_dict"]["filename"] not in self.filenames:
             if self.currentPlaylistName is None:
                 if d["status"] == "finished":
-                    if(d["info_dict"]["filename"] not in self.filenames):
+                    if d["info_dict"]["filename"] not in self.filenames:
                         self.filenames.append(d["info_dict"]["filename"])
-                    if(d["info_dict"]["webpage_url"] not in self.urls):
+                    if d["info_dict"]["webpage_url"] not in self.urls:
                         self.urls.append(d["info_dict"]["webpage_url"])
                     self.currentPlaylistName = d["info_dict"]["playlist_title"]
 
             elif self.currentPlaylistName == d["info_dict"]["playlist_title"]:
                 if d["status"] == "finished":
-                    if(d["info_dict"]["filename"] not in self.filenames):
+                    if d["info_dict"]["filename"] not in self.filenames:
                         self.filenames.append(d["info_dict"]["filename"])
-                    if(d["info_dict"]["webpage_url"] not in self.urls):
+                    if d["info_dict"]["webpage_url"] not in self.urls:
                         self.urls.append(d["info_dict"]["webpage_url"])
             else:
                 if d["status"] == "finished":
                     self.currentPlaylistName = d["info_dict"]["playlist_title"]
+                    del(self.filenames)
+                    del(self.urls)
                     self.filenames = list()
                     self.urls = list()
                     self.filenames.append(d["info_dict"]["filename"])
@@ -76,6 +106,7 @@ def youtubeDownloader():
     if not os.path.exists(outputPath):
         os.makedirs(outputPath)
 
+    tracemalloc.start()
     fNameManager = FilenameManager()
     logFile = open("log", "w")
     opts = {
@@ -108,7 +139,7 @@ def youtubeDownloader():
     }
 
     # musi idea is to create a list of playlists that we can check if a file is in
-
+    
     for i, playlist in enumerate(youtubePlaylists):
         ydl = YoutubeDL(opts)
         ydl.download(playlist)
@@ -173,5 +204,8 @@ def youtubeDownloader():
                             + newPath
                             + " because of presence in musi playlist\n"
                         )
+        snapshot = tracemalloc.take_snapshot()
+        display_top(snapshot)
+        tracemalloc.stop()
         del ydl
     logFile.close()
