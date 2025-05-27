@@ -33,7 +33,7 @@ def error(*args, **kwargs):
 
 def main(args):
 
-    for playlist in args.youtube_playlists:
+    for playlist in args.playlists:
         # Get Metadata Of Vids For Extraction Of URL On Failure
         ydl_opts_extract = {
             'quiet': True,
