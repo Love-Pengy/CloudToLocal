@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-/*
+# /*
 # C extensions
 *.so
 
@@ -161,13 +161,13 @@ cython_debug/
 #.idea/
 
 
-### MY STUFF
-!config.json
-!helpers.py
-!help.py
-!main.py
-!myconfig.json
-!README.md
-!soundcloudPlaylistDL.py
-!TODO.md
-!youtubePlaylistDL.py
+# ### MY STUFF
+# !config.json
+# !helpers.py
+# !help.py
+# !main.py
+# !myconfig.json
+# !README.md
+# !soundcloudPlaylistDL.py
+# !TODO.md
+# !youtubePlaylistDL.py
