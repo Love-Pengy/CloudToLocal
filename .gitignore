@@ -160,14 +160,4 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-
-# ### MY STUFF
-# !config.json
-# !helpers.py
-# !help.py
-# !main.py
-# !myconfig.json
-# !README.md
-# !soundcloudPlaylistDL.py
-# !TODO.md
-# !youtubePlaylistDL.py
+test/

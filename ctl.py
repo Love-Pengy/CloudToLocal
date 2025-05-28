@@ -34,7 +34,7 @@ def error(*args, **kwargs):
 
 def main(args):
 
-    for playlist in args.playlists:
+    for playlist in args.download_playlists:
         # Get Metadata Of Vids For Extraction Of URL On Failure
         ydl_opts_extract = {
             'quiet': True,
@@ -97,34 +97,32 @@ if __name__ == "__main__":
             config_file_parser_class=configargparse.YAMLConfigFileParser
     )
     
-    # TODO: Reorder this to make sense in help page
-    parser.add_argument("--retry_amt", "-r", default=10, 
-                        help="Amount Of Times To Retry Non-Fatal Download"
-                        " Errors")
-
-    parser.add_argument("--verbose", "-v", default=0, 
-                        help="Enable Verbose Output")
-
     parser.add_argument("--config", "-c", type=str, 
                         is_config_file=True, default="ctlConfig.yaml",
                         help="Configuration File Path")
     
-    parser.add_argument("--playlists", "-p", type=str, 
+    parser.add_argument("--download_playlists", "-p", type=str, 
                         nargs="+", 
                         help="List of Playlists To Download"
                              "  Can Be Either Youtube or Soundcloud")
-    
-    # TODO: make it so you can't specify fail on warning and unavail file
-    parser.add_argument("--fail_on_warning", "-w", type=int, 
-                        default=0, help="Exit Program On Failure")
-    
+
+    parser.add_argument("--outdir", "-o", type=str, 
+                        required=True, help="Directory To Output Files To")
+
     # TODO: Recommend wayback machine for archive somewhere in docs
     parser.add_argument("--unavail_file", "-u", type=str, 
                         default="unavailable_videos", 
                         help="List Of Video URLS Unavailable For Download")
 
-    parser.add_argument("--outdir", "-o", type=str, 
-                        required=True, help="Directory To Output Files To")
+    parser.add_argument("--retry_amt", "-r", default=10, 
+                        help="Amount Of Times To Retry Non-Fatal Download"
+                        " Errors")
+
+    parser.add_argument("--fail_on_warning", "-w", type=int, 
+                        default=0, help="Exit Program On Failure")
+
+    parser.add_argument("--verbose", "-v", default=0, 
+                        help="Enable Verbose Output")
 
     args = parser.parse_args()
     VERBOSE = args.verbose 
