@@ -1,6 +1,0 @@
-verbose: 1
-playlists: ["https://soundcloud.com/afrazierboy/sets/liked"]
-outdir: "test"
-
-# TODO: specify sets with length ex: sets: 10 (this would be in min)
-
