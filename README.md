@@ -1,46 +1,66 @@
 # CloudToLocal
 
-+ Automated online backup tool for local backups with Youtube, Soundcloud, and Musi
+Automated online backup tool for local backups with Youtube, Soundcloud, and Musi
+
+## Installation 
+ 
+Install Deps With Given `requirements.txt' file: 
+> `pip install -r requirements.txt` 
+
+> [!IMPORTANT] 
+> It is crucial that you keep the deps up to date. If download failures start
+> to occur it is most likely that yt-dlp needs an update. If you find that this 
+> is the case submit an issue and or update the yt-dlp package
 
 ## Usage
-+ In order to configure behavior of this tool create a config.json file in the root of the project directory 
+    
+In order to use this program you must either specify everything via arguments 
+or through a configuration file. 
 
-+ The current configuration options are as follows: 
-    + songDir
-        - directory to hold the downloaded songs
-    - soundcloudPlaylists 
-        - list of links for soundcloud playlists to download
-    - youtubePlaylists
-        - list of youtube playlists to download
-    - musiPlaylists
-        - list of musi playlists to use for mapping
-    - soundcloudSongMapping
-        - list of lists that represent which youtube playlist to put a specified soudcloud playlist withing
+Because this is intended to be an automation, it is highly recommended that you
+use a file.
 
-## Example
-```json
-[{
-    "songDir": "songs", 
-    "soundcloudPlaylists": [
-        "https://soundcloud.com/username/foo" 
-    ], 
-"youtubePlaylists": [
-        "https://youtube.com/playlist?list=id1", 
-        "https://youtube.com/playlist?list=id2", 
-        "https://youtube.com/playlist?list=id3"
-    ], 
-    "musiPlaylists": [
-        "https://feelthemusi.com/playlist/id1", 
-        "https://feelthemusi.com/playlist/id2", 
-        "https://feelthemusi.com/playlist/id3", 
-        "https://feelthemusi.com/playlist/id4" 
-    ],
-    "soundcloudSongMapping": [
-        {
-        "My Cool SoundCloud Playlist": ["My Cool Youtube Playlist"]  
-        }
-    ], 
-}]
+Below is a list of all the current options
+
 ```
+usage: ctl.py [-h] [--config CONFIG]
+              [--download_playlists DOWNLOAD_PLAYLISTS [DOWNLOAD_PLAYLISTS ...]]
+              --outdir OUTDIR [--unavail_file UNAVAIL_FILE]
+              [--retry_amt RETRY_AMT]
+              [--fail_on_warning FAIL_ON_WARNING] [--verbose VERBOSE]
+
+Automated Youtube and Soundcloud Downloader
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG, -c CONFIG
+                        Configuration File Path
+  --download_playlists DOWNLOAD_PLAYLISTS [DOWNLOAD_PLAYLISTS ...], -i DOWNLOAD_PLAYLISTS [DOWNLOAD_PLAYLISTS ...]
+                        List of Playlists To Download Can Be Either
+                        Youtube or Soundcloud
+  --outdir OUTDIR, -o OUTDIR
+                        Directory To Output Files To
+  --unavail_file UNAVAIL_FILE, -u UNAVAIL_FILE
+                        List Of Video URLS Unavailable For Download
+  --retry_amt RETRY_AMT, -r RETRY_AMT
+                        Amount Of Times To Retry Non-Fatal Download
+                        Errors
+  --fail_on_warning FAIL_ON_WARNING, -w FAIL_ON_WARNING
+                        Exit Program On Failure
+  --verbose VERBOSE, -v VERBOSE
+                        Enable Verbose Output
+```
+
+## Tips
+
+When using the `unavail_file` option it will give you the urls of the videos
+that failed. For these songs you can not get the relevent information through
+youtube's site. I recommned using the [Wayback Machine](https://web.archive.org/)
+in order to obtain the information you need to replace that song.
+
+There is currently no option to pass cookies to this script. Therefore, age 
+restricted videos will not work.
+
+
 
 

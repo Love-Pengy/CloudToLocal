@@ -60,8 +60,6 @@ def main(args):
                 'noplaylist': True,
                 'paths': {"home":args.outdir},
                 'outtmpl': "%(title)s.%(ext)s",
-                # TODO: Specify in docs that this is the expected place for 
-                # archive 
                 'download_archive': args.outdir+"/archive"
             }
  
@@ -90,7 +88,6 @@ def main(args):
 
     success("Download Completed")
 
-# TODO: put note in docs that age restricted videos will not work
 if __name__ == "__main__": 
     parser = configargparse.ArgParser(
             description="Automated Youtube and Soundcloud Downloader", 
@@ -101,15 +98,14 @@ if __name__ == "__main__":
                         is_config_file=True, default="ctlConfig.yaml",
                         help="Configuration File Path")
     
-    parser.add_argument("--download_playlists", "-p", type=str, 
+    parser.add_argument("--download_playlists", "-i", type=str, 
                         nargs="+", 
                         help="List of Playlists To Download"
                              "  Can Be Either Youtube or Soundcloud")
 
     parser.add_argument("--outdir", "-o", type=str, 
                         required=True, help="Directory To Output Files To")
-
-    # TODO: Recommend wayback machine for archive somewhere in docs
+    
     parser.add_argument("--unavail_file", "-u", type=str, 
                         default="unavailable_videos", 
                         help="List Of Video URLS Unavailable For Download")
