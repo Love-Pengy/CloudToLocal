@@ -231,7 +231,7 @@ class CloudToLocal:
                              thumbs[len(thumbs)-1])
 
                     shutil.move(filepath, f"{self.output_dir}"
-                                f"{artists}_"
+                                f"{artists[0]}_"
                                 f"{sanitize_string(album_name[0]["album"])}_"
                                 f"{album_name[0]["trackNumber"]:02d}_"
                                 f"{sanitize_string(search[0]["title"])}"
