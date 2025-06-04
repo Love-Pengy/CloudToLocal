@@ -16,12 +16,12 @@ VERBOSE = False
 FAIL_ON_WARNING = False
 
 
-def info(*args, **kwargs):
+def pinfo(*args, **kwargs):
     if (VERBOSE):
         print(*args, **kwargs)
 
 
-def warning(*args, **kwargs):
+def pwarning(*args, **kwargs):
     print("\033[93m")
     print("⚠️", end="")
     print(*args, **kwargs)
@@ -30,14 +30,14 @@ def warning(*args, **kwargs):
         exit()
 
 
-def success(*args, **kwargs):
+def psuccess(*args, **kwargs):
     print("\033[92m")
     print("✅", end="")
     print(*args, **kwargs)
     print("\033[0m")
 
 
-def error(*args, **kwargs):
+def perror(*args, **kwargs):
     print("\033[91m")
     print("❌", end="")
     print(*args, **kwargs)
@@ -81,7 +81,7 @@ class CloudToLocal:
             for index, entry in enumerate(info['entries']):
                 url = entry['url']
                 if not url:
-                    warning(
+                    pwarning(
                         f"[{index+1}] Skipping: No URL found for "
                         f"'{entry['title']}'")
                     continue
@@ -134,15 +134,15 @@ class CloudToLocal:
                                 curr_duration = video_info["duration"]
                         break
                     except DownloadError as e:
-                        info(f"Failed to download Retrying'{
-                             title} ({url})': {e}")
+                        pinfo(f"Failed to download Retrying: {
+                              title} {url}: {e}")
                         sleep(retry*10)
                         if (not retry):
                             with open(args.unavail_file, "a") as f:
                                 f.write(url)
                     except Exception as e:
                         print(traceback.format_exc())
-                        error(f"Unexpected error for '{title}': {e}")
+                        perror(f"Unexpected error for '{title}': {e}")
                         exit()
 
                 if (args.replace_filenames and curr_filepath):
@@ -154,7 +154,7 @@ class CloudToLocal:
             with open(self.missing_albums, "w") as f:
                 json.dump(self.missing_albums_map, f, indent=2)
 
-        success("Download Completed")
+        psuccess("Download Completed")
 
     def replace_filename(self, title, uploader, filepath, extension, provider):
 
@@ -194,11 +194,11 @@ class CloudToLocal:
                         "closest_match": closest_match,
                         "provider": provider
                     }
-                    info(f"ALBUM MISSED: {title} {artist}")
+                    pinfo(f"ALBUM MISSED: {title} {artist}")
                 else:
-                    info(f"{title} -> {search[0]["artists"][0]["name"]} "
-                         f"{search[0]["title"]} {album_name[0]["album"]} "
-                         f"{album_name[0]["trackNumber"]}")
+                    pinfo(f"{title} -> {search[0]["artists"][0]["name"]} "
+                          f"{search[0]["title"]} {album_name[0]["album"]} "
+                          f"{album_name[0]["trackNumber"]}")
 
                     # pprint(f"{album_name[0]=}")
                     # input()
