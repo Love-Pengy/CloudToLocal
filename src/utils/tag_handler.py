@@ -39,8 +39,7 @@ def tag_file(filepath, artist, album, title, track_num,
         picture.mime = u"image/jpeg"
         picture.width = thumbnail["width"]
         picture.height = thumbnail["height"]
-        # TODO: see if this is needed
-        # picture.depth = 24
+        picture.depth = 8
 
         picture_data = picture.write()
         encoded_data = base64.b64encode(picture_data)
@@ -55,7 +54,7 @@ def tag_file(filepath, artist, album, title, track_num,
             audio['\xa9day'] = year
         header = urllib.request.urlopen(thumbnail["url"])
         audio['covr'] = [mutagen.mp4.MP4Cover(header.read(),
-                                             imageformat=mutagen.mp4.MP4Cover.FORMAT_JPEG)]
+                                              imageformat=mutagen.mp4.MP4Cover.FORMAT_JPEG)]
         header.close()
 
     else:

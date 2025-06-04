@@ -147,7 +147,8 @@ class CloudToLocal:
                         perror(f"Unexpected error for '{title}': {e}")
                         exit()
 
-                if (args.replace_filenames and curr_filepath):
+                if (args.replace_filenames and curr_filepath and
+                        self.replace_fname):
                     self.replace_filename(title, uploader,
                                           curr_filepath, curr_ext,
                                           entry["ie_key"])
@@ -262,7 +263,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--replace_filenames", "-r", default=1,
                         help="Attempt To Replace Filename With Official "
-                        "YTMusic Name")
+                        "YTMusic Name and embed metadata")
 
     parser.add_argument("--config", "-c", type=str,
                         is_config_file=True, default="ctlConfig.yaml",
