@@ -162,3 +162,5 @@ cython_debug/
 
 ctlConfig.yaml
 test/
+missing_albums
+not_found

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
+import json
+import shutil
+import traceback
 import configargparse
-from yt_dlp import YoutubeDL
-from yt_dlp.utils import DownloadError
 from time import sleep
 from pprint import pprint
-from youtube_title_parse import get_artist_title
+from yt_dlp import YoutubeDL
 from ytmusicapi import YTMusic
+from yt_dlp.utils import DownloadError
+from youtube_title_parse import get_artist_title
 from utils.common import get_diff_count, sanitize_string
-import traceback
-import os
-import shutil
-import json
+from utils.tag_handler import tag_file
 
 VERBOSE = False
 FAIL_ON_WARNING = False
@@ -112,7 +112,9 @@ class CloudToLocal:
                     'noplaylist': True,
                     'paths': {"home": args.outdir},
                     'outtmpl': "%(title)s.%(ext)s",
-                    'download_archive': args.outdir+"/archive"
+                    'download_archive': args.outdir+"/archive",
+                    # Do Not Continue If Fragment Fails
+                    'skip_unavailable_fragments': False
                 }
                 print(f"\n[{index+1}/{len(info['entries'])}]"
                       f" Attempting: {title}")
@@ -122,7 +124,9 @@ class CloudToLocal:
                     try:
                         with YoutubeDL(ydl_opts_download) as ydl:
                             video_info = ydl.extract_info(url, download=True)
-                            if (video_info):
+
+                            if (video_info and
+                                    "requested_downloads" in video_info):
                                 video_dl_info = video_info["requested_downloads"][0]
                                 curr_ext = video_dl_info["ext"]
                                 curr_filepath = video_dl_info["filepath"]
@@ -141,13 +145,10 @@ class CloudToLocal:
                         error(f"Unexpected error for '{title}': {e}")
                         exit()
 
-                # NOTE: this only needs to be done for YT, because of the indie
-                #       nature of soundcloud
-                if (args.replace_filenames
-                        and (entry["ie_key"] == "Youtube")
-                        and curr_filepath):
-                    self.replace_filename(entry["title"], uploader,
-                                          curr_filepath, curr_ext)
+                if (args.replace_filenames and curr_filepath):
+                    self.replace_filename(title, uploader,
+                                          curr_filepath, curr_ext,
+                                          entry["ie_key"])
 
         if (self.replace_fname):
             with open(self.missing_albums, "w") as f:
@@ -155,7 +156,7 @@ class CloudToLocal:
 
         success("Download Completed")
 
-    def replace_filename(self, title, uploader, filepath, extension):
+    def replace_filename(self, title, uploader, filepath, extension, provider):
 
         result = get_artist_title(title,
                                   {"defaultArtist": uploader,
@@ -166,8 +167,8 @@ class CloudToLocal:
             title = result[1]
             search = self.ytmusic.search(
                 artist + " " + title, filter="songs", limit=1)
+
             if (search):
-                print(search[0])
                 album = self.ytmusic.get_album(
                     search[0]["album"]["id"])["tracks"]
 
@@ -178,39 +179,61 @@ class CloudToLocal:
                 ]
                 # track_num = album_name["trackNumber"]
 
-            if (not album_name):
-                closest_match_miss_count = 99999
-                closest_match = None
-                for album_entry in album:
-                    diff_num = get_diff_count(title, album_entry["title"])
-                    if (diff_num < closest_match_miss_count):
-                        closest_match = album_entry
-                        closest_match_miss_count = diff_num
+                if (not album_name):
+                    closest_match_miss_count = 99999
+                    closest_match = None
+                    for album_entry in album:
+                        diff_num = get_diff_count(title, album_entry["title"])
+                        if (diff_num < closest_match_miss_count):
+                            closest_match = album_entry
+                            closest_match_miss_count = diff_num
 
-                self.missing_albums_map[title] = {
-                    "found_artist": artist,
-                    "found_title": title,
-                    "closest_match": closest_match
-                }
-                print("\033[91m")
-                print(f"album missed: {title} {artist}")
-                print("\033[0m")
-            else:
-                info(f"{title} -> {search[0]["artists"][0]["name"]} "
-                     f"{search[0]["title"]} {album_name[0]["album"]} "
-                     f"{album_name[0]["trackNumber"]}")
+                    self.missing_albums_map[title] = {
+                        "found_artist": artist,
+                        "found_title": title,
+                        "closest_match": closest_match,
+                        "provider": provider
+                    }
+                    info(f"ALBUM MISSED: {title} {artist}")
+                else:
+                    info(f"{title} -> {search[0]["artists"][0]["name"]} "
+                         f"{search[0]["title"]} {album_name[0]["album"]} "
+                         f"{album_name[0]["trackNumber"]}")
 
-                info(f"{search[0]["artists"][0]["name"]=} "
-                     f"{search[0]["title"]=} {album_name[0]["album"]=} "
-                     f"{album_name[0]["trackNumber"]=}")
+                    # pprint(f"{album_name[0]=}")
+                    # input()
+                    # pprint(f"{search[0]=}")
+                    # input()
 
-                shutil.move(filepath, f"{self.output_dir}"
-                            f"{sanitize_string(
-                                search[0]["artists"][0]["name"])}_"
-                            f"{sanitize_string(album_name[0]["album"])}_"
-                            f"{album_name[0]["trackNumber"]:02d}_"
-                            f"{sanitize_string(search[0]["title"])}"
-                            f".{extension}")
+                    if (("thumbnails" in album_name[0])
+                            and (album_name[0]["thumbnails"] is not None)):
+                        thumbs = album_name[0]["thumbnails"]
+                    else:
+                        thumbs = search[0]["thumbnails"]
+
+                    if (("year" in search[0])
+                       and (search[0]["year"] is not None)):
+                        year = search[0]["year"]
+                    else:
+                        year = None
+
+                    artists = [sanitize_string(artist["name"])
+                               for artist in search[0]["artists"]]
+                    tag_file(filepath,
+                             artists,
+                             album_name[0]["album"],
+                             search[0]["title"],
+                             album_name[0]["trackNumber"],
+                             len(album),
+                             year,
+                             thumbs[len(thumbs)-1])
+
+                    shutil.move(filepath, f"{self.output_dir}"
+                                f"{artists}_"
+                                f"{sanitize_string(album_name[0]["album"])}_"
+                                f"{album_name[0]["trackNumber"]:02d}_"
+                                f"{sanitize_string(search[0]["title"])}"
+                                f".{extension}")
 
         # NOTE: This occurs when both title and artist cannot be parsed.
         # Should only happen when you have a delimiter that can't clearly
