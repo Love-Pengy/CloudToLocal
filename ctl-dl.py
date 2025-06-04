@@ -64,6 +64,8 @@ class CloudToLocal:
             open(self.not_found, "w")
         if (self.missing_albums):
             open(self.missing_albums, "w")
+        if (self.unavail_file):
+            open(self.unavail_file, "w")
 
         ydl_opts_extract = {
             'extract_flat': True,
