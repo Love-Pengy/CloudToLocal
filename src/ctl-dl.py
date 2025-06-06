@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
+
+import os
 import json
 import shutil
+import utils.printing as printing
 import traceback
 import configargparse
 from time import sleep
@@ -8,41 +11,10 @@ from pprint import pprint
 from yt_dlp import YoutubeDL
 from ytmusicapi import YTMusic
 from yt_dlp.utils import DownloadError
+from utils.tag_handler import tag_file
+from utils.playlist_handler import PlaylistHandler
 from youtube_title_parse import get_artist_title
 from utils.common import get_diff_count, sanitize_string
-from utils.tag_handler import tag_file
-
-VERBOSE = False
-FAIL_ON_WARNING = False
-
-
-def pinfo(*args, **kwargs):
-    if (VERBOSE):
-        print(*args, **kwargs)
-
-
-def pwarning(*args, **kwargs):
-    print("\033[93m")
-    print("⚠️", end="")
-    print(*args, **kwargs)
-    print("\033[0m")
-    if (FAIL_ON_WARNING):
-        exit()
-
-
-def psuccess(*args, **kwargs):
-    print("\033[92m")
-    print("✅", end="")
-    print(*args, **kwargs)
-    print("\033[0m")
-
-
-def perror(*args, **kwargs):
-    print("\033[91m")
-    print("❌", end="")
-    print(*args, **kwargs)
-    print("\033[0m")
-    exit()
 
 
 class CloudToLocal:
@@ -59,6 +31,10 @@ class CloudToLocal:
         self.not_found = args.not_found
         self.missing_albums_map = {}
         self.missing_albums = args.missing_albums
+
+        if (args.generate_playlists):
+            self.playlist_handler = PlaylistHandler(self.dl_playlists,
+                                                    self.retries)
 
         if (self.not_found):
             open(self.not_found, "w")
@@ -83,7 +59,7 @@ class CloudToLocal:
             for index, entry in enumerate(info['entries']):
                 url = entry['url']
                 if not url:
-                    pwarning(
+                    printing.pwarning(
                         f"[{index+1}] Skipping: No URL found for "
                         f"'{entry['title']}'")
                     continue
@@ -136,30 +112,31 @@ class CloudToLocal:
                                 curr_duration = video_info["duration"]
                         break
                     except DownloadError as e:
-                        pinfo(f"Failed to download Retrying: {
-                              title} {url}: {e}")
+                        printing.pinfo(f"Failed to download Retrying"
+                                       f"({retry}): {title} {url}: {e}")
                         sleep(retry*10)
                         if (not retry):
                             with open(args.unavail_file, "a") as f:
                                 f.write(url)
                     except Exception as e:
                         print(traceback.format_exc())
-                        perror(f"Unexpected error for '{title}': {e}")
+                        printing.perror(f"Unexpected error for '{title}': {e}")
                         exit()
 
                 if (args.replace_filenames and curr_filepath and
                         self.replace_fname):
                     self.replace_filename(title, uploader,
                                           curr_filepath, curr_ext,
-                                          entry["ie_key"])
+                                          entry["ie_key"], url, curr_duration)
 
         if (self.replace_fname):
             with open(self.missing_albums, "w") as f:
                 json.dump(self.missing_albums_map, f, indent=2)
 
-        psuccess("Download Completed")
+        printing.psuccess("Download Completed")
 
-    def replace_filename(self, title, uploader, filepath, extension, provider):
+    def replace_filename(self, title, uploader, filepath, extension, provider,
+                         url, duration):
 
         result = get_artist_title(title,
                                   {"defaultArtist": uploader,
@@ -180,7 +157,6 @@ class CloudToLocal:
                     track for track in album
                     if track["title"].lower() == title.lower()
                 ]
-                # track_num = album_name["trackNumber"]
 
                 if (not album_name):
                     closest_match_miss_count = 99999
@@ -197,17 +173,10 @@ class CloudToLocal:
                         "closest_match": closest_match,
                         "provider": provider
                     }
-                    pinfo(f"ALBUM MISSED: {title} {artist}")
+                    printing.pinfo(f"ALBUM MISSED: {title} {artist}")
                 else:
-                    pinfo(f"{title} -> {search[0]["artists"][0]["name"]} "
-                          f"{search[0]["title"]} {album_name[0]["album"]} "
-                          f"{album_name[0]["trackNumber"]}")
 
-                    # pprint(f"{album_name[0]=}")
-                    # input()
-                    # pprint(f"{search[0]=}")
-                    # input()
-
+                    track_num = album_name[0]["trackNumber"]
                     if (("thumbnails" in album_name[0])
                             and (album_name[0]["thumbnails"] is not None)):
                         thumbs = album_name[0]["thumbnails"]
@@ -231,6 +200,13 @@ class CloudToLocal:
                              year,
                              thumbs[len(thumbs)-1])
 
+                    printing.pinfo(f"{os.path.basename(filepath)} -> {artists[0]}_"
+                                   f"{sanitize_string(
+                                       album_name[0]["album"])}_"
+                                   f"{album_name[0]["trackNumber"]:02d}_"
+                                   f"{sanitize_string(search[0]["title"])}"
+                                   f".{extension}")
+
                     shutil.move(filepath, f"{self.output_dir}"
                                 f"{artists[0]}_"
                                 f"{sanitize_string(album_name[0]["album"])}_"
@@ -238,13 +214,19 @@ class CloudToLocal:
                                 f"{sanitize_string(search[0]["title"])}"
                                 f".{extension}")
 
+                    if (args.generate_playlists):
+                        self.playlist_handler.write_to_playlists(url, duration,
+                                                                 artist, title,
+                                                                 track_num,
+                                                                 album_name[0]["album"],
+                                                                 filepath,
+                                                                 self.output_dir)
+
         # NOTE: This occurs when both title and artist cannot be parsed.
         # Should only happen when you have a delimiter that can't clearly
         # be used to distinguish betwen artist and title such as a space
         else:
-            print("\033[91m")
-            print(f"ARTIST AND SONG NOT FOUND: {title}")
-            print("\033[0m")
+            printing.pinfo(f"ARTIST AND SONG NOT FOUND: {title}")
             with open("not_found", "a+") as f:
                 f.write(f"{title} {uploader}\n")
 
@@ -299,8 +281,12 @@ if __name__ == "__main__":
                         help="File Path To Output Songs That Failed To Verify"
                              " The Album")
 
+    parser.add_argument("--generate_playlists", "-gp", default=1,
+                        help="Generate m3u Playlists From Specified Download"
+                             " Urls")
+
     args = parser.parse_args()
-    VERBOSE = args.verbose
-    FAIL_ON_WARNING = args.fail_on_warning
+    printing.VERBOSE = args.verbose
+    printing.FAIL_ON_WARNING = args.fail_on_warning
 
     main(args)

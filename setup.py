@@ -15,6 +15,5 @@ setup(
     install_requires=["youtube_title_parse @ https://github.com/Love-Pengy/youtube_title_parse/archive/refs/heads/master.zip",
                       "certifi", "charset_normalizer", "ConfigArgParse",
                       "idna", "mutagen", "PyYAML", "requests", "urllib3",
-                      "yt-dlp", "ytmusicapi"
-                      ]
+                      "yt-dlp", "ytmusicapi", "selenium"]
 )
