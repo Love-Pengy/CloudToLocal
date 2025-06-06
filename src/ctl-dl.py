@@ -3,12 +3,14 @@
 import os
 import json
 import shutil
-import utils.printing as printing
+import requests
 import traceback
 import configargparse
 from time import sleep
 from pprint import pprint
 from yt_dlp import YoutubeDL
+import utils.printing as printing
+from yt_dlp import version as yt_dlp_version
 from ytmusicapi import YTMusic
 from yt_dlp.utils import DownloadError
 from utils.tag_handler import tag_file
@@ -53,6 +55,18 @@ class CloudToLocal:
             with YoutubeDL(ydl_opts_extract) as ydl:
                 self.playlists_info.append(
                     ydl.extract_info(playlist, download=False))
+
+    def check_ytdlp_update(self):
+        local_version = yt_dlp_version.__version__
+        release_page = requests.get(
+            "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
+        latest_release = release_page.json()["tag_name"]
+        if (local_version != latest_release):
+            printing.pwarning(f"Newer yt_dlp Version Available, Please Update If"
+                              f" You Experience Download Issues ({
+                                  local_version} -> {latest_release})")
+        else:
+            printing.pinfo(f"yt_dlp Is Up To Date (Version {latest_release})")
 
     def download(self):
         for info in self.playlists_info:
@@ -233,6 +247,7 @@ class CloudToLocal:
 
 def main(args):
     ctl = CloudToLocal(args)
+    ctl.check_ytdlp_update()
     print("STARTING DOWNLOAD")
     ctl.download()
 
