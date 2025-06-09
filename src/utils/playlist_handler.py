@@ -87,7 +87,6 @@ class PlaylistHandler:
         return (
             [spec for spec in self.playlists if url in self.playlists[spec]])
 
-    # TODO: add the ability to add from just a url (will call check_playlist
     def write_to_playlists(self, url, duration, artist, title, track_num, album,
                            filepath, output_dir):
         """ Write song to all playlist files it belongs to

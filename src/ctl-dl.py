@@ -16,7 +16,7 @@ from yt_dlp.utils import DownloadError
 from utils.tag_handler import tag_file
 from utils.playlist_handler import PlaylistHandler
 from youtube_title_parse import get_artist_title
-from utils.common import get_diff_count, sanitize_string
+from utils.common import get_diff_count, sanitize_string, get_img_size_url
 
 
 class CloudToLocal:
@@ -38,12 +38,13 @@ class CloudToLocal:
             self.playlist_handler = PlaylistHandler(self.dl_playlists,
                                                     self.retries)
 
-        if (self.not_found):
-            open(self.not_found, "w")
-        if (self.missing_albums):
-            open(self.missing_albums, "w")
-        if (self.unavail_file):
-            open(self.unavail_file, "w")
+        if (not args.fix_missing):
+            if (self.not_found):
+                open(self.not_found, "w")
+            if (self.missing_albums):
+                open(self.missing_albums, "w")
+            if (self.unavail_file):
+                open(self.unavail_file, "w")
 
         ydl_opts_extract = {
             'extract_flat': True,
@@ -62,8 +63,8 @@ class CloudToLocal:
             "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
         latest_release = release_page.json()["tag_name"]
         if (local_version != latest_release):
-            printing.pwarning(f"Newer yt_dlp Version Available, Please Update If"
-                              f" You Experience Download Issues ({
+            printing.pwarning(f"Newer yt_dlp Version Available, Please Update "
+                              f"If You Experience Download Issues ({
                                   local_version} -> {latest_release})")
         else:
             printing.pinfo(f"yt_dlp Is Up To Date (Version {latest_release})")
@@ -106,7 +107,9 @@ class CloudToLocal:
                     'outtmpl': "%(title)s.%(ext)s",
                     'download_archive': args.outdir+"/archive",
                     # Do Not Continue If Fragment Fails
-                    'skip_unavailable_fragments': False
+                    'skip_unavailable_fragments': False,
+                    # By Default Use The Song Thumbnail
+                    'embedthumbnail': True
                 }
                 print(f"\n[{index+1}/{len(info['entries'])}]"
                       f" Attempting: {title}")
@@ -122,7 +125,6 @@ class CloudToLocal:
                                 video_dl_info = video_info["requested_downloads"][0]
                                 curr_ext = video_dl_info["ext"]
                                 curr_filepath = video_dl_info["filepath"]
-                                # TODO: Use To Generate M3U
                                 curr_duration = video_info["duration"]
                         break
                     except DownloadError as e:
@@ -132,6 +134,7 @@ class CloudToLocal:
                         if (not retry):
                             with open(args.unavail_file, "a") as f:
                                 f.write(url)
+                                f.write('\n')
                     except Exception as e:
                         print(traceback.format_exc())
                         printing.perror(f"Unexpected error for '{title}': {e}")
@@ -181,11 +184,16 @@ class CloudToLocal:
                             closest_match = album_entry
                             closest_match_miss_count = diff_num
 
-                    self.missing_albums_map[title] = {
+                    closest_match["album_len"] = len(album)
+                    self.missing_albums_map[filepath] = {
                         "found_artist": artist,
                         "found_title": title,
                         "closest_match": closest_match,
-                        "provider": provider
+                        "provider": provider,
+                        "ext": extension,
+                        "url": url,
+                        "duration": duration,
+                        "uploader": uploader
                     }
                     printing.pinfo(f"ALBUM MISSED: {title} {artist}")
                 else:
@@ -205,6 +213,7 @@ class CloudToLocal:
 
                     artists = [sanitize_string(artist["name"])
                                for artist in search[0]["artists"]]
+
                     tag_file(filepath,
                              artists,
                              album_name[0]["album"],
@@ -244,9 +253,241 @@ class CloudToLocal:
             with open("not_found", "a+") as f:
                 f.write(f"{title} {uploader}\n")
 
+    def user_replace_filename(self, title, artists, filepath, extension,
+                              album_name, url, duration, track_number, album_len,
+                              album_date, thumbnail_url):
+        tag_file(filepath,
+                 artists,
+                 album_name,
+                 title,
+                 track_number,
+                 album_len,
+                 album_date,
+                 thumbnail_url)
+
+        if (not album_name):
+            album_name = title
+
+        printing.pinfo(f"{os.path.basename(filepath)} -> {artists[0]}_"
+                       f"{sanitize_string(album_name)}_"
+                       f"{track_number:02d}_"
+                       f"{title}"
+                       f".{extension}")
+
+        shutil.move(filepath, f"{self.output_dir}"
+                    f"{artists[0]}_"
+                    f"{album_name}_"
+                    f"{track_number:02d}_"
+                    f"{title}"
+                    f".{extension}")
+
+        if (args.generate_playlists):
+            self.playlist_handler.write_to_playlists(url, duration,
+                                                     artists[0], title,
+                                                     track_number,
+                                                     album_name,
+                                                     filepath,
+                                                     self.output_dir)
+
+    def correct_missing(self):
+        """Interactive To Fix Albums And Songs That Could Not Be
+            Automatically Found"""
+
+        with open(self.missing_albums, "r") as f:
+            missing_albums = json.load(f)
+
+        for song_path in list(missing_albums):
+            spec = missing_albums[song_path]
+            print(f"OG Path: {song_path}\n"
+                  f"OG Title: {spec["found_title"]}, OG Artist: {
+                      spec["found_artist"]}\n"
+                  f"Matched Title: {spec["closest_match"]["title"]}, "
+                  f"Matched Artist: {[artist["name"]
+                                      for artist in spec["closest_match"]["artists"]]}\n"
+                  f"Matched Album: {spec["closest_match"]["album"]}\n")
+            f"Provider: {spec["provider"]}"
+            user_input = None
+            while (not (user_input == '1') and
+                   not (user_input == '2') and
+                   not (user_input == '3') and
+                   not (user_input == '4') and
+                   not (user_input == 'q')):
+                user_input = input(
+                    "1: Accept Closest Match 2: Accept Original (No Album) 3: Search Again 4: Input From Scratch q: Save And Exit ")
+
+            match user_input:
+                case '1':
+                    closest_match = spec["closest_match"]
+                    artists = [artist["name"]
+                               for artist in closest_match["artists"]]
+
+                    if ("year" in closest_match):
+                        album_date = closest_match["year"]
+                    else:
+                        album_date = None
+
+                    if (closest_match["thumbnails"] is not None):
+                        thumbnail = closest_match["thumbnails"][len(
+                            closest_match["thumbnails"]-1)]
+                    else:
+                        thumbnail = None
+
+                    self.user_replace_filename(closest_match["title"], artists,
+                                               song_path, spec["ext"],
+                                               closest_match["album"],
+                                               spec["url"], spec["duration"],
+                                               closest_match["trackNumber"],
+                                               closest_match["album_len"],
+                                               album_date,
+                                               thumbnail
+                                               )
+                    missing_albums.pop(song_path)
+
+                case '2':
+                    self.user_replace_filename(spec["found_title"],
+                                               [spec["found_artist"]],
+                                               song_path,
+                                               spec["ext"],
+                                               "", spec["url"],
+                                               spec["duration"],
+                                               1, 1, None, user_url)
+                    missing_albums.pop(song_path)
+
+                case '3':
+                    while (1):
+                        print(f"Old FilePath: {song_path}\n"
+                              f"Old Title: {spec["closest_match"]["title"]}\n"
+                              f"Old Artist: {spec["closest_match"]["title"]}")
+
+                        user_title = input("New Title: ")
+                        user_artist = input("New Artist: ")
+                        search = self.ytmusic.search(
+                            user_artist + " " + user_title, filter="songs", limit=1)
+                        if (search):
+                            album = self.ytmusic.get_album(
+                                search[0]["album"]["id"])["tracks"]
+
+                            # See if track is in the album we found
+                            album_name = [
+                                track for track in album
+                                if track["title"].lower() == user_title.lower()
+                            ]
+                            if (album_name):
+                                track_num = album_name[0]["trackNumber"]
+
+                                if (("thumbnails" in album_name[0])
+                                        and (album_name[0]["thumbnails"]
+                                             is not None)):
+                                    thumbs = album_name[0]["thumbnails"]
+                                else:
+                                    thumbs = search[0]["thumbnails"]
+
+                                artists = [sanitize_string(artist["name"])
+                                           for artist in search[0]["artists"]]
+
+                                if (("year" in search[0])
+                                   and (search[0]["year"] is not None)):
+                                    year = search[0]["year"]
+                                else:
+                                    year = None
+
+                                print(f"Found: \nTitle: {search[0]["title"]}\n"
+                                      f"Artists: {artists}\n"
+                                      f"Track Num: {
+                                          album_name[0]["trackNumber"]}\n"
+                                      f"Album Len: {len(album)}\n"
+                                      f"Year: {year}\n"
+                                      f"Thumbnail: {thumbs[len(thumbs)-1]}")
+
+                                user_input = ""
+                                while ((not user_input.lower() == 'y') and
+                                       (not user_input.lower() == 'n')):
+                                    user_input = input(
+                                        "Does The Above Seem Correct? (Y/N) ")
+
+                                if (user_input.lower() == 'y'):
+                                    image_size = get_img_size_url(
+                                        thumbs[len(thumbs-1)]["url"])
+
+                                    url = f"http://youtu.be/{
+                                        search[0]["videoId"]}"
+                                    self.user_replace_filename(search[0]["title"],
+                                                               artists,
+                                                               song_path,
+                                                               spec["ext"],
+                                                               album_name[0]["album"],
+                                                               url,
+                                                               spec["duration"],
+                                                               album_name[0]["trackNumber"],
+                                                               len(album),
+                                                               year,
+                                                               {"height": image_size[1],
+                                                                "width": image_size[0],
+                                                                "url": thumbs[len(thumbs)-1]["url"]})
+                                    missing_albums.pop(song_path)
+                                    break
+                            else:
+                                print("Album Not Found")
+                        else:
+                            print("Song Not Found")
+                case '4':
+                    while (1):
+                        print(f"Old FilePath: {song_path}\n"
+                              f"Old Title: {spec["closest_match"]["title"]}\n"
+                              f"Old Artist: {spec["closest_match"]["title"]}")
+                        user_title = input("New Title: ")
+                        user_artists = [input for input in input(
+                            "New Artists (seperated by ,): ").split(',')]
+                        user_album = input(
+                            "New Album (Leave Blank For None): ")
+                        user_url = input("New Song Url: ")
+                        user_duration = int(input("New Duration (seconds): "))
+                        user_track_num = int(input("New Track Number: "))
+                        user_total_tracks = int(
+                            input("Total Tracks In Album: "))
+                        user_album_date = input("Album Year: ")
+                        user_thumbnail_url = input("Thumbnail Url: ")
+
+                        confirmation = input(f"Title: {user_title}\n"
+                                             f"Artist: {user_artists}\n"
+                                             f"Album: {user_album}\n"
+                                             f"Url: {user_url}\n"
+                                             f"Duration: {user_duration}\n"
+                                             f"Track Num: {user_track_num}\n"
+                                             f"Total Tracks: {
+                            user_total_tracks}\n"
+                            f"Album Year: {user_album_date}\n"
+                            "Does Everything Above Look Right? (Y/N) ")
+
+                        if (confirmation.lower() == 'y'):
+                            image_size = get_img_size_url(user_thumbnail_url)
+
+                            self.user_replace_filename(user_title,
+                                                       user_artists,
+                                                       song_path,
+                                                       spec["ext"],
+                                                       user_album,
+                                                       user_url,
+                                                       user_duration,
+                                                       user_track_num,
+                                                       user_total_tracks,
+                                                       user_album_date,
+                                                       {"height": image_size[1],
+                                                        "width": image_size[0],
+                                                        "url": user_thumbnail_url})
+                            missing_albums.pop(song_path)
+                            break
+                case 'q':
+                    break
+        with open(self.missing_albums, "w") as f:
+            json.dump(missing_albums, f, indent=2)
+
 
 def main(args):
     ctl = CloudToLocal(args)
+    if (args.fix_missing):
+        ctl.correct_missing()
+        exit()
     ctl.check_ytdlp_update()
     print("STARTING DOWNLOAD")
     ctl.download()
@@ -281,6 +522,9 @@ if __name__ == "__main__":
     parser.add_argument("--retry_amt", "-retry", default=10,
                         help="Amount Of Times To Retry Non-Fatal Download"
                         " Errors")
+
+    parser.add_argument("--fix-missing", "-fm", type=int,
+                        help="Fix Missing Albums From File Path Specified")
 
     parser.add_argument("--fail_on_warning", "-w", type=int,
                         default=0, help="Exit Program On Failure")

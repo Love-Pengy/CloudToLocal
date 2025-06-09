@@ -1,6 +1,7 @@
 import mutagen
 import urllib
 import base64
+import utils.printing as printing
 
 
 def tag_file(filepath, artist, album, title, track_num,
@@ -31,20 +32,21 @@ def tag_file(filepath, artist, album, title, track_num,
         if (year):
             audio["date"] = year
 
-        header = urllib.request.urlopen(thumbnail["url"])
-        picture.data = header.read()
-        header.close()
-        picture.type = 17
-        picture.desc = u"Cover"
-        picture.mime = u"image/jpeg"
-        picture.width = thumbnail["width"]
-        picture.height = thumbnail["height"]
-        picture.depth = 8
+        if (thumbnail):
+            header = urllib.request.urlopen(thumbnail["url"])
+            picture.data = header.read()
+            header.close()
+            picture.type = 17
+            picture.desc = u"Cover"
+            picture.mime = u"image/jpeg"
+            picture.width = thumbnail["width"]
+            picture.height = thumbnail["height"]
+            picture.depth = 24
 
-        picture_data = picture.write()
-        encoded_data = base64.b64encode(picture_data)
-        comment_val = encoded_data.decode("ascii")
-        audio["metadata_block_picture"] = [comment_val]
+            picture_data = picture.write()
+            encoded_data = base64.b64encode(picture_data)
+            comment_val = encoded_data.decode("ascii")
+            audio["metadata_block_picture"] = [comment_val]
 
     elif (isinstance(audio, mutagen.mp4.MP4)):
         audio['\xa9nam'] = title
@@ -52,19 +54,23 @@ def tag_file(filepath, artist, album, title, track_num,
         audio['\xa9ART'] = artist
         if (year):
             audio['\xa9day'] = year
-        header = urllib.request.urlopen(thumbnail["url"])
-        audio['covr'] = [mutagen.mp4.MP4Cover(header.read(),
-                                              imageformat=mutagen.mp4.MP4Cover.FORMAT_JPEG)]
-        header.close()
-
+        if (thumbnail):
+            header = urllib.request.urlopen(thumbnail["url"])
+            audio['covr'] = [mutagen.mp4.MP4Cover(header.read(),
+                                                  imageformat=mutagen.mp4.MP4Cover.FORMAT_JPEG)]
+            header.close()
     else:
-        audio.add_picture(mutagen.APIC(
-                          encoding=3,  # utf-8
-                          mime="image/jpeg",
-                          type=3,
-                          desc="Cover",
-                          data=urllib.request
-                          .urlopen(thumbnail["url"]).read()
-                          ))
+        # NOTE: should be id3, but inconsistenly hits this case. NEEDS TESTING
+        printing.pwarning("NON IMPLEMENTED FILE TYPE FOUND. SKIPPING METADATA")
+        exit()
+        # if(thumbnail):
+        #     audio.add_picture(mutagen.APIC(
+        #                       encoding=3,  # utf-8
+        #                       mime="image/jpeg",
+        #                       type=3,
+        #                       desc="Cover",
+        #                       data=urllib.request
+        #                       .urlopen(thumbnail["url"]).read()
+        #                       ))
 
     audio.save()
