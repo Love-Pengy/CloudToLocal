@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
 import os
-import io
 import json
 import shutil
-import urllib
 import requests
 import traceback
 import configargparse
-from PIL import Image
 from time import sleep
 from pprint import pprint
 from yt_dlp import YoutubeDL
@@ -19,7 +16,7 @@ from yt_dlp.utils import DownloadError
 from utils.tag_handler import tag_file
 from utils.playlist_handler import PlaylistHandler
 from youtube_title_parse import get_artist_title
-from utils.common import get_diff_count, sanitize_string
+from utils.common import get_diff_count, sanitize_string, get_img_size_url
 
 
 class CloudToLocal:
@@ -66,8 +63,8 @@ class CloudToLocal:
             "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
         latest_release = release_page.json()["tag_name"]
         if (local_version != latest_release):
-            printing.pwarning(f"Newer yt_dlp Version Available, Please Update If"
-                              f" You Experience Download Issues ({
+            printing.pwarning(f"Newer yt_dlp Version Available, Please Update "
+                              f"If You Experience Download Issues ({
                                   local_version} -> {latest_release})")
         else:
             printing.pinfo(f"yt_dlp Is Up To Date (Version {latest_release})")
@@ -110,7 +107,9 @@ class CloudToLocal:
                     'outtmpl': "%(title)s.%(ext)s",
                     'download_archive': args.outdir+"/archive",
                     # Do Not Continue If Fragment Fails
-                    'skip_unavailable_fragments': False
+                    'skip_unavailable_fragments': False,
+                    # By Default Use The Song Thumbnail
+                    'embedthumbnail': True
                 }
                 print(f"\n[{index+1}/{len(info['entries'])}]"
                       f" Attempting: {title}")
@@ -126,7 +125,6 @@ class CloudToLocal:
                                 video_dl_info = video_info["requested_downloads"][0]
                                 curr_ext = video_dl_info["ext"]
                                 curr_filepath = video_dl_info["filepath"]
-                                # TODO: Use To Generate M3U
                                 curr_duration = video_info["duration"]
                         break
                     except DownloadError as e:
@@ -258,7 +256,6 @@ class CloudToLocal:
     def user_replace_filename(self, title, artists, filepath, extension,
                               album_name, url, duration, track_number, album_len,
                               album_date, thumbnail_url):
-        # TODO: Search for given values
         tag_file(filepath,
                  artists,
                  album_name,
@@ -318,7 +315,6 @@ class CloudToLocal:
                 user_input = input(
                     "1: Accept Closest Match 2: Accept Original (No Album) 3: Search Again 4: Input From Scratch q: Save And Exit ")
 
-            # TODO: delete entries once fixed
             match user_input:
                 case '1':
                     closest_match = spec["closest_match"]
@@ -348,9 +344,13 @@ class CloudToLocal:
                     missing_albums.pop(song_path)
 
                 case '2':
-                    # TODO: Allow Youtube/Soundcloud thumbnail for these
-                    self.user_replace_filename(spec["found_title"], [spec["found_artist"]], song_path,
-                                               spec["ext"], "", spec["url"], spec["duration"], 1, 1, None, None)
+                    self.user_replace_filename(spec["found_title"],
+                                               [spec["found_artist"]],
+                                               song_path,
+                                               spec["ext"],
+                                               "", spec["url"],
+                                               spec["duration"],
+                                               1, 1, None, user_url)
                     missing_albums.pop(song_path)
 
                 case '3':
@@ -373,11 +373,11 @@ class CloudToLocal:
                                 if track["title"].lower() == user_title.lower()
                             ]
                             if (album_name):
-                                # TODO: complete verification
                                 track_num = album_name[0]["trackNumber"]
 
                                 if (("thumbnails" in album_name[0])
-                                        and (album_name[0]["thumbnails"] is not None)):
+                                        and (album_name[0]["thumbnails"]
+                                             is not None)):
                                     thumbs = album_name[0]["thumbnails"]
                                 else:
                                     thumbs = search[0]["thumbnails"]
@@ -391,8 +391,6 @@ class CloudToLocal:
                                 else:
                                     year = None
 
-                                # FIXME: fix everywhere: should be taken from
-                                # album
                                 print(f"Found: \nTitle: {search[0]["title"]}\n"
                                       f"Artists: {artists}\n"
                                       f"Track Num: {
@@ -408,20 +406,21 @@ class CloudToLocal:
                                         "Does The Above Seem Correct? (Y/N) ")
 
                                 if (user_input.lower() == 'y'):
-                                    # FIXME: put into function and fix
-                                    # everywhere else
-                                    with urllib.request.urlopen(thumbs[len(thumbs)-1]["url"]) as response:
-                                        image_data = response.read()
-                                    image_size = Image.open(
-                                        io.BytesIO(image_data)).size
+                                    image_size = get_img_size_url(
+                                        thumbs[len(thumbs-1)]["url"])
 
-                                    pprint(search[0]["videoId"])
                                     url = f"http://youtu.be/{
                                         search[0]["videoId"]}"
-                                    self.user_replace_filename(search[0]["title"], artists,
-                                                               song_path, spec["ext"], album_name[0]["album"],
-                                                               url, spec["duration"], album_name[0]["trackNumber"], len(
-                                                                   album), year,
+                                    self.user_replace_filename(search[0]["title"],
+                                                               artists,
+                                                               song_path,
+                                                               spec["ext"],
+                                                               album_name[0]["album"],
+                                                               url,
+                                                               spec["duration"],
+                                                               album_name[0]["trackNumber"],
+                                                               len(album),
+                                                               year,
                                                                {"height": image_size[1],
                                                                 "width": image_size[0],
                                                                 "url": thumbs[len(thumbs)-1]["url"]})
@@ -456,19 +455,23 @@ class CloudToLocal:
                                              f"Duration: {user_duration}\n"
                                              f"Track Num: {user_track_num}\n"
                                              f"Total Tracks: {
-                                                 user_total_tracks}\n"
-                                             f"Album Year: {user_album_date}\n"
-                                             "Does Everything Above Look Right? (Y/N) ")
+                            user_total_tracks}\n"
+                            f"Album Year: {user_album_date}\n"
+                            "Does Everything Above Look Right? (Y/N) ")
 
                         if (confirmation.lower() == 'y'):
-                            with urllib.request.urlopen(user_thumbnail_url) as response:
-                                image_data = response.read()
-                            image_size = Image.open(
-                                io.BytesIO(image_data)).size
+                            image_size = get_img_size_url(user_thumbnail_url)
 
-                            self.user_replace_filename(user_title, user_artists,
-                                                       song_path, spec["ext"], user_album,
-                                                       user_url, user_duration, user_track_num, user_total_tracks, user_album_date,
+                            self.user_replace_filename(user_title,
+                                                       user_artists,
+                                                       song_path,
+                                                       spec["ext"],
+                                                       user_album,
+                                                       user_url,
+                                                       user_duration,
+                                                       user_track_num,
+                                                       user_total_tracks,
+                                                       user_album_date,
                                                        {"height": image_size[1],
                                                         "width": image_size[0],
                                                         "url": user_thumbnail_url})
