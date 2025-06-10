@@ -62,10 +62,10 @@ class CloudToLocal:
         release_page = requests.get(
             "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
         latest_release = release_page.json()["tag_name"]
-        if (local_version != latest_release):
+        if (not (local_version == latest_release)):
             printing.pwarning(f"Newer yt_dlp Version Available, Please Update "
-                              f"If You Experience Download Issues ({
-                                  local_version} -> {latest_release})")
+                              f"If You Experience Download Issues"
+                              f"({local_version} -> {latest_release})")
         else:
             printing.pinfo(f"yt_dlp Is Up To Date (Version {latest_release})")
 
