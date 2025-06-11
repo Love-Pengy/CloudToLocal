@@ -97,10 +97,24 @@ class CloudToLocal:
                     title = sc_info['title']
 
                 ydl_opts_download = {
+                    # Download Best audio format and fallback to best video
                     'format': 'bestaudio/best',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                    }],
+                    'postprocessors': [
+                        {
+                            'key': 'FFmpegMetadata',
+                            'add_metadata': True
+                        },
+                        # In the case of a video format extract audio with best
+                        # quality opus
+                        {
+                            'key': 'FFmpegExtractAudio',
+                            'preferredcodec': 'opus',
+                            'preferredquality': '0'
+                        },
+                        {
+                            'key': 'EmbedThumbnail'
+                        }
+                    ],
                     'quiet': (not args.verbose),
                     'noplaylist': True,
                     'paths': {"home": args.outdir},
@@ -108,6 +122,8 @@ class CloudToLocal:
                     'download_archive': args.outdir+"/archive",
                     # Do Not Continue If Fragment Fails
                     'skip_unavailable_fragments': False,
+                    # Write Thumbnail To Disc For Usage With FFMPEG
+                    'writethumbnail': True,
                     # By Default Use The Song Thumbnail
                     'embedthumbnail': True
                 }
