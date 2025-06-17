@@ -22,7 +22,7 @@ from utils.common import get_diff_count, sanitize_string, get_img_size_url
 class CloudToLocal:
     def __init__(self, args):
         self.dl_playlists = args.playlists
-        self.output_dir = args.outdir
+        self.output_dir = os.path.expanduser(args.outdir)
         if (not (self.output_dir[len(self.output_dir)-1] == '/')):
             self.output_dir += '/'
         self.unavail_file = args.unavail_file
@@ -117,9 +117,9 @@ class CloudToLocal:
                     ],
                     'quiet': (not args.verbose),
                     'noplaylist': True,
-                    'paths': {"home": args.outdir},
+                    'paths': {"home": self.output_dir},
                     'outtmpl': "%(title)s.%(ext)s",
-                    'download_archive': args.outdir+"/archive",
+                    'download_archive': self.output_dir+"/archive",
                     # Do Not Continue If Fragment Fails
                     'skip_unavailable_fragments': False,
                     # Write Thumbnail To Disc For Usage With FFMPEG
