@@ -1,11 +1,16 @@
 import mutagen
 import urllib
 import base64
-import utils.printing as printing
+from mutagen.flac import FLAC, Picture
+from mutagen.mp4 import MP4, MP4Cover
+from mutagen.mp3 import MP3
+from mutagen.id3 import TIT2, TOPE, TALB, TRCK, TDAT, APIC
+from mutagen.oggopus import OggOpus
+from mutagen.oggvorbis import OggVorbis
 
 
 def tag_file(filepath, artist, album, title, track_num,
-             total_tracks, year, thumbnail):
+             total_tracks, year, thumbnail, ext):
     """Tag File With Information Passed
 
             Args:
@@ -17,60 +22,65 @@ def tag_file(filepath, artist, album, title, track_num,
                 total_tracks (int): total number of tracks in album
                 year (int): year/date released (can be none)
                 thumbnail (dict): dictionary of thumbnails
+                ext (string): File Extension
     """
-
-    audio = mutagen.File(filepath)
-
-    if (isinstance(audio, mutagen.oggvorbis.OggVorbis)
-            or isinstance(audio, mutagen.oggopus.OggOpus)):
-        picture = mutagen.flac.Picture()
-
-        audio["album"] = album
-        audio["artist"] = artist
-        audio["title"] = title
-        audio["tracknumber"] = f"{track_num}/{total_tracks}"
+    if (ext == "mp3"):
+        metadata = MP3(filepath)
+        metadata.setall(TIT2(title, encoding=3))
+        metadata.setall(TOPE(artist, encoding=3))
+        metadata.setall(TALB(album, encoding=3))
+        metadata.setall(TRCK(track_num, encoding=3))
         if (year):
-            audio["date"] = year
+            metadata.setall(TDAT(year, encoding=3))
+        metadata.setall('APIC', [APIC(
+            encoding=0,
+            mime="image/jpeg",
+            type=3,  # Front Cover
+            desc="Cover",
+            data=urllib.request
+            .urlopen(thumbnail["url"]).read()
+        )])
+        metadata.save()
+    elif (ext in ["m4a", "mp4"]):
+        metadata = MP4(filepath)
+        metadata['\xa9nam'] = title
+        metadata['\xa9alb'] = album
+        metadata['\xa9ART'] = artist
+        if (year):
+            metadata['\xa9day'] = year
+        header = urllib.request.urlopen(thumbnail["url"])
+        metadata['covr'] = [MP4Cover(header.read(),
+                                     imageformat=MP4Cover.FORMAT_JPEG)]
+        header.close()
+        metadata.save()
 
-        if (thumbnail):
-            header = urllib.request.urlopen(thumbnail["url"])
-            picture.data = header.read()
-            header.close()
-            picture.type = 17
-            picture.desc = u"Cover"
-            picture.mime = u"image/jpeg"
-            picture.width = thumbnail["width"]
-            picture.height = thumbnail["height"]
-            picture.depth = 24
+    elif (ext in ["ogg", "opus", "flac"]):
+        metadata = {'opus': OggOpus, 'flac': FLAC,
+                    'ogg': OggVorbis}[ext](filepath)
 
+        picture = Picture()
+        metadata["album"] = album
+        metadata["artist"] = artist
+        metadata["title"] = title
+        metadata["tracknumber"] = f"{track_num}/{total_tracks}"
+        if (year):
+            metadata["date"] = year
+
+        picture.data = urllib.request.urlopen(thumbnail["url"]).read()
+        picture.type = 3  # front cover
+        picture.desc = u"Cover"
+        picture.mime = u"image/jpeg"
+        picture.width = thumbnail["width"]
+        picture.height = thumbnail["height"]
+
+        if (ext == "flac"):
+            metadata.add_picture(picture)
+        else:
             picture_data = picture.write()
             encoded_data = base64.b64encode(picture_data)
             comment_val = encoded_data.decode("ascii")
-            audio["metadata_block_picture"] = [comment_val]
-
-    elif (isinstance(audio, mutagen.mp4.MP4)):
-        audio['\xa9nam'] = title
-        audio['\xa9alb'] = album
-        audio['\xa9ART'] = artist
-        if (year):
-            audio['\xa9day'] = year
-        if (thumbnail):
-            header = urllib.request.urlopen(thumbnail["url"])
-            audio['covr'] = [mutagen.mp4.MP4Cover(header.read(),
-                                                  imageformat=mutagen.mp4.MP4Cover.FORMAT_JPEG)]
-            header.close()
+            metadata["metadata_block_picture"] = [comment_val]
+        metadata.save()
     else:
-        # NOTE: should be id3, but inconsistenly hits this case. NEEDS TESTING
-        printing.pwarning("NON IMPLEMENTED FILE TYPE FOUND. SKIPPING METADATA")
-        exit()
-        # if(thumbnail):
-        #     audio.add_picture(mutagen.APIC(
-        #                       encoding=3,  # utf-8
-        #                       mime="image/jpeg",
-        #                       type=3,
-        #                       desc="Cover",
-        #                       data=urllib.request
-        #                       .urlopen(thumbnail["url"]).read()
-        #                       ))
-
-    audio.save()
+        raise ValueError("Unsupported FileType Passed To Tag Handler. "
+                         "Supported Types Are: flac, opus, ogg, mp3, and mp4")

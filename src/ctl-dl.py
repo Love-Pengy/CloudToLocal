@@ -237,7 +237,8 @@ class CloudToLocal:
                              album_name[0]["trackNumber"],
                              len(album),
                              year,
-                             thumbs[len(thumbs)-1])
+                             thumbs[len(thumbs)-1],
+                             extension)
 
                     printing.pinfo(f"{os.path.basename(filepath)} -> {artists[0]}_"
                                    f"{sanitize_string(
@@ -279,7 +280,8 @@ class CloudToLocal:
                  track_number,
                  album_len,
                  album_date,
-                 thumbnail_url)
+                 thumbnail_url, 
+                 extension)
 
         if (not album_name):
             album_name = title
