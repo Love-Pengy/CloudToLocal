@@ -240,26 +240,20 @@ class CloudToLocal:
                              thumbs[len(thumbs)-1],
                              extension)
 
-                    printing.pinfo(f"{os.path.basename(filepath)} -> {artists[0]}_"
-                                   f"{sanitize_string(
-                                       album_name[0]["album"])}_"
-                                   f"{album_name[0]["trackNumber"]:02d}_"
-                                   f"{sanitize_string(search[0]["title"])}"
-                                   f".{extension}")
+                    new_fname = f"{self.output_dir}{artists[0]}_{sanitize_string(album_name[0]["album"])}_{
+                        album_name[0]["trackNumber"]:02d}_{sanitize_string(search[0]["title"])}.{extension}"
 
-                    shutil.move(filepath, f"{self.output_dir}"
-                                f"{artists[0]}_"
-                                f"{sanitize_string(album_name[0]["album"])}_"
-                                f"{album_name[0]["trackNumber"]:02d}_"
-                                f"{sanitize_string(search[0]["title"])}"
-                                f".{extension}")
+                    printing.pinfo(f"{os.path.basename(filepath)} -> "
+                                   f"{new_fname}")
+
+                    shutil.move(filepath, new_fname)
 
                     if (args.generate_playlists):
                         self.playlist_handler.write_to_playlists(url, duration,
                                                                  artist, title,
                                                                  track_num,
                                                                  album_name[0]["album"],
-                                                                 filepath,
+                                                                 new_fname,
                                                                  self.output_dir)
 
         # NOTE: This occurs when both title and artist cannot be parsed.
@@ -280,7 +274,7 @@ class CloudToLocal:
                  track_number,
                  album_len,
                  album_date,
-                 thumbnail_url, 
+                 thumbnail_url,
                  extension)
 
         if (not album_name):
