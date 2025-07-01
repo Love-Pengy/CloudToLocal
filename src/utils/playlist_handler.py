@@ -102,12 +102,12 @@ class PlaylistHandler:
         """
         for playlist_spec in self.check_playlists(url):
 
-            if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.playlist")):
-                with open(f"{output_dir}{playlist_spec[1]}.playlist", "w") as f:
+            if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.m3u")):
+                with open(f"{output_dir}{playlist_spec[1]}.m3u", "w") as f:
                     f.write("#EXTM3U\n")
                     f.write(f"#EXTINF:{duration},{artist} - {title}\n")
-                    f.write(f"{artist}_{album}_{track_num}:02d_{title}\n")
+                    f.write(filepath + "\n")
             else:
-                with open(f"{output_dir}{playlist_spec[1]}.playlist", "a") as f:
+                with open(f"{output_dir}{playlist_spec[1]}.m3u", "a") as f:
                     f.write(f"#EXTINF:{duration},{artist} - {title}\n")
-                    f.write(f"{artist}_{album}_{track_num:02d}_{title}\n")
+                    f.write(filepath + "\n")
