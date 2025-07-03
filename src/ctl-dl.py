@@ -182,6 +182,8 @@ class CloudToLocal:
 
             if (search):
                 # FIXME: this should be able to handle songs not having albums
+                # should check if album is in search[0] and then set album to 
+                # the song name, and grab cover art from the search
                 album = self.ytmusic.get_album(
                     search[0]["album"]["id"])["tracks"]
 

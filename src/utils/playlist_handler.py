@@ -22,7 +22,7 @@ class PlaylistHandler:
         opts = webdriver.ChromeOptions()
         opts.add_argument("--headless")
         driver = webdriver.Chrome(options=opts)
-        for url in urls:
+        for index, url in enumerate(urls):
             if (url.startswith("https://feethemusic.com/")):
                 driver.get(url)
                 soup = BeautifulSoup(driver.page_source, "html.parser")
@@ -46,7 +46,7 @@ class PlaylistHandler:
                 self.playlists[(url, playlist_name)] = [a['href']
                                                         for a in url_div.find_all("a", href=True)]
 
-            # Soundcloud
+            # Soundcloud Long Link
             elif (url.startswith("https://soundcloud.com/")):
                 ydl_opts_extract = {
                     'extract_flat': True,
@@ -55,6 +55,27 @@ class PlaylistHandler:
                 }
                 with YoutubeDL(ydl_opts_extract) as ydl:
                     info = ydl.extract_info(url, download=False)
+                    if ("entries" in info):
+                        self.playlists[(url, info["album"])] = [
+                            entry["url"] for entry in info["entries"]]
+                    else:
+                        printing.pwarning(f"{url} Does Not Seem To Be A "
+                                          f"Playlist")
+
+            elif (url.startswith("https://on.soundcloud.com/")):
+                ydl_opts_extract = {
+                    'extract_flat': True,
+                    'skip_download': True,
+                    'quiet': (not printing.VERBOSE)
+                }
+                with YoutubeDL(ydl_opts_extract) as ydl:
+                    # HACK: redirect does not give full info of playlist so we
+                    #   so we just extract again when the actual url is
+                    #   obtained
+                    redirect = ydl.extract_info(url, download=False)
+                    info = ydl.extract_info(redirect["url"],
+                                            download=False)
+                    urls[index] = redirect["url"]
                     if ("entries" in info):
                         self.playlists[(url, info["album"])] = [
                             entry["url"] for entry in info["entries"]]
