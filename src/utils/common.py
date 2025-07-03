@@ -56,3 +56,22 @@ def get_img_size_url(url):
     image_size = Image.open(
         io.BytesIO(image_data)).size
     return (image_size)
+
+
+def increase_img_req_res(low_res):
+    """
+        Replace Thumbnail object of size 120x120 with 1480x1480
+
+        Args:
+            low_res (dict)
+
+        Returns:
+            Dictionary of increased size
+    """
+
+    high_res = {}
+    high_res["height"] = 1480
+    high_res["width"] = 1480
+    high_res["url"] = low_res["url"].replace("w120-h120",
+                                             "w1480-h1480")
+    return (high_res)

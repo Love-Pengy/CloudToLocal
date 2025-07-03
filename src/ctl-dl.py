@@ -16,7 +16,7 @@ from yt_dlp.utils import DownloadError
 from utils.tag_handler import tag_file
 from utils.playlist_handler import PlaylistHandler
 from youtube_title_parse import get_artist_title
-from utils.common import get_diff_count, sanitize_string, get_img_size_url
+from utils.common import get_diff_count, sanitize_string, get_img_size_url, increase_img_req_res
 
 
 class CloudToLocal:
@@ -156,8 +156,7 @@ class CloudToLocal:
                         printing.perror(f"Unexpected error for '{title}': {e}")
                         exit()
 
-                if (args.replace_filenames and curr_filepath and
-                        self.replace_fname):
+                if (curr_filepath and self.replace_fname):
                     self.replace_filename(title, uploader,
                                           curr_filepath, curr_ext,
                                           entry["ie_key"], url, curr_duration)
@@ -182,6 +181,7 @@ class CloudToLocal:
                 artist + " " + title, filter="songs", limit=1)
 
             if (search):
+                # FIXME: this should be able to handle songs not having albums
                 album = self.ytmusic.get_album(
                     search[0]["album"]["id"])["tracks"]
 
@@ -230,6 +230,8 @@ class CloudToLocal:
                     artists = [sanitize_string(artist["name"])
                                for artist in search[0]["artists"]]
 
+                    thumb_obj = thumbs[len(thumbs)-1]
+
                     tag_file(filepath,
                              artists,
                              album_name[0]["album"],
@@ -237,7 +239,7 @@ class CloudToLocal:
                              album_name[0]["trackNumber"],
                              len(album),
                              year,
-                             thumbs[len(thumbs)-1],
+                             increase_img_req_res(thumbs[len(thumbs)-1]),
                              extension)
 
                     new_fname = f"{self.output_dir}{artists[0]}_{sanitize_string(album_name[0]["album"])}_{
@@ -274,7 +276,7 @@ class CloudToLocal:
                  track_number,
                  album_len,
                  album_date,
-                 thumbnail_url,
+                 increase_img_req_res(thumbnail_url),
                  extension)
 
         if (not album_name):
@@ -351,7 +353,7 @@ class CloudToLocal:
                                                closest_match["trackNumber"],
                                                closest_match["album_len"],
                                                album_date,
-                                               thumbnail
+                                               increase_img_req_res(thumbnail)
                                                )
                     missing_albums.pop(song_path)
 
