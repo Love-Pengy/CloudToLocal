@@ -181,19 +181,19 @@ class CloudToLocal:
                 artist + " " + title, filter="songs", limit=1)
 
             if (search):
-                # FIXME: this should be able to handle songs not having albums
-                # should check if album is in search[0] and then set album to 
-                # the song name, and grab cover art from the search
-                album = self.ytmusic.get_album(
-                    search[0]["album"]["id"])["tracks"]
+                single = True
+                if ("album" in search[0]):
+                    single = False
+                    album = self.ytmusic.get_album(
+                        search[0]["album"]["id"])["tracks"]
 
-                # See if track is in the album we found
-                album_name = [
-                    track for track in album
-                    if track["title"].lower() == title.lower()
-                ]
+                    # See if track is in the album we found
+                    album_name = [
+                        track for track in album
+                        if track["title"].lower() == title.lower()
+                    ]
 
-                if (not album_name):
+                if (not album_name and ("album" in search[0])):
                     closest_match_miss_count = 99999
                     closest_match = None
                     for album_entry in album:
@@ -215,13 +215,17 @@ class CloudToLocal:
                     }
                     printing.pinfo(f"ALBUM MISSED: {title} {artist}")
                 else:
-
-                    track_num = album_name[0]["trackNumber"]
-                    if (("thumbnails" in album_name[0])
-                            and (album_name[0]["thumbnails"] is not None)):
-                        thumbs = album_name[0]["thumbnails"]
-                    else:
+                    if (single):
+                        track_num = 1
                         thumbs = search[0]["thumbnails"]
+                        album_name = [{"album": None}]
+                    else:
+                        track_num = album_name[0]["trackNumber"]
+                        if (("thumbnails" in album_name[0])
+                                and (album_name[0]["thumbnails"] is not None)):
+                            thumbs = album_name[0]["thumbnails"]
+                        else:
+                            thumbs = search[0]["thumbnails"]
 
                     if (("year" in search[0])
                        and (search[0]["year"] is not None)):
@@ -232,13 +236,11 @@ class CloudToLocal:
                     artists = [sanitize_string(artist["name"])
                                for artist in search[0]["artists"]]
 
-                    thumb_obj = thumbs[len(thumbs)-1]
-
                     tag_file(filepath,
                              artists,
                              album_name[0]["album"],
                              search[0]["title"],
-                             album_name[0]["trackNumber"],
+                             track_num,
                              len(album),
                              year,
                              increase_img_req_res(thumbs[len(thumbs)-1]),
