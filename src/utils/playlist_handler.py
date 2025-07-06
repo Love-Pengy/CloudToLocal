@@ -9,11 +9,13 @@ import utils.printing as printing
 
 class PlaylistHandler:
 
-    def __init__(self, urls, retries):
+    def __init__(self,  retries, urls=None, info_ret=None):
         self.playlists = {}
-        self.add_urls(urls, retries)
+        self.urls_populated = False 
+        if (urls):
+            self.add_urls(urls, retries, info_ret)
 
-    def add_urls(self, urls, retry_cnt):
+    def add_urls(self, urls, retry_cnt, info_ret=None):
         """ Creates A Dictionary Where The Keys Are Tuples
             (playlist url, playlist name) and the values are lists of song urls
         """
@@ -23,7 +25,7 @@ class PlaylistHandler:
         opts.add_argument("--headless")
         driver = webdriver.Chrome(options=opts)
         for index, url in enumerate(urls):
-            if (url.startswith("https://feethemusic.com/")):
+            if (url.startswith("https://feelthemusic.com/")):
                 driver.get(url)
                 soup = BeautifulSoup(driver.page_source, "html.parser")
                 driver.quit()
@@ -43,6 +45,7 @@ class PlaylistHandler:
                     printing.pwarning(f"FAILED TO FIND PLAYLIST {url}")
                     continue
 
+                # NOTE: this should probably construct info for the return
                 self.playlists[(url, playlist_name)] = [a['href']
                                                         for a in url_div.find_all("a", href=True)]
 
@@ -55,6 +58,8 @@ class PlaylistHandler:
                 }
                 with YoutubeDL(ydl_opts_extract) as ydl:
                     info = ydl.extract_info(url, download=False)
+                    if (info_ret is not None):
+                        info_ret.append(info)
                     if ("entries" in info):
                         self.playlists[(url, info["album"])] = [
                             entry["url"] for entry in info["entries"]]
@@ -63,19 +68,18 @@ class PlaylistHandler:
                                           f"Playlist")
 
             elif (url.startswith("https://on.soundcloud.com/")):
+                redirect = YoutubeDL({'extract_flat': True,
+                                     'skip_download': True,
+                                     'quiet': (not printing.VERBOSE)}).extract_info(url, download=False)
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
                     'quiet': (not printing.VERBOSE)
                 }
                 with YoutubeDL(ydl_opts_extract) as ydl:
-                    # HACK: redirect does not give full info of playlist so we
-                    #   so we just extract again when the actual url is
-                    #   obtained
-                    redirect = ydl.extract_info(url, download=False)
-                    info = ydl.extract_info(redirect["url"],
-                                            download=False)
-                    urls[index] = redirect["url"]
+                    info = ydl.extract_info(redirect["url"], download=False)
+                    if (info_ret is not None):
+                        info_ret.append(info)
                     if ("entries" in info):
                         self.playlists[(url, info["album"])] = [
                             entry["url"] for entry in info["entries"]]
@@ -92,6 +96,8 @@ class PlaylistHandler:
                 }
                 with YoutubeDL(ydl_opts_extract) as ydl:
                     info = ydl.extract_info(url, download=False)
+                    if (info_ret is not None):
+                        info_ret.append(info)
                     if ("entries" in info):
                         self.playlists[(url, info["title"])] = [
                             entry["url"] for entry in info["entries"]]
@@ -100,11 +106,14 @@ class PlaylistHandler:
                                           f"Playlist")
             else:
                 printing.pwarning(f"Unexpected Domain: {url}")
+        self.urls_populated = True
 
     def check_playlists(self, url):
         """ Returns a list of playlists that 'url' is in in
             (playlist url, playlist name) form"""
 
+        if (not self.urls_populated):
+            printing.pwarning("Urls Have Not Yet Been Populated")
         return (
             [spec for spec in self.playlists if url in self.playlists[spec]])
 

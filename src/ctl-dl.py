@@ -35,8 +35,10 @@ class CloudToLocal:
         self.missing_albums = args.missing_albums
 
         if (args.generate_playlists):
-            self.playlist_handler = PlaylistHandler(self.dl_playlists,
-                                                    self.retries)
+            self.playlist_handler = PlaylistHandler(self.retries,
+                                                    self.dl_playlists,
+                                                    self.playlists_info
+                                                    )
 
         if (not args.fix_missing):
             if (self.not_found):
@@ -45,17 +47,6 @@ class CloudToLocal:
                 open(self.missing_albums, "w")
             if (self.unavail_file):
                 open(self.unavail_file, "w")
-
-        ydl_opts_extract = {
-            'extract_flat': True,
-            'skip_download': True,
-            'quiet': (not args.verbose)
-        }
-
-        for playlist in self.dl_playlists:
-            with YoutubeDL(ydl_opts_extract) as ydl:
-                self.playlists_info.append(
-                    ydl.extract_info(playlist, download=False))
 
     def check_ytdlp_update(self):
         local_version = yt_dlp_version.__version__
@@ -182,7 +173,8 @@ class CloudToLocal:
 
             if (search):
                 single = True
-                if ("album" in search[0]):
+                if ("album" in search[0] and search[0]["album"] is not None):
+                    print(search[0])
                     single = False
                     album = self.ytmusic.get_album(
                         search[0]["album"]["id"])["tracks"]
