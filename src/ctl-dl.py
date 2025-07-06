@@ -174,7 +174,6 @@ class CloudToLocal:
             if (search):
                 single = True
                 if ("album" in search[0] and search[0]["album"] is not None):
-                    print(search[0])
                     single = False
                     album = self.ytmusic.get_album(
                         search[0]["album"]["id"])["tracks"]

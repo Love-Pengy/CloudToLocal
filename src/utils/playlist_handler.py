@@ -83,6 +83,7 @@ class PlaylistHandler:
                     if ("entries" in info):
                         self.playlists[(url, info["album"])] = [
                             entry["url"] for entry in info["entries"]]
+                        self.playlists[(url, info["album"])].append(redirect["original_url"])
                     else:
                         printing.pwarning(f"{url} Does Not Seem To Be A "
                                           f"Playlist")
@@ -131,7 +132,6 @@ class PlaylistHandler:
                 filepath (str): path to song
         """
         for playlist_spec in self.check_playlists(url):
-
             if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.m3u")):
                 with open(f"{output_dir}{playlist_spec[1]}.m3u", "w") as f:
                     f.write("#EXTM3U\n")
