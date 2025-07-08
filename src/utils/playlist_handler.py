@@ -1,17 +1,18 @@
 import os
+import utils.printing as printing
 from time import sleep
 from pprint import pprint
 from yt_dlp import YoutubeDL
 from bs4 import BeautifulSoup
 from selenium import webdriver
-import utils.printing as printing
+from utils.printing import info, warning
 
 
 class PlaylistHandler:
 
     def __init__(self,  retries, urls=None, info_ret=None):
         self.playlists = {}
-        self.urls_populated = False 
+        self.urls_populated = False
         if (urls):
             self.add_urls(urls, retries, info_ret)
 
@@ -39,10 +40,10 @@ class PlaylistHandler:
                     if (not (playlist_name == '')):
                         break
                     sleep(retry_cnt*10)
-                    printing.pinfo(f"Failed to obtain playlist info retrying "
-                                   f"({retry}): {url}")
+                    info(f"Failed to obtain playlist info retrying "
+                         f"({retry}): {url}")
                 else:
-                    printing.pwarning(f"FAILED TO FIND PLAYLIST {url}")
+                    warning(f"FAILED TO FIND PLAYLIST {url}")
                     continue
 
                 # NOTE: this should probably construct info for the return
@@ -57,36 +58,40 @@ class PlaylistHandler:
                     'quiet': (not printing.VERBOSE)
                 }
                 with YoutubeDL(ydl_opts_extract) as ydl:
-                    info = ydl.extract_info(url, download=False)
+                    extraction_info = ydl.extract_info(url, download=False)
                     if (info_ret is not None):
-                        info_ret.append(info)
-                    if ("entries" in info):
-                        self.playlists[(url, info["album"])] = [
-                            entry["url"] for entry in info["entries"]]
+                        info_ret.append(extraction_info)
+                    if ("entries" in extraction_info):
+                        self.playlists[(url, extraction_info["album"])] = [
+                            entry["url"] for entry in
+                            extraction_info["entries"]]
                     else:
-                        printing.pwarning(f"{url} Does Not Seem To Be A "
-                                          f"Playlist")
+                        warning(f"{url} Does Not Seem To Be A "
+                                f"Playlist")
 
             elif (url.startswith("https://on.soundcloud.com/")):
                 redirect = YoutubeDL({'extract_flat': True,
                                      'skip_download': True,
-                                     'quiet': (not printing.VERBOSE)}).extract_info(url, download=False)
+                                      'quiet': (not printing.VERBOSE)}).extract_info(url, download=False)
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
                     'quiet': (not printing.VERBOSE)
                 }
                 with YoutubeDL(ydl_opts_extract) as ydl:
-                    info = ydl.extract_info(redirect["url"], download=False)
+                    extraction_info = ydl.extract_info(
+                        redirect["url"], download=False)
                     if (info_ret is not None):
-                        info_ret.append(info)
-                    if ("entries" in info):
-                        self.playlists[(url, info["album"])] = [
-                            entry["url"] for entry in info["entries"]]
-                        self.playlists[(url, info["album"])].append(redirect["original_url"])
+                        info_ret.append(extraction_info)
+                    if ("entries" in extraction_info):
+                        self.playlists[(url, extraction_info["album"])] = [
+                            entry["url"] for entry
+                            in extraction_info["entries"]]
+                        self.playlists[(url, extraction_info["album"])].append(
+                            redirect["original_url"])
                     else:
-                        printing.pwarning(f"{url} Does Not Seem To Be A "
-                                          f"Playlist")
+                        warning(f"{url} Does Not Seem To Be A "
+                                f"Playlist")
 
             # Youtube
             elif (url.startswith("https://youtube.com/")):
@@ -96,17 +101,18 @@ class PlaylistHandler:
                     'quiet': (not printing.VERBOSE)
                 }
                 with YoutubeDL(ydl_opts_extract) as ydl:
-                    info = ydl.extract_info(url, download=False)
+                    extraction_info = ydl.extract_info(url, download=False)
                     if (info_ret is not None):
-                        info_ret.append(info)
-                    if ("entries" in info):
-                        self.playlists[(url, info["title"])] = [
-                            entry["url"] for entry in info["entries"]]
+                        info_ret.append(extraction_info)
+                    if ("entries" in extraction_info):
+                        self.playlists[(url, extraction_info["title"])] = [
+                            entry["url"] for entry in
+                            extraction_info["entries"]]
                     else:
-                        printing.pwarning(f"{url} Does Not Seem To Be A "
-                                          f"Playlist")
+                        warning(f"{url} Does Not Seem To Be A "
+                                f"Playlist")
             else:
-                printing.pwarning(f"Unexpected Domain: {url}")
+                warning(f"Unexpected Domain: {url}")
         self.urls_populated = True
 
     def check_playlists(self, url):
@@ -114,7 +120,7 @@ class PlaylistHandler:
             (playlist url, playlist name) form"""
 
         if (not self.urls_populated):
-            printing.pwarning("Urls Have Not Yet Been Populated")
+            warning("Urls Have Not Yet Been Populated")
         return (
             [spec for spec in self.playlists if url in self.playlists[spec]])
 

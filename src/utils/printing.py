@@ -2,7 +2,7 @@ VERBOSE = False
 FAIL_ON_WARNING = False
 
 
-def pinfo(*args, **kwargs):
+def info(*args, **kwargs):
     if (VERBOSE):
         print("'\033[94m")
         print("ⓘ  ", end="")
@@ -10,7 +10,7 @@ def pinfo(*args, **kwargs):
         print("\033[0m")
 
 
-def pwarning(*args, **kwargs):
+def warning(*args, **kwargs):
     print("\033[93m")
     print("⚠️", end="")
     print(*args, **kwargs)
@@ -19,14 +19,14 @@ def pwarning(*args, **kwargs):
         exit()
 
 
-def psuccess(*args, **kwargs):
+def success(*args, **kwargs):
     print("\033[92m")
     print("✅", end="")
     print(*args, **kwargs)
     print("\033[0m")
 
 
-def perror(*args, **kwargs):
+def error(*args, **kwargs):
     print("\033[91m")
     print("❌", end="")
     print(*args, **kwargs)

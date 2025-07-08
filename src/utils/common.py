@@ -1,6 +1,9 @@
 import io
 import urllib
+import requests
+from utils.printing import warning, info
 from PIL import Image
+from yt_dlp import version as yt_dlp_version
 
 
 def get_diff_count(in1, in2):
@@ -75,3 +78,16 @@ def increase_img_req_res(low_res):
     high_res["url"] = low_res["url"].replace("w120-h120",
                                              "w1480-h1480")
     return (high_res)
+
+
+def check_ytdlp_update():
+    local_version = yt_dlp_version.__version__
+    release_page = requests.get(
+        "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
+    latest_release = release_page.json()["tag_name"]
+    if (not (local_version == latest_release)):
+        warning(f"Newer yt_dlp Version Available, Please Update "
+                f"If You Experience Download Issues"
+                f"({local_version} -> {latest_release})")
+    else:
+        info(f"yt_dlp Is Up To Date (Version {latest_release})")
