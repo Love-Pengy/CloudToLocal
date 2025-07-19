@@ -1,0 +1,6 @@
+verbose: 0
+playlists: [
+  "https://youtube.com/playlist?list=PLN0r2zeXfMwAJRhNb4jiVquoIrbo2LTPA&si=doBfHzzdLuThRtMd"
+]
+outdir: "~/Music"
+
