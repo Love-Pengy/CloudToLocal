@@ -3,42 +3,47 @@
 import os
 import json
 import traceback
-import configargparse
+import sys
 from time import sleep
-from pprint import pprint
+
+import configargparse
+# from pprint import pprint
 from yt_dlp import YoutubeDL
-from ytmusicapi import YTMusic
-import utils.printing as printing
 from yt_dlp.utils import DownloadError
+from ytmusicapi import YTMusic
 from utils.common import check_ytdlp_update
-from utils.printing import info, warning, error
+from utils import printing
+from utils.printing import warning, error, success
 from utils.playlist_handler import PlaylistHandler
 from utils.file_operations import replace_filename
 
 
 class CloudToLocal:
-    def __init__(self, args):
-        self.dl_playlists = args.playlists
-        self.output_dir = os.path.expanduser(args.outdir)
+    def __init__(self, arguments):
+        self.dl_playlists = arguments.playlists
+        self.output_dir = os.path.expanduser(arguments.outdir)
         if (not (self.output_dir[len(self.output_dir)-1] == '/')):
             self.output_dir += '/'
-        self.unavail_file = args.unavail_file
-        self.retries = args.retry_amt
+        self.unavail_file = arguments.unavail_file
+        self.retries = arguments.retry_amt
         self.playlists_info = []
-        self.replace_fname = args.replace_filenames
+        self.replace_fname = arguments.replace_filenames
         self.ytmusic = YTMusic()
-        self.not_found = args.not_found
+        self.not_found = arguments.not_found
         self.missing_albums_map = {}
-        self.missing_albums = args.missing_albums
+        self.missing_albums = arguments.missing_albums
+        self.download_delay = arguments.download_sleep
+        self.request_delay = arguments.request_sleep
+        self.verbose = arguments.verbose
 
-        self.generate_playlists = args.generate_playlists
+        self.generate_playlists = arguments.generate_playlists
         if (self.generate_playlists):
             self.playlist_handler = PlaylistHandler(self.retries,
                                                     self.dl_playlists,
-                                                    self.playlists_info
+                                                    self.playlists_info,
+                                                    self.request_delay
                                                     )
-
-        if (not args.fix_missing):
+        if (not arguments.fix_missing):
             if (self.not_found):
                 open(self.not_found, "w")
             if (self.missing_albums):
@@ -92,7 +97,7 @@ class CloudToLocal:
                             'key': 'EmbedThumbnail'
                         }
                     ],
-                    'quiet': (not args.verbose),
+                    'quiet': (not self.verbose),
                     'noplaylist': True,
                     'paths': {"home": self.output_dir},
                     'outtmpl': "%(title)s.%(ext)s",
@@ -102,13 +107,19 @@ class CloudToLocal:
                     # Write Thumbnail To Disc For Usage With FFMPEG
                     'writethumbnail': True,
                     # By Default Use The Song Thumbnail
-                    'embedthumbnail': True
+                    'embedthumbnail': True,
                 }
+                if (self.download_delay):
+                    ydl_opts_download["sleep_interval"] = 1
+                    ydl_opts_download["max_sleep_interval"] = self.download_delay
+                if (self.request_delay):
+                    ydl_opts_download["sleep_interval_requests"] = self.request_delay
+
                 print(f"\n[{index+1}/{len(info['entries'])}]"
                       f" Attempting: {title}")
 
                 curr_filepath = None
-                for retry in range(0, args.retry_amt-1):
+                for retry in range(0, self.retries-1):
                     try:
                         with YoutubeDL(ydl_opts_download) as ydl:
                             video_info = ydl.extract_info(url, download=True)
@@ -119,19 +130,22 @@ class CloudToLocal:
                                 curr_ext = video_dl_info["ext"]
                                 curr_filepath = video_dl_info["filepath"]
                                 curr_duration = video_info["duration"]
+                            else:
+                                curr_ext = None
+                                curr_duration = None
                         break
                     except DownloadError as e:
                         info(f"Failed to download Retrying"
-                                       f"({retry}): {title} {url}: {e}")
+                             f"({retry}): {title} {url}: {e}")
                         sleep(retry*10)
                         if (not retry):
-                            with open(args.unavail_file, "a") as f:
+                            with open(self.unavail_file, "a") as f:
                                 f.write(url)
                                 f.write('\n')
                     except Exception as e:
                         print(traceback.format_exc())
                         error(f"Unexpected error for '{title}': {e}")
-                        exit()
+                        sys.exit()
 
                 if (curr_filepath and self.replace_fname):
                     replace_filename(title, uploader,
@@ -148,11 +162,12 @@ class CloudToLocal:
         success("Download Completed")
 
 
-def main(args):
-    ctl = CloudToLocal(args)
-    if (args.fix_missing):
+def main(arguments):
+    ctl = CloudToLocal(arguments)
+    if (arguments.fix_missing):
+        # FIXME: correct_missing has been moved.
         ctl.correct_missing()
-        exit()
+        sys.exit()
     check_ytdlp_update()
     print("STARTING DOWNLOAD")
     ctl.download()
@@ -206,8 +221,13 @@ if __name__ == "__main__":
                              " The Album")
 
     parser.add_argument("--generate_playlists", "-gp", default=1,
-                        help="Generate m3u Playlists From Specified Download"
+                        help="Generate M3U Playlists From Specified Download"
                              " Urls")
+    parser.add_argument("--download_sleep", "-ds", default=5,
+                        help="Maximum Amount Of Seconds To Sleep Before A Download")
+
+    parser.add_argument("--request_sleep", "-rs", default=0,
+                        help="Amount Of Seconds To Sleep Before A Download")
 
     args = parser.parse_args()
     printing.VERBOSE = args.verbose

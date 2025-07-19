@@ -10,9 +10,11 @@ from utils.printing import info, warning
 
 class PlaylistHandler:
 
-    def __init__(self,  retries, urls=None, info_ret=None):
+    def __init__(self,  retries, urls=None, info_ret=None, request_delay=None):
         self.playlists = {}
         self.urls_populated = False
+        self.request_delay = request_delay
+
         if (urls):
             self.add_urls(urls, retries, info_ret)
 
@@ -55,8 +57,12 @@ class PlaylistHandler:
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
-                    'quiet': (not printing.VERBOSE)
+                    'quiet': (not printing.VERBOSE),
                 }
+
+                if (self.request_delay):
+                    ydl_opts_extract["sleep_interval_requests"] = self.request_delay
+
                 with YoutubeDL(ydl_opts_extract) as ydl:
                     extraction_info = ydl.extract_info(url, download=False)
                     if (info_ret is not None):
@@ -72,12 +78,16 @@ class PlaylistHandler:
             elif (url.startswith("https://on.soundcloud.com/")):
                 redirect = YoutubeDL({'extract_flat': True,
                                      'skip_download': True,
-                                      'quiet': (not printing.VERBOSE)}).extract_info(url, download=False)
+                                      'quiet': (not printing.VERBOSE)}).extract_info(url,
+                                                                                     download=False)
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
-                    'quiet': (not printing.VERBOSE)
+                    'quiet': (not printing.VERBOSE),
                 }
+                if (self.request_delay):
+                    ydl_opts_extract["sleep_interval_requests"] = self.request_delay
+
                 with YoutubeDL(ydl_opts_extract) as ydl:
                     extraction_info = ydl.extract_info(
                         redirect["url"], download=False)
@@ -98,8 +108,11 @@ class PlaylistHandler:
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
-                    'quiet': (not printing.VERBOSE)
+                    'quiet': (not printing.VERBOSE),
                 }
+                if (self.request_delay):
+                    ydl_opts_extract["sleep_interval_requests"] = self.request_delay
+
                 with YoutubeDL(ydl_opts_extract) as ydl:
                     extraction_info = ydl.extract_info(url, download=False)
                     if (info_ret is not None):
