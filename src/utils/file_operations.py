@@ -2,6 +2,7 @@ import os
 import shutil
 import urllib
 import base64
+from pprint import pprint
 from mutagen.mp3 import MP3
 from ytmusicapi import YTMusic
 from utils.printing import info
@@ -141,6 +142,7 @@ def replace_filename(title, uploader, filepath, extension, provider,
                     album_name = [
                         track for track in album
                         if track["title"].lower() == title.lower()
+                        and track["artists"][0]["name"].lower() == artist.lower()
                     ]
 
                 if (not album_name and ("album" in search[0])):
