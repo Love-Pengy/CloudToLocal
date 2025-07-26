@@ -15,7 +15,7 @@ from utils.common import check_ytdlp_update
 from utils import printing
 from utils.printing import warning, error, success
 from utils.playlist_handler import PlaylistHandler
-from utils.file_operations import replace_filename
+from utils.file_operations import replace_filename, add_to_record
 
 
 class CloudToLocal:
@@ -24,14 +24,10 @@ class CloudToLocal:
         self.output_dir = os.path.expanduser(arguments.outdir)
         if (not (self.output_dir[len(self.output_dir)-1] == '/')):
             self.output_dir += '/'
-        self.unavail_file = arguments.unavail_file
         self.retries = arguments.retry_amt
         self.playlists_info = []
         self.replace_fname = arguments.replace_filenames
         self.ytmusic = YTMusic()
-        self.not_found = arguments.not_found
-        self.missing_albums_map = {}
-        self.missing_albums = arguments.missing_albums
         self.download_delay = arguments.download_sleep
         self.request_delay = arguments.request_sleep
         self.verbose = arguments.verbose
@@ -43,13 +39,9 @@ class CloudToLocal:
                                                     self.playlists_info,
                                                     self.request_delay
                                                     )
-        if (not arguments.fix_missing):
-            if (self.not_found):
-                open(self.not_found, "w")
-            if (self.missing_albums):
-                open(self.missing_albums, "w")
-            if (self.unavail_file):
-                open(self.unavail_file, "w")
+
+        self.report = {}
+        self.report_fpath = self.output_dir+"/ctl_report"
 
     def download(self):
         for info in self.playlists_info:
@@ -107,10 +99,10 @@ class CloudToLocal:
                     # Write Thumbnail To Disc For Usage With FFMPEG
                     'writethumbnail': True,
                     # By Default Use The Song Thumbnail
-                    'embedthumbnail': True,
+                    'embedthumbnail': True
                 }
                 if (self.download_delay):
-                    ydl_opts_download["sleep_interval"] = 1
+                    ydl_opts_download["sleep_interval"] = 0
                     ydl_opts_download["max_sleep_interval"] = self.download_delay
                 if (self.request_delay):
                     ydl_opts_download["sleep_interval_requests"] = self.request_delay
@@ -134,17 +126,18 @@ class CloudToLocal:
                                 curr_ext = None
                                 curr_duration = None
                         break
-                    except DownloadError as e:
-                        info(f"Failed to download Retrying"
-                             f"({retry}): {title} {url}: {e}")
+                    except DownloadError:
+                        printing.info(f"(#{retry+1}) Failed to download... Retrying")
                         sleep(retry*10)
                         if (not retry):
-                            with open(self.unavail_file, "a") as f:
-                                f.write(url)
-                                f.write('\n')
+                            add_to_record({"status": "DOWNLOAD_FAILURE", "url": url},
+                                          self.report)
+
                     except Exception as e:
                         print(traceback.format_exc())
                         error(f"Unexpected error for '{title}': {e}")
+                        add_to_record({"status": "DOWNLOAD_FAILURE", "url": url},
+                                      self.report)
                         sys.exit()
 
                 if (curr_filepath and self.replace_fname):
@@ -152,12 +145,10 @@ class CloudToLocal:
                                      curr_filepath, curr_ext,
                                      entry["ie_key"], url, curr_duration,
                                      self.generate_playlists,
-                                     self.missing_albums_map,
-                                     self.output_dir, self.playlist_handler)
+                                     self.output_dir, self.playlist_handler, self.report)
 
-        if (self.replace_fname):
-            with open(self.missing_albums, "w") as f:
-                json.dump(self.missing_albums_map, f, indent=2)
+        with open(self.report_fpath, "w") as f:
+            json.dump(self.report, f, ident=2)
 
         success("Download Completed")
 
@@ -193,11 +184,7 @@ if __name__ == "__main__":
                              "  Can Be Either Youtube or Soundcloud")
 
     parser.add_argument("--outdir", "-o", type=str,
-                        required=True, help="Directory To Output Files To")
-
-    parser.add_argument("--unavail_file", "-u", type=str,
-                        default="unavailable_videos",
-                        help="List Of Video URLS Unavailable For Download")
+                        required=True, help="Directory To Output Unverified Songs To")
 
     parser.add_argument("--retry_amt", "-retry", default=10,
                         help="Amount Of Times To Retry Non-Fatal Download"
@@ -212,17 +199,10 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", "-v", default=0,
                         help="Enable Verbose Output")
 
-    parser.add_argument("--not_found", "-nf", default="not_found",
-                        help="File Path To Output Songs That Failed The "
-                             " YTMusic Search")
-
-    parser.add_argument("--missing_albums", "-ma", default="missing_albums",
-                        help="File Path To Output Songs That Failed To Verify"
-                             " The Album")
-
     parser.add_argument("--generate_playlists", "-gp", default=1,
                         help="Generate M3U Playlists From Specified Download"
                              " Urls")
+
     parser.add_argument("--download_sleep", "-ds", default=5,
                         help="Maximum Amount Of Seconds To Sleep Before A Download")
 
