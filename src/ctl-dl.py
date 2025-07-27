@@ -31,6 +31,7 @@ class CloudToLocal:
         self.download_delay = arguments.download_sleep
         self.request_delay = arguments.request_sleep
         self.verbose = arguments.verbose
+        self.debug = bool(arguments.debug)
 
         self.generate_playlists = arguments.generate_playlists
         if (self.generate_playlists):
@@ -61,7 +62,7 @@ class CloudToLocal:
                     #       Of Song Information For Top Level Entry So We Must
                     #       Query Further
                     sc_info = YoutubeDL({'simulate': True,
-                                         'quiet': True, }
+                                         'quiet': not self.verbose, }
                                         ).extract_info(url)
                     if ('artist' in sc_info):
                         uploader = sc_info['artist']
@@ -89,7 +90,10 @@ class CloudToLocal:
                             'key': 'EmbedThumbnail'
                         }
                     ],
-                    'quiet': (not self.verbose),
+                    # Whether to print to stdout
+                    'quiet': not self.verbose,
+                    # Whether to add additional info to stdout
+                    'verbose': self.debug,
                     'noplaylist': True,
                     'paths': {"home": self.output_dir},
                     'outtmpl': "%(title)s.%(ext)s",
@@ -99,7 +103,9 @@ class CloudToLocal:
                     # Write Thumbnail To Disc For Usage With FFMPEG
                     'writethumbnail': True,
                     # By Default Use The Song Thumbnail
-                    'embedthumbnail': True
+                    'embedthumbnail': True,
+                    # Ensure Only Formats That Are Downloadable Are Selected
+                    'check_formats': True
                 }
                 if (self.download_delay):
                     ydl_opts_download["sleep_interval"] = 0
@@ -148,7 +154,7 @@ class CloudToLocal:
                                      self.output_dir, self.playlist_handler, self.report)
 
         with open(self.report_fpath, "w") as f:
-            json.dump(self.report, f, ident=2)
+            json.dump(self.report, f, indent=2)
 
         success("Download Completed")
 
@@ -170,7 +176,7 @@ if __name__ == "__main__":
         config_file_parser_class=configargparse.YAMLConfigFileParser
     )
 
-    parser.add_argument("--replace_filenames", "-r", default=1,
+    parser.add_argument("--replace_filenames", "-r", default=1, type=int,
                         help="Attempt To Replace Filename With Official "
                         "YTMusic Name and embed metadata")
 
@@ -186,7 +192,7 @@ if __name__ == "__main__":
     parser.add_argument("--outdir", "-o", type=str,
                         required=True, help="Directory To Output Unverified Songs To")
 
-    parser.add_argument("--retry_amt", "-retry", default=10,
+    parser.add_argument("--retry_amt", "-retry", default=10, type=int,
                         help="Amount Of Times To Retry Non-Fatal Download"
                         " Errors")
 
@@ -196,18 +202,21 @@ if __name__ == "__main__":
     parser.add_argument("--fail_on_warning", "-w", type=int,
                         default=0, help="Exit Program On Failure")
 
-    parser.add_argument("--verbose", "-v", default=0,
+    parser.add_argument("--verbose", "-v", default=0, type=int,
                         help="Enable Verbose Output")
 
-    parser.add_argument("--generate_playlists", "-gp", default=1,
+    parser.add_argument("--generate_playlists", "-gp", default=1, type=int,
                         help="Generate M3U Playlists From Specified Download"
                              " Urls")
 
-    parser.add_argument("--download_sleep", "-ds", default=5,
+    parser.add_argument("--download_sleep", "-ds", default=5, type=int,
                         help="Maximum Amount Of Seconds To Sleep Before A Download")
 
-    parser.add_argument("--request_sleep", "-rs", default=0,
-                        help="Amount Of Seconds To Sleep Before A Download")
+    parser.add_argument("--request_sleep", "-rs", default=1, type=int,
+                        help="Amount Of Seconds To Sleep Between Requests")
+    
+    parser.add_argument("--debug", "-d", default=0, type=int,
+                        help="Enable Debug Printing For Downloads")
 
     args = parser.parse_args()
     printing.VERBOSE = args.verbose

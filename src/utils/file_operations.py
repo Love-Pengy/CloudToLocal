@@ -148,7 +148,7 @@ def replace_filename(title, uploader, filepath, extension, provider,
                         and track["artists"][0]["name"].lower() == artist.lower()
                     ]
 
-                if (not album_name and ("album" in search[0])):
+                if (album_name is None and ("album" in search[0])):
                     closest_match_miss_count = 99999
                     closest_match = None
                     for album_entry in album:
@@ -240,8 +240,7 @@ def replace_filename(title, uploader, filepath, extension, provider,
         else:
             info(f"ARTIST AND SONG NOT FOUND: {title}")
             add_to_record({
-                "status": "SEARCH_FAILED",
-                "found_artist": artist,
+                "status": "SEARCH_FOUND_NOTHING",
                 "found_title": title,
                 "provider": provider,
                 "ext": extension,
