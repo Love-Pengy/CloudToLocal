@@ -26,7 +26,6 @@ class CloudToLocal:
             self.output_dir += '/'
         self.retries = arguments.retry_amt
         self.playlists_info = []
-        self.replace_fname = arguments.replace_filenames
         self.ytmusic = YTMusic()
         self.download_delay = arguments.download_sleep
         self.request_delay = arguments.request_sleep
@@ -104,8 +103,6 @@ class CloudToLocal:
                     'writethumbnail': True,
                     # By Default Use The Song Thumbnail
                     'embedthumbnail': True,
-                    # Ensure Only Formats That Are Downloadable Are Selected
-                    'check_formats': True
                 }
                 if (self.download_delay):
                     ydl_opts_download["sleep_interval"] = 0
@@ -117,36 +114,36 @@ class CloudToLocal:
                       f" Attempting: {title}")
 
                 curr_filepath = None
-                for retry in range(0, self.retries-1):
-                    try:
-                        with YoutubeDL(ydl_opts_download) as ydl:
-                            video_info = ydl.extract_info(url, download=True)
+                attempts = 0
+                while (True):
+                    if(not (self.retries == attempts-1)):
+                        try:
+                            with YoutubeDL(ydl_opts_download) as ydl:
+                                video_info = ydl.extract_info(url, download=True)
 
-                            if (video_info and
-                                    "requested_downloads" in video_info):
-                                video_dl_info = video_info["requested_downloads"][0]
-                                curr_ext = video_dl_info["ext"]
-                                curr_filepath = video_dl_info["filepath"]
-                                curr_duration = video_info["duration"]
-                            else:
-                                curr_ext = None
-                                curr_duration = None
-                        break
-                    except DownloadError:
-                        printing.info(f"(#{retry+1}) Failed to download... Retrying")
-                        sleep(retry*10)
-                        if (not retry):
-                            add_to_record({"status": "DOWNLOAD_FAILURE", "url": url},
-                                          self.report)
-
-                    except Exception as e:
-                        print(traceback.format_exc())
-                        error(f"Unexpected error for '{title}': {e}")
+                                if (video_info and
+                                        "requested_downloads" in video_info):
+                                    video_dl_info = video_info["requested_downloads"][0]
+                                    curr_ext = video_dl_info["ext"]
+                                    curr_filepath = video_dl_info["filepath"]
+                                    curr_duration = video_info["duration"]
+                                else:
+                                    curr_ext = None
+                                    curr_duration = None
+                            break
+                        except DownloadError:
+                            printing.info(f"(#{attempts+1}) Failed to download... Retrying")
+                            sleep(attempts*10)
+                        except Exception as e:
+                            print(traceback.format_exc())
+                            error(f"Unexpected error for '{title}': {e}")
+                    else:
                         add_to_record({"status": "DOWNLOAD_FAILURE", "url": url},
                                       self.report)
-                        sys.exit()
+                        break
+                    attempts += 1
 
-                if (curr_filepath and self.replace_fname):
+                if (curr_filepath):
                     replace_filename(title, uploader,
                                      curr_filepath, curr_ext,
                                      entry["ie_key"], url, curr_duration,
@@ -175,10 +172,6 @@ if __name__ == "__main__":
         description="Automated Youtube and Soundcloud Downloader",
         config_file_parser_class=configargparse.YAMLConfigFileParser
     )
-
-    parser.add_argument("--replace_filenames", "-r", default=1, type=int,
-                        help="Attempt To Replace Filename With Official "
-                        "YTMusic Name and embed metadata")
 
     parser.add_argument("--config", "-c", type=str,
                         is_config_file=True, default="ctlConfig.yaml",

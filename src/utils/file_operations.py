@@ -20,7 +20,7 @@ from utils.common import (
 
 # Add entry to record
 def add_to_record(context, record):
-    record["url"] = context
+    record[context["url"]] = context
 
 
 def tag_file(filepath, artist, album, title, track_num,
@@ -148,7 +148,7 @@ def replace_filename(title, uploader, filepath, extension, provider,
                         and track["artists"][0]["name"].lower() == artist.lower()
                     ]
 
-                if (album_name is None and ("album" in search[0])):
+                if (not album_name and ("album" in search[0])):
                     closest_match_miss_count = 99999
                     closest_match = None
                     for album_entry in album:
@@ -178,7 +178,7 @@ def replace_filename(title, uploader, filepath, extension, provider,
                         album_name=[{"album": None}]
                         status = "SINGLE"
                     else:
-                        status = "DOWNLOAD_NO_UPDATE"
+                        status = "ALBUM_FOUND"
                         track_num=album_name[0]["trackNumber"]
                         if (("thumbnails" in album_name[0])
                                 and (album_name[0]["thumbnails"] is not None)):
