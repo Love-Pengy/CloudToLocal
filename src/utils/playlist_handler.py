@@ -1,5 +1,5 @@
 import os
-import utils.printing as printing
+import globals
 from time import sleep
 from pprint import pprint
 from yt_dlp import YoutubeDL
@@ -57,7 +57,7 @@ class PlaylistHandler:
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
-                    'quiet': (not printing.VERBOSE),
+                    'quiet': globals.QUIET,
                 }
 
                 if (self.request_delay):
@@ -78,12 +78,11 @@ class PlaylistHandler:
             elif (url.startswith("https://on.soundcloud.com/")):
                 redirect = YoutubeDL({'extract_flat': True,
                                      'skip_download': True,
-                                      'quiet': (not printing.VERBOSE)}).extract_info(url,
-                                                                                     download=False)
+                                      'quiet': globals.QUIET}).extract_info(url, download=False)
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
-                    'quiet': (not printing.VERBOSE),
+                    'quiet': globals.QUIET,
                 }
                 if (self.request_delay):
                     ydl_opts_extract["sleep_interval_requests"] = self.request_delay
@@ -108,7 +107,7 @@ class PlaylistHandler:
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
-                    'quiet': (not printing.VERBOSE),
+                    'quiet': globals.QUIET,
                 }
                 if (self.request_delay):
                     ydl_opts_extract["sleep_interval_requests"] = self.request_delay

@@ -1,0 +1,3 @@
+VERBOSE = False
+FAIL_ON_WARNING = False
+QUIET = False

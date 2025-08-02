@@ -6,13 +6,14 @@ import traceback
 import sys
 from time import sleep
 
+import globals
 import configargparse
 # from pprint import pprint
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 from ytmusicapi import YTMusic
 from utils.common import check_ytdlp_update
-from utils import printing
+import utils.printing as printing # FIXME: here for naming issues should fix this at some point
 from utils.printing import warning, error, success
 from utils.playlist_handler import PlaylistHandler
 from utils.file_operations import replace_filename, add_to_record
@@ -29,8 +30,6 @@ class CloudToLocal:
         self.ytmusic = YTMusic()
         self.download_delay = arguments.download_sleep
         self.request_delay = arguments.request_sleep
-        self.verbose = arguments.verbose
-        self.debug = bool(arguments.debug)
 
         self.generate_playlists = arguments.generate_playlists
         if (self.generate_playlists):
@@ -61,7 +60,7 @@ class CloudToLocal:
                     #       Of Song Information For Top Level Entry So We Must
                     #       Query Further
                     sc_info = YoutubeDL({'simulate': True,
-                                         'quiet': not self.verbose, }
+                                         'quiet': globals.QUIET, }
                                         ).extract_info(url)
                     if ('artist' in sc_info):
                         uploader = sc_info['artist']
@@ -90,9 +89,9 @@ class CloudToLocal:
                         }
                     ],
                     # Whether to print to stdout
-                    'quiet': not self.verbose,
+                    'quiet': globals.QUIET,
                     # Whether to add additional info to stdout
-                    'verbose': self.debug,
+                    'verbose': globals.VERBOSE,
                     'noplaylist': True,
                     'paths': {"home": self.output_dir},
                     'outtmpl': "%(title)s.%(ext)s",
@@ -198,6 +197,9 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", "-v", default=0, type=int,
                         help="Enable Verbose Output")
 
+    parser.add_argument("--quiet", "-q", default=0, type=int,
+                        help="Suppress Everything But Warnings and Errors")
+
     parser.add_argument("--generate_playlists", "-gp", default=1, type=int,
                         help="Generate M3U Playlists From Specified Download"
                              " Urls")
@@ -208,11 +210,10 @@ if __name__ == "__main__":
     parser.add_argument("--request_sleep", "-rs", default=1, type=int,
                         help="Amount Of Seconds To Sleep Between Requests")
     
-    parser.add_argument("--debug", "-d", default=0, type=int,
-                        help="Enable Debug Printing For Downloads")
 
     args = parser.parse_args()
-    printing.VERBOSE = args.verbose
-    printing.FAIL_ON_WARNING = args.fail_on_warning
-
+    globals.VERBOSE = bool(args.verbose)
+    globals.FAIL_ON_WARNING = bool(args.fail_on_warning)
+    globals.QUIET = bool(args.quiet)
     main(args)
+

@@ -135,20 +135,23 @@ def replace_filename(title, uploader, filepath, extension, provider,
                 artist + " " + title, filter="songs", limit=1)
 
             if (search):
-                single = True
                 if ("album" in search[0] and search[0]["album"] is not None):
                     single = False
                     album = ytmusic.get_album(
                         search[0]["album"]["id"])["tracks"]
 
-                    # See if track is in the album we found
-                    album_name = [
-                        track for track in album
-                        if track["title"].lower() == title.lower()
-                        and track["artists"][0]["name"].lower() == artist.lower()
-                    ]
+                    if(album is not None):
+                        # See if track is in the album we found
+                        album_name = [
+                            track for track in album
+                            if track["title"].lower() == title.lower()
+                            and track["artists"][0]["name"].lower() == artist.lower()
+                        ]
+                    else: 
+                        single = True
 
-                if (not album_name and ("album" in search[0])):
+                # FIXME: almost certainly this should be a single
+                if ("album" in search[0]):
                     closest_match_miss_count = 99999
                     closest_match = None
                     for album_entry in album:
