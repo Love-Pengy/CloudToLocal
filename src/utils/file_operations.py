@@ -19,6 +19,8 @@ from utils.common import (
     increase_img_req_res)
 
 # Add entry to record
+
+
 def add_to_record(context, record):
     record[context["url"]] = context
 
@@ -100,9 +102,8 @@ def tag_file(filepath, artist, album, title, track_num,
                          "Supported Types Are: flac, opus, ogg, mp3, and mp4")
 
 
-def replace_filename(title, uploader, filepath, extension, provider,
-                     url, duration, generate_playlists,
-                     output_dir, handler, record):
+def replace_filename(title, uploader, filepath, extension, provider, url, duration, output_dir,
+                     handler, record):
     """
         Filename Replacement Method. Replaces filename, tags file with
             relevant metadata, and adds to playlist if desired
@@ -124,10 +125,16 @@ def replace_filename(title, uploader, filepath, extension, provider,
     """
 
     with YTMusic() as ytmusic:
+        artist = uploader
+        track_num = 1
+        matching_album = []
+        new_fname = os.path.basename(filepath)
         result = get_artist_title(title,
                                   {"defaultArtist": uploader,
                                    "defaultTitle": title
                                    })
+        single = False
+        matching_album_name = None
         if (all(result)):
             artist = result[0]
             title = result[1]
@@ -136,22 +143,24 @@ def replace_filename(title, uploader, filepath, extension, provider,
 
             if (search):
                 if ("album" in search[0] and search[0]["album"] is not None):
-                    single = False
                     album = ytmusic.get_album(
                         search[0]["album"]["id"])["tracks"]
 
-                    if(album is not None):
+                    if (album is not None):
                         # See if track is in the album we found
-                        album_name = [
+                        matching_album = [
                             track for track in album
                             if track["title"].lower() == title.lower()
                             and track["artists"][0]["name"].lower() == artist.lower()
                         ]
-                    else: 
+                        if(matching_album):
+                            matching_album_name = matching_album[0]["album"]
+                    else:
                         single = True
 
-                # FIXME: almost certainly this should be a single
-                if ("album" in search[0]):
+                if (not matching_album
+                    and "album" in search[0]
+                        and search[0]["album"] is not None):
                     closest_match_miss_count = 99999
                     closest_match = None
                     for album_entry in album:
@@ -176,41 +185,53 @@ def replace_filename(title, uploader, filepath, extension, provider,
                     info(f"ALBUM MISSED: {title} {artist}")
                 else:
                     if (single):
-                        track_num=1
-                        thumbs=search[0]["thumbnails"]
-                        album_name=[{"album": None}]
+                        track_num = 1
+                        thumbs = search[0]["thumbnails"]
+                        matching_album = [{"album": None}]
                         status = "SINGLE"
                     else:
                         status = "ALBUM_FOUND"
-                        track_num=album_name[0]["trackNumber"]
-                        if (("thumbnails" in album_name[0])
-                                and (album_name[0]["thumbnails"] is not None)):
-                            thumbs=album_name[0]["thumbnails"]
+                        track_num = matching_album[0]["trackNumber"]
+                        if (("thumbnails" in matching_album[0])
+                                and (matching_album[0]["thumbnails"] is not None)):
+                            thumbs = matching_album[0]["thumbnails"]
                         else:
-                            thumbs=search[0]["thumbnails"]
+                            thumbs = search[0]["thumbnails"]
 
                     if (("year" in search[0])
                        and (search[0]["year"] is not None)):
-                        year=search[0]["year"]
+                        year = search[0]["year"]
                     else:
-                        year=None
+                        year = None
 
-                    artists=[sanitize_string(artist["name"])
+                    artists = [sanitize_string(artist["name"])
                                for artist in search[0]["artists"]]
 
-                    tag_file(filepath,
-                             artists,
-                             album_name[0]["album"],
-                             search[0]["title"],
-                             track_num,
-                             len(album),
-                             year,
-                             increase_img_req_res(thumbs[len(thumbs)-1]),
-                             extension)
+                    if(matching_album):
+                        tag_file(filepath,
+                                 artists,
+                                 matching_album[0]["album"],
+                                 search[0]["title"],
+                                 track_num,
+                                 len(album),
+                                 year,
+                                 increase_img_req_res(thumbs[len(thumbs)-1]),
+                                 extension)
+                    else:
+                        tag_file(filepath,
+                                 artists,
+                                 None,
+                                 search[0]["title"],
+                                 track_num,
+                                 len(album),
+                                 year,
+                                 increase_img_req_res(thumbs[len(thumbs)-1]),
+                                 extension)
 
-                    new_fname=(f"{output_dir}{artists[0]}_"
-                                 f"{sanitize_string(album_name[0]["album"])}"
-                                 f"_{album_name[0]["trackNumber"]:02d}_"
+                    new_fname = (f"{output_dir}{artists[0]}_"
+                                 f"{sanitize_string(
+                                     matching_album[0]["album"])}"
+                                 f"_{matching_album[0]["trackNumber"]:02d}_"
                                  f"{sanitize_string(search[0]["title"])}"
                                  f".{extension}")
 
@@ -219,13 +240,6 @@ def replace_filename(title, uploader, filepath, extension, provider,
 
                     shutil.move(filepath, new_fname)
 
-                    if (generate_playlists):
-                        handler.write_to_playlists(url, duration,
-                                                   artist, title,
-                                                   track_num,
-                                                   album_name[0]["album"],
-                                                   new_fname,
-                                                   output_dir)
                     add_to_record({
                         "status": status,
                         "found_artist": artist,
@@ -241,7 +255,6 @@ def replace_filename(title, uploader, filepath, extension, provider,
         # Should only happen when you have a delimiter that can't clearly
         # be used to distinguish betwen artist and title such as a space
         else:
-            info(f"ARTIST AND SONG NOT FOUND: {title}")
             add_to_record({
                 "status": "SEARCH_FOUND_NOTHING",
                 "found_title": title,
@@ -251,10 +264,18 @@ def replace_filename(title, uploader, filepath, extension, provider,
                 "duration": duration,
                 "uploader": uploader
             }, record)
+            info(f"ARTIST AND SONG NOT FOUND: {title}")
+
+        handler.write_to_playlists(url, duration,
+                                   artist, title,
+                                   track_num,
+                                   matching_album_name,
+                                   new_fname,
+                                   output_dir)
 
 
 def user_replace_filename(self, title, artists, filepath, extension,
-                          album_name, url, duration, track_number, album_len,
+                          matching_album, url, duration, track_number, album_len,
                           album_date, thumbnail_url, generate_playlists):
     """
         User Initiated Filename Replacement Method. Replaces filename, tags
@@ -265,7 +286,7 @@ def user_replace_filename(self, title, artists, filepath, extension,
             artists (str)
             filepath (str)
             extension (str)
-            album_name (str)
+            matching_album (str)
             url (str)
             duration (int)
             track_number (int)
@@ -278,7 +299,7 @@ def user_replace_filename(self, title, artists, filepath, extension,
 
     tag_file(filepath,
              artists,
-             album_name,
+             matching_album,
              title,
              track_number,
              album_len,
@@ -286,18 +307,18 @@ def user_replace_filename(self, title, artists, filepath, extension,
              increase_img_req_res(thumbnail_url),
              extension)
 
-    if (not album_name):
-        album_name=title
+    if (not matching_album):
+        matching_album = title
 
     info(f"{os.path.basename(filepath)} -> {artists[0]}_"
-         f"{sanitize_string(album_name)}_"
+         f"{sanitize_string(matching_album)}_"
          f"{track_number:02d}_"
          f"{title}"
          f".{extension}")
 
     shutil.move(filepath, f"{self.output_dir}"
                 f"{artists[0]}_"
-                f"{album_name}_"
+                f"{matching_album}_"
                 f"{track_number:02d}_"
                 f"{title}"
                 f".{extension}")
@@ -306,6 +327,6 @@ def user_replace_filename(self, title, artists, filepath, extension,
         self.playlist_handler.write_to_playlists(url, duration,
                                                  artists[0], title,
                                                  track_number,
-                                                 album_name,
+                                                 matching_album,
                                                  filepath,
                                                  self.output_dir)

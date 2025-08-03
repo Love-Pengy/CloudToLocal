@@ -58,6 +58,7 @@ class PlaylistHandler:
                     'extract_flat': True,
                     'skip_download': True,
                     'quiet': globals.QUIET,
+                    'verbose': globals.VERBOSE
                 }
 
                 if (self.request_delay):
@@ -78,11 +79,14 @@ class PlaylistHandler:
             elif (url.startswith("https://on.soundcloud.com/")):
                 redirect = YoutubeDL({'extract_flat': True,
                                      'skip_download': True,
-                                      'quiet': globals.QUIET}).extract_info(url, download=False)
+                                      'quiet': globals.QUIET,
+                                      'verbose': globals.VERBOSE}
+                                     ).extract_info(url, download=False)
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
                     'quiet': globals.QUIET,
+                    'verbose': globals.VERBOSE
                 }
                 if (self.request_delay):
                     ydl_opts_extract["sleep_interval_requests"] = self.request_delay
@@ -108,6 +112,7 @@ class PlaylistHandler:
                     'extract_flat': True,
                     'skip_download': True,
                     'quiet': globals.QUIET,
+                    'verbose': globals.VERBOSE
                 }
                 if (self.request_delay):
                     ydl_opts_extract["sleep_interval_requests"] = self.request_delay

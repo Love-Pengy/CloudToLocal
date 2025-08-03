@@ -2,8 +2,8 @@
 
 import os
 import json
+import shutil
 import traceback
-import sys
 from time import sleep
 
 import globals
@@ -11,10 +11,8 @@ import configargparse
 # from pprint import pprint
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
-from ytmusicapi import YTMusic
 from utils.common import check_ytdlp_update
-import utils.printing as printing # FIXME: here for naming issues should fix this at some point
-from utils.printing import warning, error, success
+from utils.printing import warning, error, success, info
 from utils.playlist_handler import PlaylistHandler
 from utils.file_operations import replace_filename, add_to_record
 
@@ -22,29 +20,23 @@ from utils.file_operations import replace_filename, add_to_record
 class CloudToLocal:
     def __init__(self, arguments):
         self.dl_playlists = arguments.playlists
-        self.output_dir = os.path.expanduser(arguments.outdir)
+        self.output_dir = arguments.outdir
         if (not (self.output_dir[len(self.output_dir)-1] == '/')):
             self.output_dir += '/'
         self.retries = arguments.retry_amt
         self.playlists_info = []
-        self.ytmusic = YTMusic()
         self.download_delay = arguments.download_sleep
         self.request_delay = arguments.request_sleep
-
-        self.generate_playlists = arguments.generate_playlists
-        if (self.generate_playlists):
-            self.playlist_handler = PlaylistHandler(self.retries,
-                                                    self.dl_playlists,
-                                                    self.playlists_info,
-                                                    self.request_delay
-                                                    )
-
+        self.playlist_handler = PlaylistHandler(self.retries,
+                                                self.dl_playlists,
+                                                self.playlists_info,
+                                                self.request_delay)
         self.report = {}
         self.report_fpath = self.output_dir+"/ctl_report"
 
     def download(self):
-        for info in self.playlists_info:
-            for index, entry in enumerate(info['entries']):
+        for curr_playlist_info in self.playlists_info:
+            for index, entry in enumerate(curr_playlist_info['entries']):
                 url = entry['url']
                 if not url:
                     warning(
@@ -60,7 +52,8 @@ class CloudToLocal:
                     #       Of Song Information For Top Level Entry So We Must
                     #       Query Further
                     sc_info = YoutubeDL({'simulate': True,
-                                         'quiet': globals.QUIET, }
+                                         'quiet': globals.QUIET,
+                                         'verbose': globals.VERBOSE}
                                         ).extract_info(url)
                     if ('artist' in sc_info):
                         uploader = sc_info['artist']
@@ -102,23 +95,22 @@ class CloudToLocal:
                     'writethumbnail': True,
                     # By Default Use The Song Thumbnail
                     'embedthumbnail': True,
+                    'sleep_interval': 0,
+                    'max_sleep_interval': self.download_delay,
+                    'sleep_interval_requests': self.request_delay
                 }
-                if (self.download_delay):
-                    ydl_opts_download["sleep_interval"] = 0
-                    ydl_opts_download["max_sleep_interval"] = self.download_delay
-                if (self.request_delay):
-                    ydl_opts_download["sleep_interval_requests"] = self.request_delay
 
-                print(f"\n[{index+1}/{len(info['entries'])}]"
-                      f" Attempting: {title}")
+                info(f"[{index+1}/{len(curr_playlist_info['entries'])}]"
+                              f" Attempting: {title}")
 
                 curr_filepath = None
                 attempts = 0
                 while (True):
-                    if(not (self.retries == attempts-1)):
+                    if (not (self.retries == attempts-1)):
                         try:
                             with YoutubeDL(ydl_opts_download) as ydl:
-                                video_info = ydl.extract_info(url, download=True)
+                                video_info = ydl.extract_info(
+                                    url, download=True)
 
                                 if (video_info and
                                         "requested_downloads" in video_info):
@@ -131,7 +123,8 @@ class CloudToLocal:
                                     curr_duration = None
                             break
                         except DownloadError:
-                            printing.info(f"(#{attempts+1}) Failed to download... Retrying")
+                            info(
+                                f"(#{attempts+1}) Failed to download... Retrying")
                             sleep(attempts*10)
                         except Exception as e:
                             print(traceback.format_exc())
@@ -146,7 +139,6 @@ class CloudToLocal:
                     replace_filename(title, uploader,
                                      curr_filepath, curr_ext,
                                      entry["ie_key"], url, curr_duration,
-                                     self.generate_playlists,
                                      self.output_dir, self.playlist_handler, self.report)
 
         with open(self.report_fpath, "w") as f:
@@ -156,14 +148,18 @@ class CloudToLocal:
 
 
 def main(arguments):
+    arguments.outdir = os.path.expanduser(arguments.outdir)
+    if(arguments.fresh
+           and os.path.exists(arguments.outdir)):
+        shutil.rmtree(arguments.outdir)
     ctl = CloudToLocal(arguments)
     if (arguments.fix_missing):
         # FIXME: correct_missing has been moved.
         ctl.correct_missing()
-        sys.exit()
-    check_ytdlp_update()
-    print("STARTING DOWNLOAD")
-    ctl.download()
+    else:
+        check_ytdlp_update()
+        info("STARTING DOWNLOAD")
+        ctl.download()
 
 
 if __name__ == "__main__":
@@ -200,20 +196,17 @@ if __name__ == "__main__":
     parser.add_argument("--quiet", "-q", default=0, type=int,
                         help="Suppress Everything But Warnings and Errors")
 
-    parser.add_argument("--generate_playlists", "-gp", default=1, type=int,
-                        help="Generate M3U Playlists From Specified Download"
-                             " Urls")
-
     parser.add_argument("--download_sleep", "-ds", default=5, type=int,
                         help="Maximum Amount Of Seconds To Sleep Before A Download")
 
     parser.add_argument("--request_sleep", "-rs", default=1, type=int,
                         help="Amount Of Seconds To Sleep Between Requests")
-    
+
+    parser.add_argument("--fresh", "-f", default=0, type=int,
+                        help="Delete Directory Before Downloading (Mainly For Testing)")
 
     args = parser.parse_args()
     globals.VERBOSE = bool(args.verbose)
     globals.FAIL_ON_WARNING = bool(args.fail_on_warning)
     globals.QUIET = bool(args.quiet)
     main(args)
-
