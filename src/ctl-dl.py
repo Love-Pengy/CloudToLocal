@@ -8,7 +8,7 @@ from time import sleep
 
 import globals
 import configargparse
-# from pprint import pprint
+from pprint import pprint
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 from utils.common import check_ytdlp_update
@@ -117,7 +117,7 @@ class CloudToLocal:
                                     video_dl_info = video_info["requested_downloads"][0]
                                     curr_ext = video_dl_info["ext"]
                                     curr_filepath = video_dl_info["filepath"]
-                                    curr_duration = video_info["duration"]
+                                    curr_duration = int(round(float(video_info["duration"]), 0))
                                 else:
                                     curr_ext = None
                                     curr_duration = None

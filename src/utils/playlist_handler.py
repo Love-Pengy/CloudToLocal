@@ -154,13 +154,18 @@ class PlaylistHandler:
                 album (str): name of album
                 filepath (str): path to song
         """
+        if(filepath.startswith("#")):
+            sanitized_path = "./" + filepath
+        else:
+            sanitized_path = filepath
+
         for playlist_spec in self.check_playlists(url):
             if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.m3u")):
                 with open(f"{output_dir}{playlist_spec[1]}.m3u", "w") as f:
                     f.write("#EXTM3U\n")
                     f.write(f"#EXTINF:{duration},{artist} - {title}\n")
-                    f.write(filepath + "\n")
+                    f.write(sanitized_path + "\n")
             else:
                 with open(f"{output_dir}{playlist_spec[1]}.m3u", "a") as f:
                     f.write(f"#EXTINF:{duration},{artist} - {title}\n")
-                    f.write(filepath + "\n")
+                    f.write(sanitized_path + "\n")
