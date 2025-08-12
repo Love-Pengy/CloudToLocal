@@ -2,16 +2,20 @@ import os
 import shutil
 import urllib
 import base64
+import traceback
 from pprint import pprint
+
+from time import sleep
 from mutagen.mp3 import MP3
 from ytmusicapi import YTMusic
-from utils.printing import info
+from utils.printing import info, error
 from mutagen.oggopus import OggOpus
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
-from mutagen.id3 import TIT2, TOPE, TALB, TRCK, TDAT, APIC
 from youtube_title_parse import get_artist_title
+from ytmusicapi.exceptions import YTMusicServerError
+from mutagen.id3 import TIT2, TOPE, TALB, TRCK, TDAT, APIC
 
 from utils.common import (
     get_diff_count,
@@ -143,8 +147,18 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
 
             if (search):
                 if ("album" in search[0] and search[0]["album"] is not None):
-                    album = ytmusic.get_album(
-                        search[0]["album"]["id"])["tracks"]
+                    for i in range(0, 5):
+                        try:
+                            album = ytmusic.get_album(
+                                search[0]["album"]["id"])["tracks"]
+                            break
+                        except YTMusicServerError:
+                            info(
+                                f"(#{i+1}) Album Search Failed ... Retrying")
+                            sleep(i*10)
+                        except Exception as e:
+                            print(traceback.format_exc())
+                            error(f"Unexpected error for '{title}': {e}")
 
                     if (album is not None):
                         # See if track is in the album we found
@@ -191,7 +205,11 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                         status = "SINGLE"
                     else:
                         status = "ALBUM_FOUND"
-                        track_num = matching_album[0]["trackNumber"]
+                        try:
+                            track_num = matching_album[0]["trackNumber"]
+                        except: 
+                            #NOTE: Still tracking this down
+                            error(f"UNKNOWN FAILURE: {matching_album=}, {search[0]=})
                         if (("thumbnails" in matching_album[0])
                                 and (matching_album[0]["thumbnails"] is not None)):
                             thumbs = matching_album[0]["thumbnails"]
@@ -270,7 +288,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                                    artist, title,
                                    track_num,
                                    matching_album_name,
-                                   new_fname,
+                                   os.path.basename(new_fname),
                                    output_dir)
 
 
