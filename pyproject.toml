@@ -1,0 +1,39 @@
+[project]
+name = "CloudToLocal"
+version = "0.0.0"
+description = "Automated Online Service Backup Tool"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+  { name = "Brandon Frazier" }
+]
+# Regular dependencies
+dependencies = [
+  "certifi==2025.7.14",
+  "charset_normalizer==3.4.2",
+  "ConfigArgParse==1.7.1",
+  "idna==3.10",
+  "mutagen==1.47.0",
+  "PyYAML==6.0.2",
+  "requests==2.32.4",
+  "urllib3==2.5.0",
+  "yt-dlp==2025.7.21",
+  "ytmusicapi==1.11.0",
+  "selenium==4.34.2",
+  "beautifulsoup4==4.13.4",
+  "pillow==11.3.0",
+  "youtube_title_parse @ https://github.com/Love-Pengy/youtube_title_parse/archive/refs/heads/master.zip"
+]
+
+[project.urls]
+Repository = "https://github.com/Love-Pengy/CloudToLocal"
+Issues = "https://github.com/Love-Pengy/CloudToLocal/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
