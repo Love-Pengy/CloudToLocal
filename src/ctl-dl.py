@@ -7,14 +7,20 @@ import traceback
 from time import sleep
 
 import globals
+from globals import ReportStatus
 import configargparse
 from pprint import pprint
 from yt_dlp import YoutubeDL
+from utils.tui import correct_missing
 from yt_dlp.utils import DownloadError
 from utils.common import check_ytdlp_update
 from utils.printing import warning, error, success, info
 from utils.playlist_handler import PlaylistHandler
-from utils.file_operations import replace_filename, add_to_record
+from utils.file_operations import (
+    replace_filename,
+    add_to_record_err,
+    add_to_record_pre_replace
+)
 
 
 class CloudToLocal:
@@ -45,12 +51,14 @@ class CloudToLocal:
                     continue
 
                 if (entry["ie_key"] == "Youtube"):
+                    provider = "Youtube"
                     title = entry['title']
                     uploader = entry["uploader"]
                 else:
                     # NOTE: Soundcloud's API Gives References To Song Instead
                     #       Of Song Information For Top Level Entry So We Must
                     #       Query Further
+                    provider = "Soundcloud"
                     sc_info = YoutubeDL({'simulate': True,
                                          'quiet': globals.QUIET,
                                          'verbose': globals.VERBOSE}
@@ -101,7 +109,7 @@ class CloudToLocal:
                 }
 
                 info(f"[{index+1}/{len(curr_playlist_info['entries'])}]"
-                              f" Attempting: {title}")
+                     f" Attempting: {title}")
 
                 curr_filepath = None
                 attempts = 0
@@ -117,8 +125,13 @@ class CloudToLocal:
                                     video_dl_info = video_info["requested_downloads"][0]
                                     curr_ext = video_dl_info["ext"]
                                     curr_filepath = video_dl_info["filepath"]
-                                    curr_duration = int(round(float(video_info["duration"]), 0))
+                                    curr_duration = int(
+                                        round(float(video_info["duration"]), 0))
                                 else:
+                                    # FIXME: this is wrong, if we don't have a filepath nothing got
+                                    # downloaded. This should probably report
+                                    pprint(self.report)
+                                    input()
                                     curr_ext = None
                                     curr_duration = None
                             break
@@ -130,12 +143,23 @@ class CloudToLocal:
                             print(traceback.format_exc())
                             error(f"Unexpected error for '{title}': {e}")
                     else:
-                        add_to_record({"status": "DOWNLOAD_FAILURE", "url": url},
-                                      self.report)
+                        add_to_record_err({"status": ReportStatus.DOWNLOAD_FAILURE},
+                                          self.report, url)
                         break
                     attempts += 1
 
                 if (curr_filepath):
+
+                    add_to_record_pre_replace({
+                        "status": ReportStatus.DOWNLOAD_SUCCESS,
+                        "title": title,
+                        "uploader": uploader,
+                        "provider": provider,
+                        "ext": curr_ext,
+                        "duration": curr_duration,
+                        "uploader": uploader
+                    }, self.report, url)
+
                     replace_filename(title, uploader,
                                      curr_filepath, curr_ext,
                                      entry["ie_key"], url, curr_duration,
@@ -149,13 +173,12 @@ class CloudToLocal:
 
 def main(arguments):
     arguments.outdir = os.path.expanduser(arguments.outdir)
-    if(arguments.fresh
-           and os.path.exists(arguments.outdir)):
+    if (arguments.fresh
+       and os.path.exists(arguments.outdir)):
         shutil.rmtree(arguments.outdir)
     ctl = CloudToLocal(arguments)
     if (arguments.fix_missing):
-        # FIXME: correct_missing has been moved.
-        ctl.correct_missing()
+        correct_missing(arguments.outdir+"/ctl_report")
     else:
         check_ytdlp_update()
         info("STARTING DOWNLOAD")
