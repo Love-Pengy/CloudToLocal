@@ -8,6 +8,7 @@ from pprint import pprint
 from time import sleep
 from mutagen.mp3 import MP3
 from ytmusicapi import YTMusic
+from globals import ReportStatus
 from utils.printing import info, error
 from mutagen.oggopus import OggOpus
 from mutagen.mp4 import MP4, MP4Cover
@@ -23,10 +24,23 @@ from utils.common import (
     increase_img_req_res)
 
 # Add entry to record
+# The tui is expecting as much of the following as possible:
+#   Old: title, uploader, duration, filename, url, ext, provider
+#   New: title, artist, duration, filename, thumbnail url, url, ext
+# TODO: make a pre record addition and post, so that the key isn't managed outside
 
 
-def add_to_record(context, record):
-    record[context["url"]] = context
+def add_to_record_pre_replace(context, record, url):
+    record[url] = {}
+    record[url]["before"] = context
+
+
+def add_to_record_post_replace(context, record, url):
+    record[url]["after"] = context
+
+
+def add_to_record_err(context, record, url):
+    record[url] = context
 
 
 def tag_file(filepath, artist, album, title, track_num,
@@ -107,7 +121,7 @@ def tag_file(filepath, artist, album, title, track_num,
 
 
 def replace_filename(title, uploader, filepath, extension, provider, url, duration, output_dir,
-                     handler, record):
+                     handler, report):
     """
         Filename Replacement Method. Replaces filename, tags file with
             relevant metadata, and adds to playlist if desired
@@ -120,10 +134,9 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
             provider (str)
             url (str)
             duration (int)
-            generate_playlists (bool)
             output_dir (str)
             handler (PlaylistHandler)
-            record (dict): dictionary of download status reports
+            report (dict): dictionary of download status reports
 
 
     """
@@ -167,7 +180,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                             if track["title"].lower() == title.lower()
                             and track["artists"][0]["name"].lower() == artist.lower()
                         ]
-                        if(matching_album):
+                        if (matching_album):
                             matching_album_name = matching_album[0]["album"]
                     else:
                         single = True
@@ -185,31 +198,31 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
 
                     closest_match["album_len"] = len(album)
 
-                    add_to_record({
-                        "status": "DOWNLOAD_NO_UPDATE",
+                    add_to_record_post_replace({
+                        "status": ReportStatus.DOWNLOAD_NO_UPDATE,
                         "found_artist": artist,
                         "found_title": title,
                         "closest_match": closest_match,
                         "provider": provider,
                         "ext": extension,
-                        "url": url,
                         "duration": duration,
                         "uploader": uploader
-                    }, record)
+                    }, report, url)
                     info(f"ALBUM MISSED: {title} {artist}")
                 else:
                     if (single):
                         track_num = 1
                         thumbs = search[0]["thumbnails"]
                         matching_album = [{"album": None}]
-                        status = "SINGLE"
+                        status = ReportStatus.SINGLE
                     else:
-                        status = "ALBUM_FOUND"
+                        status = ReportStatus.ALBUM_FOUND
                         try:
                             track_num = matching_album[0]["trackNumber"]
-                        except: 
-                            #NOTE: Still tracking this down
-                            error(f"UNKNOWN FAILURE: {matching_album=}, {search[0]=})
+                        except:
+                            # NOTE: Still tracking this down
+                            error(f"UNKNOWN FAILURE: {
+                                  matching_album=}, {search[0]=}")
                         if (("thumbnails" in matching_album[0])
                                 and (matching_album[0]["thumbnails"] is not None)):
                             thumbs = matching_album[0]["thumbnails"]
@@ -224,8 +237,9 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
 
                     artists = [sanitize_string(artist["name"])
                                for artist in search[0]["artists"]]
+                    thumbnail = increase_img_req_res(thumbs[len(thumbs)-1])
 
-                    if(matching_album):
+                    if (matching_album):
                         tag_file(filepath,
                                  artists,
                                  matching_album[0]["album"],
@@ -233,7 +247,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                                  track_num,
                                  len(album),
                                  year,
-                                 increase_img_req_res(thumbs[len(thumbs)-1]),
+                                 thumbnail,
                                  extension)
                     else:
                         tag_file(filepath,
@@ -243,7 +257,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                                  track_num,
                                  len(album),
                                  year,
-                                 increase_img_req_res(thumbs[len(thumbs)-1]),
+                                 thumbnail,
                                  extension)
 
                     new_fname = (f"{output_dir}{artists[0]}_"
@@ -258,30 +272,25 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
 
                     shutil.move(filepath, new_fname)
 
-                    add_to_record({
+                    add_to_record_post_replace({
                         "status": status,
-                        "found_artist": artist,
-                        "found_title": title,
+                        "artist": artist,
+                        "title": title,
                         "provider": provider,
                         "ext": extension,
                         "url": url,
                         "duration": duration,
-                        "uploader": uploader
-                    }, record)
+                        "uploader": uploader,
+                        "thumbnail_url": thumbnail,
+                        "filename": os.path.basename(new_fname)
+                    }, report, url)
 
         # NOTE: This occurs when both title and artist cannot be parsed.
         # Should only happen when you have a delimiter that can't clearly
         # be used to distinguish betwen artist and title such as a space
         else:
-            add_to_record({
-                "status": "SEARCH_FOUND_NOTHING",
-                "found_title": title,
-                "provider": provider,
-                "ext": extension,
-                "url": url,
-                "duration": duration,
-                "uploader": uploader
-            }, record)
+            add_to_record_err({"status": ReportStatus.SEARCH_FOUND_NOTHING, "url": url},
+                              report, url)
             info(f"ARTIST AND SONG NOT FOUND: {title}")
 
         handler.write_to_playlists(url, duration,
@@ -294,7 +303,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
 
 def user_replace_filename(self, title, artists, filepath, extension,
                           matching_album, url, duration, track_number, album_len,
-                          album_date, thumbnail_url, generate_playlists):
+                          album_date, thumbnail_url):
     """
         User Initiated Filename Replacement Method. Replaces filename, tags
             file with relevant metadata, and adds to playlist if desired
@@ -311,7 +320,6 @@ def user_replace_filename(self, title, artists, filepath, extension,
             album_len (int)
             album_date (str)
             thumbnail_url (dict)
-            generate_playlists (bool)
 
     """
 
@@ -341,10 +349,9 @@ def user_replace_filename(self, title, artists, filepath, extension,
                 f"{title}"
                 f".{extension}")
 
-    if (generate_playlists):
-        self.playlist_handler.write_to_playlists(url, duration,
-                                                 artists[0], title,
-                                                 track_number,
-                                                 matching_album,
-                                                 filepath,
-                                                 self.output_dir)
+    self.playlist_handler.write_to_playlists(url, duration,
+                                             artists[0], title,
+                                             track_number,
+                                             matching_album,
+                                             filepath,
+                                             self.output_dir)

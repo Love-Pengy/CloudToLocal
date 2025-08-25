@@ -1,20 +1,19 @@
 import json
-from ytmusic import YTMusic
+from ytmusicapi import YTMusic
 from utils.common import get_img_size_url, sanitize_string
-from file_operations import user_replace_filename
+from utils.file_operations import user_replace_filename
 
 
-def correct_missing(path, generate_playlists):
+def correct_missing(report_path):
     """Interactive Function To Fix Albums And Songs That Could Not Be
         Automatically Found With A High Level Of Certainty
 
         Args:
-            path (str): Path To Missing Albums JSON File
-            generate_playlists (bool)
+            report_path (str): Path To Report JSON File
         """
 
     ytmusic = YTMusic()
-    with open(path, "r") as f:
+    with open(report_path, "r") as f:
         missing_albums = json.load(f)
 
     for song_path in list(missing_albums):
@@ -62,9 +61,7 @@ def correct_missing(path, generate_playlists):
                                       closest_match["trackNumber"],
                                       closest_match["album_len"],
                                       album_date,
-                                      thumbnail,
-                                      generate_playlists
-                                      )
+                                      thumbnail)
                 missing_albums.pop(song_path)
 
             case '2':
@@ -74,8 +71,7 @@ def correct_missing(path, generate_playlists):
                                       spec["ext"],
                                       "", spec["url"],
                                       spec["duration"],
-                                      1, 1, None, user_url,
-                                      generate_playlists)
+                                      1, 1, None, user_url)
                 missing_albums.pop(song_path)
 
             case '3':
@@ -147,8 +143,7 @@ def correct_missing(path, generate_playlists):
                                                       year,
                                                       {"height": image_size[1],
                                                        "width": image_size[0],
-                                                       "url": thumbs[len(thumbs)-1]["url"]},
-                                                      generate_playlists)
+                                                       "url": thumbs[len(thumbs)-1]["url"]})
                                 missing_albums.pop(song_path)
                                 break
                         else:
@@ -199,11 +194,24 @@ def correct_missing(path, generate_playlists):
                                               user_album_date,
                                               {"height": image_size[1],
                                                "width": image_size[0],
-                                               "url": user_thumbnail_url},
-                                              generate_playlists)
+                                               "url": user_thumbnail_url}
+                                              )
                         missing_albums.pop(song_path)
                         break
             case 'q':
                 break
-    with open(path, "w") as f:
+    with open(report_path, "w") as f:
         json.dump(missing_albums, f, indent=2)
+
+# Idea here is to do the following: 
+#   1. clear the screen
+#   2. write status in the top middle
+#   3. display original embed information to the left
+#   4. display changed embed information to the right
+#   5. display options at the bottom
+
+# What this requires: a more specific reporting system. I need the original information as well 
+#   as the new information
+def render_comparison():
+    pass
+
