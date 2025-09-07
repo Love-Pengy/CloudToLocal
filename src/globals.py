@@ -10,3 +10,5 @@ class ReportStatus:
     SINGLE = 4
     ALBUM_FOUND = 5
 
+def get_report_status_str(val):
+    return(ReportStatus.__dict__.keys()[dict.values().index(val)])

@@ -54,6 +54,7 @@ class CloudToLocal:
                     provider = "Youtube"
                     title = entry['title']
                     uploader = entry["uploader"]
+                    thumbnail_url = entry["thumbnails"][len(entry["thumbnails"])-1]["url"]
                 else:
                     # NOTE: Soundcloud's API Gives References To Song Instead
                     #       Of Song Information For Top Level Entry So We Must
@@ -68,7 +69,12 @@ class CloudToLocal:
                     else:
                         uploader = sc_info['uploader']
 
+                    pprint(sc_info)
+                    # TODO: this can probably just be used to get high res thumbnail
+                    thumbnail_url = sc_info["thumbnail"]
+                    # thumbnail_url = entry["thumbnails"][len(entry["thumbnails"])-1]["url"]
                     title = sc_info['title']
+
 
                 ydl_opts_download = {
                     # Download Best audio format and fallback to best video
@@ -157,7 +163,8 @@ class CloudToLocal:
                         "provider": provider,
                         "ext": curr_ext,
                         "duration": curr_duration,
-                        "uploader": uploader
+                        "uploader": uploader,
+                        "thumbnail_url": thumbnail_url
                     }, self.report, url)
 
                     replace_filename(title, uploader,
