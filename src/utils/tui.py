@@ -1,7 +1,16 @@
+import io
 import json
+import urllib.request
 from ytmusicapi import YTMusic
+from term_image.image import AutoImage
+from PIL import Image, ImageOps, ImageDraw
 from utils.common import get_img_size_url, sanitize_string
 from utils.file_operations import user_replace_filename
+from globals import get_report_status_str
+
+TUI_OPTION_BLOCK_HEIGHT = 100
+TUI_NAME_BLOCK_HEIGHT = 50
+TUI_BOTTOM_UI_HEIGHT = TUI_NAME_BLOCK_HEIGHT+TUI_OPTION_BLOCK_HEIGHT
 
 
 def correct_missing(report_path):
@@ -203,15 +212,99 @@ def correct_missing(report_path):
     with open(report_path, "w") as f:
         json.dump(missing_albums, f, indent=2)
 
-# Idea here is to do the following: 
+# Idea here is to do the following:
 #   1. clear the screen
 #   2. write status in the top middle
 #   3. display original embed information to the left
 #   4. display changed embed information to the right
 #   5. display options at the bottom
 
-# What this requires: a more specific reporting system. I need the original information as well 
+# What this requires: a more specific reporting system. I need the original information as well
 #   as the new information
-def render_comparison():
-    pass
 
+
+# TODO: handle only having one of these
+def render_comparison(term_size_x, term_size_y, report_entry):
+
+    # Retreive Images
+    try:
+        with urllib.request.urlopen(report_entry["thumbnail_url"]) as response:
+            request_response = response.read()
+            image1_data = io.BytesIO(request_response)
+        with urllib.request.urlopen(report_entry["thumbnail_info"]["url"]) as response:
+            request_response = response.read()
+            image2_data = io.BytesIO(request_response)
+    except Exception as e:
+        print(f"Error: {e}")
+
+    image1 = Image.open(image1_data)
+    image1 = image1.resize((int(term_size_x/2), int(term_size_y/2)))
+
+    if ("after" in report_entry):
+        image2 = Image.open(image2_data)
+        image2 = image2.resize((int(term_size_x/2), int(term_size_y/2)))
+
+    # Draw Album Art
+    combined_canvas = Image.new(
+        "RGB", (term_size_x, term_size_y))
+    combined_canvas.paste(image1)
+
+    if ("after" in report_entry):
+        combined_canvas.paste(
+            image2, (int(term_size_x/2), 0))
+
+    # Draw bottom section
+    TUI_NAME_BLOCK_HEIGHT = 50
+    combined_canvas = ImageOps.expand(
+        combined_canvas, border=(
+            0, 0, 0, TUI_NAME_BLOCK_HEIGHT + TUI_OPTION_BLOCK_HEIGHT),
+        fill=(255, 255, 0))
+
+    draw = ImageDraw.Draw(combined_canvas)
+
+    # Draw Titles
+    draw.text((0, combined_canvas.size[1]-TUI_BOTTOM_UI_HEIGHT),
+              "Title1", fill=(0, 0, 255))
+    if ("after" in report_entry):
+        status_str = get_report_status_str(report_entry["after"]["status"])
+    else:
+        status_str = get_report_status_str(report_entry["before"]["status"])
+
+        if ((status_str == "SINGLE") or (status_str == "ALBUM_FOUND")):
+            draw.text((int(combined_canvas.size[0]/2),
+                      combined_canvas.size[1]-TUI_NAME_BLOCK_HEIGHT),
+                      report_entry["title"], fill=(0, 0, 255))
+
+    w = draw.textlength(status_str)
+    draw.line((combined_canvas.size[0]/2, 0, combined_canvas.size[0]/2,
+               combined_canvas.size[1]-TUI_BOTTOM_UI_HEIGHT), fill=128, width=5)
+    draw.text(((combined_canvas.size[0]/2)-(w/2), 0),
+              status_str, fill=(0, 255, 255), align="center")
+
+    draw.line((0, (combined_canvas.size[1] - TUI_BOTTOM_UI_HEIGHT),
+               combined_canvas.size[0],
+               (combined_canvas.size[1] - TUI_BOTTOM_UI_HEIGHT)),
+              fill=128, width=5)
+
+    # Draw Options
+    option_block_height = TUI_OPTION_BLOCK_HEIGHT
+    option_block_step = TUI_OPTION_BLOCK_HEIGHT/4
+
+    w = draw.textlength("Option 1")
+    draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
+              "Option 1", fill=(0, 0, 0), align="center")
+    w = draw.textlength("Option 2")
+    option_block_height -= option_block_step
+    draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
+              "Option 2", fill=(0, 0, 0), align="center")
+    w = draw.textlength("Option 3")
+    option_block_height -= option_block_step
+    draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
+              "Option 3", fill=(0, 0, 0), align="center")
+    w = draw.textlength("Option 4")
+    option_block_height -= option_block_step
+    draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
+              "Option 4", fill=(0, 0, 0), align="center")
+
+    term_image = AutoImage(combined_canvas)
+    print(term_image)

@@ -281,7 +281,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                         "url": url,
                         "duration": duration,
                         "uploader": uploader,
-                        "thumbnail_url": thumbnail,
+                        "thumbnail_info": thumbnail,
                         "filename": os.path.basename(new_fname)
                     }, report, url)
 
