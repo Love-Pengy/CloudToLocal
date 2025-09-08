@@ -1,4 +1,3 @@
-+ add original and updated information into reports.
-    + this is pretty much done, but see if you can get original image url
-+ using this report implement the side by side replacement TUI
-+ update the metadata TUI to the new implementations
++ Display image dimensions in top right of each image
++ display options based on the status of the download
++ fix all options to the new way of handling things

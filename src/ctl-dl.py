@@ -54,7 +54,8 @@ class CloudToLocal:
                     provider = "Youtube"
                     title = entry['title']
                     uploader = entry["uploader"]
-                    thumbnail_url = entry["thumbnails"][len(entry["thumbnails"])-1]["url"]
+                    thumbnail_url = entry["thumbnails"][len(
+                        entry["thumbnails"])-1]["url"]
                 else:
                     # NOTE: Soundcloud's API Gives References To Song Instead
                     #       Of Song Information For Top Level Entry So We Must
@@ -69,12 +70,10 @@ class CloudToLocal:
                     else:
                         uploader = sc_info['uploader']
 
-                    pprint(sc_info)
                     # TODO: this can probably just be used to get high res thumbnail
                     thumbnail_url = sc_info["thumbnail"]
                     # thumbnail_url = entry["thumbnails"][len(entry["thumbnails"])-1]["url"]
                     title = sc_info['title']
-
 
                 ydl_opts_download = {
                     # Download Best audio format and fallback to best video
@@ -180,16 +179,18 @@ class CloudToLocal:
 
 def main(arguments):
     arguments.outdir = os.path.expanduser(arguments.outdir)
-    if (arguments.fresh
-       and os.path.exists(arguments.outdir)):
-        shutil.rmtree(arguments.outdir)
     ctl = CloudToLocal(arguments)
+
     if (arguments.fix_missing):
         correct_missing(arguments.outdir+"/ctl_report")
-    else:
-        check_ytdlp_update()
-        info("STARTING DOWNLOAD")
-        ctl.download()
+        exit()
+    elif (arguments.fresh
+          and os.path.exists(arguments.outdir)):
+        shutil.rmtree(arguments.outdir)
+
+    check_ytdlp_update()
+    info("STARTING DOWNLOAD")
+    ctl.download()
 
 
 if __name__ == "__main__":
