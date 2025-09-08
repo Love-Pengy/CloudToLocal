@@ -1,7 +1,9 @@
 import io
 import json
 import urllib.request
+from pprint import pprint
 from ytmusicapi import YTMusic
+from utils.printing import warning
 from term_image.image import AutoImage
 from PIL import Image, ImageOps, ImageDraw
 from utils.common import get_img_size_url, sanitize_string
@@ -23,19 +25,22 @@ def correct_missing(report_path):
 
     ytmusic = YTMusic()
     with open(report_path, "r") as f:
-        missing_albums = json.load(f)
+        report = json.load(f)
 
-    for song_path in list(missing_albums):
-        spec = missing_albums[song_path]
-        print(f"OG Path: {song_path}\n"
-              f"OG Title: {spec["found_title"]}, OG Artist: {
-                  spec["found_artist"]}\n"
-              f"Matched Title: {spec["closest_match"]["title"]}, "
-              f"Matched Artist: {[artist["name"]
-                                  for artist in
-                                  spec["closest_match"]["artists"]]}\n"
-              f"Matched Album: {spec["closest_match"]["album"]}\n")
-        f"Provider: {spec["provider"]}"
+    for entry_idx in list(report):
+        spec = report[entry_idx]
+        # print(f"OG Path: {song_path}\n"
+        #       f"OG Title: {spec["found_title"]}, OG Artist: {
+        #           spec["found_artist"]}\n"
+        #       f"Matched Title: {spec["closest_match"]["title"]}, "
+        #       f"Matched Artist: {[artist["name"]
+        #                           for artist in
+        #                           spec["closest_match"]["artists"]]}\n"
+        #       f"Matched Album: {spec["closest_match"]["album"]}\n")
+        # f"Provider: {spec["provider"]}"
+
+        # NOTE: 1920x1080 is assumed here. This gets scaled to term size anyway
+        render_comparison(spec, 1920, 1080)
         user_input = None
         while (not (user_input == '1') and
                not (user_input == '2') and
@@ -71,7 +76,7 @@ def correct_missing(report_path):
                                       closest_match["album_len"],
                                       album_date,
                                       thumbnail)
-                missing_albums.pop(song_path)
+                report.pop(song_path)
 
             case '2':
                 user_replace_filename(spec["found_title"],
@@ -81,7 +86,7 @@ def correct_missing(report_path):
                                       "", spec["url"],
                                       spec["duration"],
                                       1, 1, None, user_url)
-                missing_albums.pop(song_path)
+                report.pop(song_path)
 
             case '3':
                 while (1):
@@ -153,7 +158,7 @@ def correct_missing(report_path):
                                                       {"height": image_size[1],
                                                        "width": image_size[0],
                                                        "url": thumbs[len(thumbs)-1]["url"]})
-                                missing_albums.pop(song_path)
+                                report.pop(song_path)
                                 break
                         else:
                             print("Album Not Found")
@@ -205,37 +210,27 @@ def correct_missing(report_path):
                                                "width": image_size[0],
                                                "url": user_thumbnail_url}
                                               )
-                        missing_albums.pop(song_path)
+                        report.pop(song_path)
                         break
             case 'q':
                 break
     with open(report_path, "w") as f:
-        json.dump(missing_albums, f, indent=2)
+        json.dump(report, f, indent=2)
 
-# Idea here is to do the following:
-#   1. clear the screen
-#   2. write status in the top middle
-#   3. display original embed information to the left
-#   4. display changed embed information to the right
-#   5. display options at the bottom
-
-# What this requires: a more specific reporting system. I need the original information as well
-#   as the new information
-
-
-# TODO: handle only having one of these
-def render_comparison(term_size_x, term_size_y, report_entry):
+def render_comparison(report_entry, term_size_x, term_size_y):
 
     # Retreive Images
     try:
-        with urllib.request.urlopen(report_entry["thumbnail_url"]) as response:
+        with urllib.request.urlopen(report_entry["before"]["thumbnail_url"]) as response:
             request_response = response.read()
             image1_data = io.BytesIO(request_response)
-        with urllib.request.urlopen(report_entry["thumbnail_info"]["url"]) as response:
-            request_response = response.read()
-            image2_data = io.BytesIO(request_response)
+        if ("after" in report_entry):
+            with urllib.request.urlopen(
+                report_entry["after"]["thumbnail_info"]["url"]) as response:
+                request_response = response.read()
+                image2_data = io.BytesIO(request_response)
     except Exception as e:
-        print(f"Error: {e}")
+        warning(f"Error: {e}")
 
     image1 = Image.open(image1_data)
     image1 = image1.resize((int(term_size_x/2), int(term_size_y/2)))
@@ -246,7 +241,7 @@ def render_comparison(term_size_x, term_size_y, report_entry):
 
     # Draw Album Art
     combined_canvas = Image.new(
-        "RGB", (term_size_x, term_size_y))
+        "RGB", (term_size_x, int(term_size_y/2)))
     combined_canvas.paste(image1)
 
     if ("after" in report_entry):
@@ -254,10 +249,9 @@ def render_comparison(term_size_x, term_size_y, report_entry):
             image2, (int(term_size_x/2), 0))
 
     # Draw bottom section
-    TUI_NAME_BLOCK_HEIGHT = 50
     combined_canvas = ImageOps.expand(
         combined_canvas, border=(
-            0, 0, 0, TUI_NAME_BLOCK_HEIGHT + TUI_OPTION_BLOCK_HEIGHT),
+            0, 0, 0, TUI_BOTTOM_UI_HEIGHT),
         fill=(255, 255, 0))
 
     draw = ImageDraw.Draw(combined_canvas)
