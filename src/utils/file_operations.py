@@ -2,12 +2,16 @@ import os
 import shutil
 import urllib
 import base64
+import pathlib
 import traceback
+from io import BytesIO
 from pprint import pprint
 
+from PIL import Image
 from time import sleep
 from mutagen.mp3 import MP3
 from ytmusicapi import YTMusic
+from utils.common import warning
 from globals import ReportStatus
 from utils.printing import info, error
 from mutagen.oggopus import OggOpus
@@ -16,7 +20,7 @@ from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
 from youtube_title_parse import get_artist_title
 from ytmusicapi.exceptions import YTMusicServerError
-from mutagen.id3 import TIT2, TOPE, TALB, TRCK, TDAT, APIC
+from mutagen.id3 import TIT2, TOPE, TALB, TRCK, TDAT, APIC, ID3
 
 from utils.common import (
     get_diff_count,
@@ -24,24 +28,49 @@ from utils.common import (
     increase_img_req_res)
 
 # Add entry to record
-# The tui is expecting as much of the following as possible:
-#   Old: title, uploader, duration, filename, url, ext, provider
-#   New: title, artist, duration, filename, thumbnail url, url, ext
-# TODO: make a pre record addition and post, so that the key isn't managed outside
-
-
-def add_to_record_pre_replace(context, record, url):
+def add_to_record_pre_replace(context, record, url, status):
     record[url] = {}
     record[url]["before"] = context
+    record[url]["status"] = status
 
 
-def add_to_record_post_replace(context, record, url):
+def add_to_record_post_replace(context, record, url, status):
     record[url]["after"] = context
+    record[url]["status"] = status
 
 
-def add_to_record_err(context, record, url):
+def add_to_record_err(context, record, url, status):
     record[url] = context
+    record[url] = status
 
+def get_embedded_thumbnail_res(path) -> tuple:
+    ext = pathlib.Path(path).suffix
+    match ext:
+        case ".mp3":
+            audio = ID3(path)
+            thumb_data = audio[APIC].data
+            return(Image.open(BytesIO(thumb_data)).size)
+        case ".mp4" | ".m4a":
+            audio = MP4(path)
+            thumb_data = BytesIO(audio["covr"])
+            return(Image.open(thumb_data).size)
+        case ".opus" | ".ogg" | ".flac":
+            audio = {".opus": OggOpus, ".ogg": OggVorbis}[ext](path)
+            for data in audio.get("metadata_block_picture", []):
+                try: 
+                    data = base64.b64decode(data)
+                except (TypeError, ValueError):
+                    continue
+            picture = Picture(data)
+            return(picture.width, picture.height)
+        case ".flac":
+            pic = audio.pictures[0]
+            width = pic.width
+            height = pic.height
+            return(width, height)
+        case _:
+            warning(f"Unsupported Filetype: {ext[1:]}")
+ 
 
 def tag_file(filepath, artist, album, title, track_num,
              total_tracks, year, thumbnail, ext):
@@ -199,15 +228,15 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                     closest_match["album_len"] = len(album)
 
                     add_to_record_post_replace({
-                        "status": ReportStatus.DOWNLOAD_NO_UPDATE,
                         "found_artist": artist,
                         "found_title": title,
                         "closest_match": closest_match,
                         "provider": provider,
                         "ext": extension,
                         "duration": duration,
-                        "uploader": uploader
-                    }, report, url)
+                        "uploader": uploader,
+                        "path": filepath
+                    }, report, url, ReportStatus.DOWNLOAD_NO_UPDATE)
                     info(f"ALBUM MISSED: {title} {artist}")
                 else:
                     if (single):
@@ -273,7 +302,6 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                     shutil.move(filepath, new_fname)
 
                     add_to_record_post_replace({
-                        "status": status,
                         "artist": artist,
                         "title": title,
                         "provider": provider,
@@ -282,15 +310,15 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                         "duration": duration,
                         "uploader": uploader,
                         "thumbnail_info": thumbnail,
-                        "filename": os.path.basename(new_fname)
-                    }, report, url)
+                        "filename": os.path.basename(new_fname),
+                        "filepath": filepath
+                    }, report, url, status)
 
         # NOTE: This occurs when both title and artist cannot be parsed.
         # Should only happen when you have a delimiter that can't clearly
         # be used to distinguish betwen artist and title such as a space
         else:
-            add_to_record_err({"status": ReportStatus.SEARCH_FOUND_NOTHING, "url": url},
-                              report, url)
+            add_to_record_err({"url": url}, report, url, ReportStatus.SEARCH_FOUND_NOTHING)
             info(f"ARTIST AND SONG NOT FOUND: {title}")
 
         handler.write_to_playlists(url, duration,
@@ -301,7 +329,9 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                                    output_dir)
 
 
-def user_replace_filename(self, title, artists, filepath, extension,
+# TODO: this should clear all existing metadata first
+# TODO: should probably also take in objects instead of all elements
+def user_replace_filename(title, artists, filepath, extension,
                           matching_album, url, duration, track_number, album_len,
                           album_date, thumbnail_url):
     """
