@@ -1,18 +1,47 @@
 import io
 import json
+import traceback
 import urllib.request
-from pprint import pprint
-from ytmusicapi import YTMusic
-from utils.printing import warning
-from term_image.image import AutoImage
-from PIL import Image, ImageOps, ImageDraw
-from utils.common import get_img_size_url, sanitize_string
-from utils.file_operations import user_replace_filename
-from globals import get_report_status_str
 
-TUI_OPTION_BLOCK_HEIGHT = 100
-TUI_NAME_BLOCK_HEIGHT = 50
-TUI_BOTTOM_UI_HEIGHT = TUI_NAME_BLOCK_HEIGHT+TUI_OPTION_BLOCK_HEIGHT
+from ytmusicapi import YTMusic
+from globals import ReportStatus
+from utils.printing import warning
+from textual.reactive import reactive
+from textual_image.widget import Image
+from globals import get_report_status_str
+from textual.app import App, ComposeResult
+from textual.containers import Horizontal, Vertical
+from utils.file_operations import user_replace_filename
+from utils.common import get_img_size_url, sanitize_string
+from textual.widgets import Footer, Header, Pretty, Rule, Static
+
+def format_album_info(report, state) -> dict:
+    """Format report into a dict able to be pretty printed as the album info
+
+        Args:
+            report (dict): before or after dictionary
+            state (str): specifes whether report is before or after
+    """
+    # FIXME: dawg why didn't I match these to begin with
+    output = {}
+    match (state):
+        case "before":
+            output["title"] = report["title"]
+            output["uploader"] = report["uploader"]
+            output["provider"] = report["provider"]
+            output["duration"] = report["duration"]
+            output["url"] = report["url"]
+            return(output)
+        case "after":
+            output["title"] = report["title"]
+            output["artist"] = report["artist"]
+            output["provider"] = report["provider"]
+            output["duration"] = report["duration"]
+            output["url"] = report["url"]
+            output["filename"] = report["filename"]
+            return(output)
+        case _:
+            warning("Invalid State For Formatting Album Info")
 
 
 def correct_missing(report_path):
@@ -21,7 +50,7 @@ def correct_missing(report_path):
 
         Args:
             report_path (str): Path To Report JSON File
-        """
+    """
 
     ytmusic = YTMusic()
     with open(report_path, "r") as f:
@@ -217,88 +246,306 @@ def correct_missing(report_path):
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)
 
-def render_comparison(report_entry, term_size_x, term_size_y):
 
-    # Retreive Images
-    try:
-        with urllib.request.urlopen(report_entry["before"]["thumbnail_url"]) as response:
-            request_response = response.read()
-            image1_data = io.BytesIO(request_response)
-        if ("after" in report_entry):
-            with urllib.request.urlopen(
-                report_entry["after"]["thumbnail_info"]["url"]) as response:
+class ctl_tui(App):
+
+    BINDINGS = [
+        # Probably just make it always dark
+        ("n", "accept_new", "Accept New Generated Option"),
+        ("c", "accept_closest", "Accept Closest Match"),
+        ("o", "accept_original", "Accept Original (No Album)"),
+        ("s", "search_again", "Search Again"),
+        ("i", "input_scratch", "Input From Scratch"),
+        ("r", "replace_entry", "Retry Download Process With New URL"),
+        ("s", "skip_entry", "Skip Entry"),
+        ("R", "retry_download", "Retry Download Process"),
+        # NOTE: this will require another screen
+        ("p", "pick_and_choose", "Pick Elements To Pick From Both Before And After")
+    ]
+
+    # Refresh Footer/Bindings and recompose on change
+    current_report_key = reactive(None, recompose=True, bindings=True)
+
+    def __init__(self, report_path, **kwargs):
+        super().__init__(**kwargs)
+        with open(report_path, "r") as fptr:
+            self.report_dict = json.load(fptr)
+        self.current_report_key_iter = iter(self.report_dict)
+        self.current_report_key = next(self.current_report_key_iter)
+        # self.current_report_index = 0
+        self.theme = "textual-dark"
+
+    # TODO: this should be moved to a file
+    CSS = """
+
+    Screen {
+        align: center middle;
+    }
+
+    #img1, #img2 {
+        width: 50vw;
+        height: auto;
+    }
+
+    #before_info, #after_info {
+        width: 50vw;
+        height: auto;
+    }
+
+    #album_info {
+        width: 100%;
+        height: 25vh;
+    }
+
+    #status {
+        width: 100%;
+        text-align: center;
+    }
+
+    #album_art {
+        width: 100%;
+        height: 75vh;
+    }
+    """
+
+    # TODO: add exiting when complete https://textual.textualize.io/guide/app/#exiting
+    # TODO: Add status, names, thumbnail dimensions, and other metadata
+    def compose(self) -> ComposeResult:
+        current_report = self.report_dict[self.current_report_key]
+        after_width = None
+        after_height = None
+        # FIXME: needs to be status based. Will fail on status 2 for instance because of lack of thumbnail_info
+        try:
+            with urllib.request.urlopen(current_report
+                                        ["before"]["thumbnail_url"]) as response:
                 request_response = response.read()
-                image2_data = io.BytesIO(request_response)
-    except Exception as e:
-        warning(f"Error: {e}")
+                image1_data = io.BytesIO(request_response)
 
-    image1 = Image.open(image1_data)
-    image1 = image1.resize((int(term_size_x/2), int(term_size_y/2)))
+            if ("after" in current_report):
+                with urllib.request.urlopen(current_report
+                                            ["after"]["thumbnail_info"]["url"]) as response:
+                    request_response = response.read()
+                    image2_data = io.BytesIO(request_response)
+                    yield Horizontal(
+                        Image(image1_data, id="img1"),
+                        Image(image2_data, id="img2"), id="album_art"
+                    )
+                    title = current_report["after"]["title"]
+                    after_width = current_report["after"]["thumbnail_info"]["width"]
+                    after_height = current_report["after"]["thumbnail_info"]["height"]
+            else:
+                # TODO: make this take up the whole screen
+                yield Image(image1_data, id="img1")
+                title = current_report["before"]["title"]
 
-    if ("after" in report_entry):
-        image2 = Image.open(image2_data)
-        image2 = image2.resize((int(term_size_x/2), int(term_size_y/2)))
+            before_width = current_report["before"]["thumbnail_width"]
+            before_height = current_report["before"]["thumbnail_height"]
+        except Exception as e:
+            warning(f"URL Retrieval For Compose Failed: {
+                    traceback.format_exc()}")
 
-    # Draw Album Art
-    combined_canvas = Image.new(
-        "RGB", (term_size_x, int(term_size_y/2)))
-    combined_canvas.paste(image1)
+        self.title = f"({before_width},{before_height}) {
+            title} ({after_width},{after_height})"
+        yield Header()
+        yield Rule(line_style="ascii")
 
-    if ("after" in report_entry):
-        combined_canvas.paste(
-            image2, (int(term_size_x/2), 0))
+        # FIXME: fix this when not lazy ~ BEF
+        if (after_width):
+            yield Vertical(
+                Static(get_report_status_str(
+                    current_report["status"]), id="status"),
+                Horizontal(
+                    Pretty(format_album_info(
+                        current_report["before"], "before"), id="before_info"),
+                    Pretty(format_album_info(
+                        current_report["after"], "after"), id="after_info"),
+                    id="album_info"
+                )
+            )
+        else:
+            yield Vertical(
+                Static(get_report_status_str(
+                    current_report["status"]), id="status"),
+                Pretty(format_album_info(
+                    current_report["before"], "before"), id="before_info"), id="album_info"
+            )
 
-    # Draw bottom section
-    combined_canvas = ImageOps.expand(
-        combined_canvas, border=(
-            0, 0, 0, TUI_BOTTOM_UI_HEIGHT),
-        fill=(255, 255, 0))
+        yield Footer()
 
-    draw = ImageDraw.Draw(combined_canvas)
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
 
-    # Draw Titles
-    draw.text((0, combined_canvas.size[1]-TUI_BOTTOM_UI_HEIGHT),
-              "Title1", fill=(0, 0, 255))
-    if ("after" in report_entry):
-        status_str = get_report_status_str(report_entry["after"]["status"])
-    else:
-        status_str = get_report_status_str(report_entry["before"]["status"])
+        disabled_action_list = None
+        match (self.report_dict[self.current_report_key]["status"]):
+            case ReportStatus.DOWNLOAD_FAILURE:
+                disabled_action_list = ["accept_new", "accept_closest", "accept_original",
+                                        "search_again", "input_scratch"]
+            case ReportStatus.DOWNLOAD_SUCCESS:
+                disabled_action_list = ["accept_new",
+                                        "accept_closest", "retry_download"]
+            case ReportStatus.DOWNLOAD_NO_UPDATE:
+                disabled_action_list = ["accept_new",
+                                        "accept_closest", "retry_download"]
+            case ReportStatus.SEARCH_FOUND_NOTHING:
+                disabled_action_list = ["accept_new",
+                                        "accept_closest", "retry_download"]
+            case ReportStatus.SINGLE:
+                disabled_action_list = ["accept_new",
+                                        "accept_closest", "retry_download"]
+            case ReportStatus.ALBUM_FOUND:
+                disabled_action_list = ["accept_closest", "retry_download"]
 
-        if ((status_str == "SINGLE") or (status_str == "ALBUM_FOUND")):
-            draw.text((int(combined_canvas.size[0]/2),
-                      combined_canvas.size[1]-TUI_NAME_BLOCK_HEIGHT),
-                      report_entry["title"], fill=(0, 0, 255))
+        if (action in disabled_action_list):
+            return False
+        return True
 
-    w = draw.textlength(status_str)
-    draw.line((combined_canvas.size[0]/2, 0, combined_canvas.size[0]/2,
-               combined_canvas.size[1]-TUI_BOTTOM_UI_HEIGHT), fill=128, width=5)
-    draw.text(((combined_canvas.size[0]/2)-(w/2), 0),
-              status_str, fill=(0, 255, 255), align="center")
+    def action_accept_closest(self):
+        current_report = self.report_dict[self.current_report_key]
+        closest_match = current_report["after"]["closest_match"]
 
-    draw.line((0, (combined_canvas.size[1] - TUI_BOTTOM_UI_HEIGHT),
-               combined_canvas.size[0],
-               (combined_canvas.size[1] - TUI_BOTTOM_UI_HEIGHT)),
-              fill=128, width=5)
+        artists = [artist["name"]
+                   for artist in closest_match["artists"]]
 
-    # Draw Options
-    option_block_height = TUI_OPTION_BLOCK_HEIGHT
-    option_block_step = TUI_OPTION_BLOCK_HEIGHT/4
+        if ("year" in closest_match):
+            album_date = closest_match["year"]
+        else:
+            album_date = None
 
-    w = draw.textlength("Option 1")
-    draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
-              "Option 1", fill=(0, 0, 0), align="center")
-    w = draw.textlength("Option 2")
-    option_block_height -= option_block_step
-    draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
-              "Option 2", fill=(0, 0, 0), align="center")
-    w = draw.textlength("Option 3")
-    option_block_height -= option_block_step
-    draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
-              "Option 3", fill=(0, 0, 0), align="center")
-    w = draw.textlength("Option 4")
-    option_block_height -= option_block_step
-    draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
-              "Option 4", fill=(0, 0, 0), align="center")
+        if (closest_match["thumbnails"] is not None):
+            thumbnail = closest_match["thumbnails"][len(
+                closest_match["thumbnails"]-1)]
+        else:
+            thumbnail = None
 
-    term_image = AutoImage(combined_canvas)
-    print(term_image)
+        song_path = current_report["after"]["filepath"]
+
+        user_replace_filename(closest_match["title"], artists,
+                              current_report["after"]["filepath"],
+                              current_report["after"]["ext"],
+                              closest_match["album"],
+                              current_report["after"]["url"],
+                              current_report["after"]["duration"],
+                              closest_match["trackNumber"],
+                              closest_match["album_len"],
+                              album_date,
+                              thumbnail)
+
+        self.report_list.pop(song_path)
+        self.current_report_key = next(self.current_report_key_iter)
+
+    def action_accept_original(self):
+        pass
+        self.current_report_key = next(self.current_report_key_iter)
+
+    def action_search_again(self):
+        pass
+        self.current_report_key = next(self.current_report_key_iter)
+
+    def action_input_scratch(self):
+        pass
+        self.current_report_key = next(self.current_report_key_iter)
+
+    def action_replace_entry(self):
+        pass
+        self.current_report_key = next(self.current_report_key_iter)
+
+    def action_skip_entry(self):
+        pass
+        self.current_report_key = next(self.current_report_key_iter)
+
+    def action_accept_new(self):
+        pass
+        self.current_report_key = next(self.current_report_key_iter)
+
+    def action_retry_download(self):
+        pass
+        self.current_report_key = next(self.current_report_key_iter)
+
+    # def on_mount(self) -> None:
+    #     self.title = "Test Application For CloudtoLocal TUI"
+
+
+# def render_comparison(report_entry, term_size_x, term_size_y):
+#
+#     # Retreive Images
+#     try:
+#         with urllib.request.urlopen(report_entry["before"]["thumbnail_url"]) as response:
+#             request_response = response.read()
+#             image1_data = io.BytesIO(request_response)
+#         if ("after" in report_entry):
+#             with urllib.request.urlopen(
+#                 report_entry["after"]["thumbnail_info"]["url"]) as response:
+#                 request_response = response.read()
+#                 image2_data = io.BytesIO(request_response)
+#     except Exception as e:
+#         warning(f"Error: {e}")
+#
+#     image1 = Image.open(image1_data)
+#     image1 = image1.resize((int(term_size_x/2), int(term_size_y/2)))
+#
+#     if ("after" in report_entry):
+#         image2 = Image.open(image2_data)
+#         image2 = image2.resize((int(term_size_x/2), int(term_size_y/2)))
+#
+#     # Draw Album Art
+#     combined_canvas = Image.new(
+#         "RGB", (term_size_x, int(term_size_y/2)))
+#     combined_canvas.paste(image1)
+#
+#     if ("after" in report_entry):
+#         combined_canvas.paste(
+#             image2, (int(term_size_x/2), 0))
+#
+#     # Draw bottom section
+#     combined_canvas = ImageOps.expand(
+#         combined_canvas, border=(
+#             0, 0, 0, TUI_BOTTOM_UI_HEIGHT),
+#         fill=(255, 255, 0))
+#
+#     draw = ImageDraw.Draw(combined_canvas)
+#
+#     # Draw Titles
+#     draw.text((0, combined_canvas.size[1]-TUI_BOTTOM_UI_HEIGHT),
+#               "Title1", fill=(0, 0, 255))
+#     if ("after" in report_entry):
+#         status_str = get_report_status_str(report_entry["after"]["status"])
+#     else:
+#         status_str = get_report_status_str(report_entry["before"]["status"])
+#
+#         if ((status_str == "SINGLE") or (status_str == "ALBUM_FOUND")):
+#             draw.text((int(combined_canvas.size[0]/2),
+#                       combined_canvas.size[1]-TUI_NAME_BLOCK_HEIGHT),
+#                       report_entry["title"], fill=(0, 0, 255))
+#
+#     w = draw.textlength(status_str)
+#     draw.line((combined_canvas.size[0]/2, 0, combined_canvas.size[0]/2,
+#                combined_canvas.size[1]-TUI_BOTTOM_UI_HEIGHT), fill=128, width=5)
+#     draw.text(((combined_canvas.size[0]/2)-(w/2), 0),
+#               status_str, fill=(0, 255, 255), align="center")
+#
+#     draw.line((0, (combined_canvas.size[1] - TUI_BOTTOM_UI_HEIGHT),
+#                combined_canvas.size[0],
+#                (combined_canvas.size[1] - TUI_BOTTOM_UI_HEIGHT)),
+#               fill=128, width=5)
+#
+#     # Draw Options
+#     option_block_height = TUI_OPTION_BLOCK_HEIGHT
+#     option_block_step = TUI_OPTION_BLOCK_HEIGHT/4
+#
+#     w = draw.textlength("Option 1")
+#     draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
+#               "Option 1", fill=(0, 0, 0), align="center")
+#     w = draw.textlength("Option 2")
+#     option_block_height -= option_block_step
+#     draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
+#               "Option 2", fill=(0, 0, 0), align="center")
+#     w = draw.textlength("Option 3")
+#     option_block_height -= option_block_step
+#     draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
+#               "Option 3", fill=(0, 0, 0), align="center")
+#     w = draw.textlength("Option 4")
+#     option_block_height -= option_block_step
+#     draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
+#               "Option 4", fill=(0, 0, 0), align="center")
+#
+#     term_image = AutoImage(combined_canvas)
+#     print(term_image)

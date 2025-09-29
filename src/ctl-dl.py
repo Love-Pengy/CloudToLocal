@@ -11,15 +11,18 @@ from globals import ReportStatus
 import configargparse
 from pprint import pprint
 from yt_dlp import YoutubeDL
+from utils.tui import ctl_tui
 from utils.tui import correct_missing
 from yt_dlp.utils import DownloadError
 from utils.common import check_ytdlp_update
 from utils.printing import warning, error, success, info
 from utils.playlist_handler import PlaylistHandler
+
 from utils.file_operations import (
     replace_filename,
     add_to_record_err,
-    add_to_record_pre_replace
+    add_to_record_pre_replace,
+    get_embedded_thumbnail_res
 )
 
 
@@ -148,23 +151,26 @@ class CloudToLocal:
                             print(traceback.format_exc())
                             error(f"Unexpected error for '{title}': {e}")
                     else:
-                        add_to_record_err({"status": ReportStatus.DOWNLOAD_FAILURE},
-                                          self.report, url)
+                        add_to_record_err({"url": url},
+                                          self.report, url, ReportStatus.DOWNLOAD_FAILURE)
                         break
                     attempts += 1
 
                 if (curr_filepath):
-
+                    thumb_dimensions = get_embedded_thumbnail_res(curr_filepath)
                     add_to_record_pre_replace({
-                        "status": ReportStatus.DOWNLOAD_SUCCESS,
                         "title": title,
                         "uploader": uploader,
                         "provider": provider,
                         "ext": curr_ext,
                         "duration": curr_duration,
                         "uploader": uploader,
-                        "thumbnail_url": thumbnail_url
-                    }, self.report, url)
+                        "thumbnail_url": thumbnail_url,
+                        "thumbnail_width": thumb_dimensions[0],
+                        "thumbnail_height": thumb_dimensions[1],
+                        "path": curr_filepath,
+                        "url": url
+                    }, self.report, url, ReportStatus.DOWNLOAD_SUCCESS)
 
                     replace_filename(title, uploader,
                                      curr_filepath, curr_ext,
@@ -182,7 +188,8 @@ def main(arguments):
     ctl = CloudToLocal(arguments)
 
     if (arguments.fix_missing):
-        correct_missing(arguments.outdir+"/ctl_report")
+        ctl_tui(arguments.outdir+"/ctl_report").run()
+        # correct_missing(arguments.outdir+"/ctl_report")
         exit()
     elif (arguments.fresh
           and os.path.exists(arguments.outdir)):
