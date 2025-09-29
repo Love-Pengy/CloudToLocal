@@ -18,12 +18,14 @@ dependencies = [
   "PyYAML",
   "requests",
   "urllib3",
-  "yt-dlp==2025.09.05",
+  "yt-dlp==2025.09.26",
   "ytmusicapi",
   "selenium",
   "beautifulsoup4",
   "pillow",
-  "youtube_title_parse @ https://github.com/Love-Pengy/youtube_title_parse/archive/refs/heads/master.zip"
+  "youtube_title_parse @ https://github.com/Love-Pengy/youtube_title_parse/archive/refs/heads/master.zip",
+  "textual",
+  "textual_image" 
 ]
 
 [project.urls]
