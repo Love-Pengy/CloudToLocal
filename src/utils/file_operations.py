@@ -302,7 +302,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                     shutil.move(filepath, new_fname)
 
                     add_to_record_post_replace({
-                        "artist": artist,
+                        "artist": artists,
                         "title": title,
                         "provider": provider,
                         "ext": extension,
@@ -311,7 +311,11 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                         "uploader": uploader,
                         "thumbnail_info": thumbnail,
                         "filename": os.path.basename(new_fname),
-                        "filepath": filepath
+                        "filepath": filepath,
+                        "album": matching_album[0]["album"],
+                        "track_num": track_num,
+                        "total_tracks": len(album),
+                        "year": year
                     }, report, url, status)
 
         # NOTE: This occurs when both title and artist cannot be parsed.
