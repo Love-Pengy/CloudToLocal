@@ -291,11 +291,16 @@ class ctl_tui(App):
 
     #before_info, #after_info {
         width: 50vw;
+        height: 100vh;
+    }
+
+    #full_img {
+        width: auto;
         height: auto;
     }
 
     #album_info {
-        width: 100%;
+        width: 100vw;
         height: 25vh;
     }
 
@@ -307,6 +312,7 @@ class ctl_tui(App):
     #album_art {
         width: 100%;
         height: 75vh;
+        align: center middle;
     }
     """
 
@@ -331,7 +337,6 @@ class ctl_tui(App):
         after_height = None
         after_present = False
         closest_match_present = False
-        # FIXME: needs to be status based. Will fail on status 2 for instance because of lack of thumbnail_info
         try:
             with urllib.request.urlopen(current_report
                                         ["before"]["thumbnail_url"]) as response:
@@ -340,7 +345,6 @@ class ctl_tui(App):
 
             if ("after" in current_report
                     and not (current_report["status"] == ReportStatus.SEARCH_FOUND_NOTHING)
-                    # and current_report["status"] != ReportStatus.DOWNLOAD_NO_UPDATE
                 ):
                 if (not (current_report["status"] == ReportStatus.DOWNLOAD_NO_UPDATE)):
                     with urllib.request.urlopen(current_report
@@ -356,14 +360,11 @@ class ctl_tui(App):
                         after_height = current_report["after"]["thumbnail_info"]["height"]
                         after_present = True
                 else:
-                    yield Horizontal(
-                            Image(image1_data, id="img1")
-                    )
+                    yield Horizontal(Image(image1_data, id="full_img"), id="album_art")
                     title = current_report["after"]["closest_match"]["title"]
                     closest_match_present = True
             else:
-                # TODO: make this take up the whole screen
-                yield Image(image1_data, id="img1")
+                yield Horizontal(Image(image1_data, id="full_img"), id="album_art")
                 title = current_report["before"]["title"]
 
             before_width = current_report["before"]["thumbnail_width"]
