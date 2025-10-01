@@ -138,7 +138,7 @@ class CloudToLocal:
                                 else:
                                     # FIXME: this happens if we skip a download. video_info will
                                     #   be none and requested_downloads won't exist. this should
-                                    continue;
+                                    continue
                             break
                         except DownloadError:
                             info(
@@ -182,8 +182,6 @@ class CloudToLocal:
 
 def main(arguments):
     arguments.outdir = os.path.expanduser(arguments.outdir)
-    ctl = CloudToLocal(arguments)
-
     if (arguments.fix_missing):
         ctl_tui(arguments.outdir+"/ctl_report").run()
         # correct_missing(arguments.outdir+"/ctl_report")
@@ -191,6 +189,8 @@ def main(arguments):
     elif (arguments.fresh
           and os.path.exists(arguments.outdir)):
         shutil.rmtree(arguments.outdir)
+
+    ctl = CloudToLocal(arguments)
 
     check_ytdlp_update()
     info("STARTING DOWNLOAD")
