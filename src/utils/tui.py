@@ -260,8 +260,8 @@ def correct_missing(report_path):
 
 class ctl_tui(App):
 
+    # TODO: should make this a menu or something
     BINDINGS = [
-        # Probably just make it always dark
         ("n", "accept_new", "Accept New Generated Option"),
         ("c", "accept_closest", "Accept Closest Match"),
         ("o", "accept_original", "Accept Original (No Album)"),
@@ -276,15 +276,6 @@ class ctl_tui(App):
 
     # Refresh Footer/Bindings and recompose on change
     current_report_key = reactive(None, recompose=True, bindings=True)
-
-    def __init__(self, report_path, **kwargs):
-        super().__init__(**kwargs)
-        with open(report_path, "r") as fptr:
-            self.report_dict = json.load(fptr)
-        self.current_report_key_iter = iter(self.report_dict)
-        self.current_report_key = next(self.current_report_key_iter)
-        # self.current_report_index = 0
-        self.theme = "textual-dark"
 
     # TODO: this should be moved to a file
     CSS = """
@@ -319,8 +310,21 @@ class ctl_tui(App):
     }
     """
 
-    # TODO: add exiting when complete https://textual.textualize.io/guide/app/#exiting
-    # TODO: Add status, names, thumbnail dimensions, and other metadata
+    def __init__(self, report_path, **kwargs):
+        super().__init__(**kwargs)
+        with open(report_path, "r") as fptr:
+            self.report_dict = json.load(fptr)
+        self.current_report_key_iter = iter(self.report_dict)
+        self.current_report_key = next(self.current_report_key_iter)
+        # self.current_report_index = 0
+        self.theme = "textual-dark"
+
+    def increment_report_key(self):
+        try: 
+            self.current_report_key = next(self.current_report_key_iter)
+        except StopIteration:
+            self.exit(1)
+
     def compose(self) -> ComposeResult:
         current_report = self.report_dict[self.current_report_key]
         after_width = None
@@ -468,123 +472,35 @@ class ctl_tui(App):
                               thumbnail)
 
         self.report_list.pop(song_path)
-        # TODO: stop iter is our out. Handle that with an exit from textual, or screen change
-        self.current_report_key = next(self.current_report_key_iter)
+        self.increment_report_key()
 
     def action_accept_original(self):
         pass
-        self.current_report_key = next(self.current_report_key_iter)
+        self.increment_report_key()
 
     def action_search_again(self):
         pass
-        self.current_report_key = next(self.current_report_key_iter)
+        self.increment_report_key()
 
     def action_input_scratch(self):
         pass
-        self.current_report_key = next(self.current_report_key_iter)
+        self.increment_report_key()
 
     def action_replace_entry(self):
         pass
-        self.current_report_key = next(self.current_report_key_iter)
+        self.increment_report_key()
 
     def action_skip_entry(self):
         pass
-        self.current_report_key = next(self.current_report_key_iter)
+        self.increment_report_key()
 
     def action_accept_new(self):
         pass
-        self.current_report_key = next(self.current_report_key_iter)
+        self.increment_report_key()
 
     def action_retry_download(self):
         pass
-        self.current_report_key = next(self.current_report_key_iter)
+        self.increment_report_key()
 
     # def on_mount(self) -> None:
     #     self.title = "Test Application For CloudtoLocal TUI"
-
-
-# def render_comparison(report_entry, term_size_x, term_size_y):
-#
-#     # Retreive Images
-#     try:
-#         with urllib.request.urlopen(report_entry["before"]["thumbnail_url"]) as response:
-#             request_response = response.read()
-#             image1_data = io.BytesIO(request_response)
-#         if ("after" in report_entry):
-#             with urllib.request.urlopen(
-#                 report_entry["after"]["thumbnail_info"]["url"]) as response:
-#                 request_response = response.read()
-#                 image2_data = io.BytesIO(request_response)
-#     except Exception as e:
-#         warning(f"Error: {e}")
-#
-#     image1 = Image.open(image1_data)
-#     image1 = image1.resize((int(term_size_x/2), int(term_size_y/2)))
-#
-#     if ("after" in report_entry):
-#         image2 = Image.open(image2_data)
-#         image2 = image2.resize((int(term_size_x/2), int(term_size_y/2)))
-#
-#     # Draw Album Art
-#     combined_canvas = Image.new(
-#         "RGB", (term_size_x, int(term_size_y/2)))
-#     combined_canvas.paste(image1)
-#
-#     if ("after" in report_entry):
-#         combined_canvas.paste(
-#             image2, (int(term_size_x/2), 0))
-#
-#     # Draw bottom section
-#     combined_canvas = ImageOps.expand(
-#         combined_canvas, border=(
-#             0, 0, 0, TUI_BOTTOM_UI_HEIGHT),
-#         fill=(255, 255, 0))
-#
-#     draw = ImageDraw.Draw(combined_canvas)
-#
-#     # Draw Titles
-#     draw.text((0, combined_canvas.size[1]-TUI_BOTTOM_UI_HEIGHT),
-#               "Title1", fill=(0, 0, 255))
-#     if ("after" in report_entry):
-#         status_str = get_report_status_str(report_entry["after"]["status"])
-#     else:
-#         status_str = get_report_status_str(report_entry["before"]["status"])
-#
-#         if ((status_str == "SINGLE") or (status_str == "ALBUM_FOUND")):
-#             draw.text((int(combined_canvas.size[0]/2),
-#                       combined_canvas.size[1]-TUI_NAME_BLOCK_HEIGHT),
-#                       report_entry["title"], fill=(0, 0, 255))
-#
-#     w = draw.textlength(status_str)
-#     draw.line((combined_canvas.size[0]/2, 0, combined_canvas.size[0]/2,
-#                combined_canvas.size[1]-TUI_BOTTOM_UI_HEIGHT), fill=128, width=5)
-#     draw.text(((combined_canvas.size[0]/2)-(w/2), 0),
-#               status_str, fill=(0, 255, 255), align="center")
-#
-#     draw.line((0, (combined_canvas.size[1] - TUI_BOTTOM_UI_HEIGHT),
-#                combined_canvas.size[0],
-#                (combined_canvas.size[1] - TUI_BOTTOM_UI_HEIGHT)),
-#               fill=128, width=5)
-#
-#     # Draw Options
-#     option_block_height = TUI_OPTION_BLOCK_HEIGHT
-#     option_block_step = TUI_OPTION_BLOCK_HEIGHT/4
-#
-#     w = draw.textlength("Option 1")
-#     draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
-#               "Option 1", fill=(0, 0, 0), align="center")
-#     w = draw.textlength("Option 2")
-#     option_block_height -= option_block_step
-#     draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
-#               "Option 2", fill=(0, 0, 0), align="center")
-#     w = draw.textlength("Option 3")
-#     option_block_height -= option_block_step
-#     draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
-#               "Option 3", fill=(0, 0, 0), align="center")
-#     w = draw.textlength("Option 4")
-#     option_block_height -= option_block_step
-#     draw.text(((combined_canvas.size[0]/2)-(w/2), combined_canvas.size[1]-option_block_height),
-#               "Option 4", fill=(0, 0, 0), align="center")
-#
-#     term_image = AutoImage(combined_canvas)
-#     print(term_image)
