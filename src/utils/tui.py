@@ -8,12 +8,13 @@ from globals import ReportStatus
 from utils.printing import warning
 from textual.reactive import reactive
 from textual_image.widget import Image
-from globals import get_report_status_str
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
+from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
 from utils.common import get_img_size_url, sanitize_string
 from textual.widgets import Footer, Header, Pretty, Rule, Static
+
 
 def format_album_info(report, state) -> dict:
     """Format report into a dict able to be pretty printed as the album info
@@ -23,6 +24,7 @@ def format_album_info(report, state) -> dict:
             state (str): specifes whether report is before or after
     """
     # FIXME: dawg why didn't I match these to begin with
+    # also put docstring for how this works
     output = {}
     match (state):
         case "before":
@@ -31,15 +33,24 @@ def format_album_info(report, state) -> dict:
             output["provider"] = report["provider"]
             output["duration"] = report["duration"]
             output["url"] = report["url"]
-            return(output)
+            return (output)
         case "after":
             output["title"] = report["title"]
             output["artist"] = report["artist"]
             output["provider"] = report["provider"]
             output["duration"] = report["duration"]
+            output["album"] = report["album"]
             output["url"] = report["url"]
             output["filename"] = report["filename"]
-            return(output)
+            return (output)
+        case "closest":
+            closest = report["closest_match"]
+            output["title"] = closest["title"]
+            output["artists"] = closest["artists"]
+            output["album"] = closest["album"]
+            # TODO: might have to convert this back to seconds to match
+            output["duration"] = closest["duration"]
+            return (output)
         case _:
             warning("Invalid State For Formatting Album Info")
 
@@ -314,6 +325,8 @@ class ctl_tui(App):
         current_report = self.report_dict[self.current_report_key]
         after_width = None
         after_height = None
+        after_present = False
+        closest_match_present = False
         # FIXME: needs to be status based. Will fail on status 2 for instance because of lack of thumbnail_info
         try:
             with urllib.request.urlopen(current_report
@@ -321,18 +334,29 @@ class ctl_tui(App):
                 request_response = response.read()
                 image1_data = io.BytesIO(request_response)
 
-            if ("after" in current_report):
-                with urllib.request.urlopen(current_report
-                                            ["after"]["thumbnail_info"]["url"]) as response:
-                    request_response = response.read()
-                    image2_data = io.BytesIO(request_response)
+            if ("after" in current_report
+                    and not (current_report["status"] == ReportStatus.SEARCH_FOUND_NOTHING)
+                    # and current_report["status"] != ReportStatus.DOWNLOAD_NO_UPDATE
+                ):
+                if (not (current_report["status"] == ReportStatus.DOWNLOAD_NO_UPDATE)):
+                    with urllib.request.urlopen(current_report
+                                                ["after"]["thumbnail_info"]["url"]) as response:
+                        request_response = response.read()
+                        image2_data = io.BytesIO(request_response)
+                        yield Horizontal(
+                            Image(image1_data, id="img1"),
+                            Image(image2_data, id="img2"), id="album_art"
+                        )
+                        title = current_report["after"]["title"]
+                        after_width = current_report["after"]["thumbnail_info"]["width"]
+                        after_height = current_report["after"]["thumbnail_info"]["height"]
+                        after_present = True
+                else:
                     yield Horizontal(
-                        Image(image1_data, id="img1"),
-                        Image(image2_data, id="img2"), id="album_art"
+                            Image(image1_data, id="img1")
                     )
-                    title = current_report["after"]["title"]
-                    after_width = current_report["after"]["thumbnail_info"]["width"]
-                    after_height = current_report["after"]["thumbnail_info"]["height"]
+                    title = current_report["after"]["closest_match"]["title"]
+                    closest_match_present = True
             else:
                 # TODO: make this take up the whole screen
                 yield Image(image1_data, id="img1")
@@ -341,8 +365,10 @@ class ctl_tui(App):
             before_width = current_report["before"]["thumbnail_width"]
             before_height = current_report["before"]["thumbnail_height"]
         except Exception as e:
+            # FIXME: this should handle failure
             warning(f"URL Retrieval For Compose Failed: {
                     traceback.format_exc()}")
+            warning(e)
 
         self.title = f"({before_width},{before_height}) {
             title} ({after_width},{after_height})"
@@ -350,7 +376,7 @@ class ctl_tui(App):
         yield Rule(line_style="ascii")
 
         # FIXME: fix this when not lazy ~ BEF
-        if (after_width):
+        if (after_present):
             yield Vertical(
                 Static(get_report_status_str(
                     current_report["status"]), id="status"),
@@ -359,6 +385,18 @@ class ctl_tui(App):
                         current_report["before"], "before"), id="before_info"),
                     Pretty(format_album_info(
                         current_report["after"], "after"), id="after_info"),
+                    id="album_info"
+                )
+            )
+        elif (closest_match_present):
+            yield Vertical(
+                Static(get_report_status_str(
+                    current_report["status"]), id="status"),
+                Horizontal(
+                    Pretty(format_album_info(
+                        current_report["before"], "before"), id="before_info"),
+                    Pretty(format_album_info(
+                        current_report["after"], "closest"), id="after_info"),
                     id="album_info"
                 )
             )
@@ -430,6 +468,7 @@ class ctl_tui(App):
                               thumbnail)
 
         self.report_list.pop(song_path)
+        # TODO: stop iter is our out. Handle that with an exit from textual, or screen change
         self.current_report_key = next(self.current_report_key_iter)
 
     def action_accept_original(self):

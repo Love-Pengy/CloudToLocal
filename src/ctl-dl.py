@@ -136,12 +136,9 @@ class CloudToLocal:
                                     curr_duration = int(
                                         round(float(video_info["duration"]), 0))
                                 else:
-                                    # FIXME: this is wrong, if we don't have a filepath nothing got
-                                    # downloaded. This should probably report
-                                    pprint(self.report)
-                                    input()
-                                    curr_ext = None
-                                    curr_duration = None
+                                    # FIXME: this happens if we skip a download. video_info will
+                                    #   be none and requested_downloads won't exist. this should
+                                    continue;
                             break
                         except DownloadError:
                             info(
