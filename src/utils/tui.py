@@ -318,18 +318,20 @@ class ctl_tui(App):
 
     def __init__(self, report_path, **kwargs):
         super().__init__(**kwargs)
-        with open(report_path, "r") as fptr:
+        self.report_path = report_path
+        with open(self.report_path, "r") as fptr:
             self.report_dict = json.load(fptr)
-        self.current_report_key_iter = iter(self.report_dict)
+        self.current_report_key_iter = iter(list(self.report_dict))
         self.current_report_key = next(self.current_report_key_iter)
         # self.current_report_index = 0
         self.theme = "textual-dark"
 
     def increment_report_key(self):
         try: 
+            self.report_dict.pop(self.current_report_key)
             self.current_report_key = next(self.current_report_key_iter)
         except StopIteration:
-            self.exit(1)
+            self.exit()
 
     def compose(self) -> ComposeResult:
         current_report = self.report_dict[self.current_report_key]
@@ -351,14 +353,14 @@ class ctl_tui(App):
                                                 ["after"]["thumbnail_info"]["url"]) as response:
                         request_response = response.read()
                         image2_data = io.BytesIO(request_response)
-                        yield Horizontal(
-                            Image(image1_data, id="img1"),
-                            Image(image2_data, id="img2"), id="album_art"
-                        )
-                        title = current_report["after"]["title"]
-                        after_width = current_report["after"]["thumbnail_info"]["width"]
-                        after_height = current_report["after"]["thumbnail_info"]["height"]
-                        after_present = True
+                    yield Horizontal(
+                        Image(image1_data, id="img1"),
+                        Image(image2_data, id="img2"), id="album_art"
+                    )
+                    title = current_report["after"]["title"]
+                    after_width = current_report["after"]["thumbnail_info"]["width"]
+                    after_height = current_report["after"]["thumbnail_info"]["height"]
+                    after_present = True
                 else:
                     yield Horizontal(Image(image1_data, id="full_img"), id="album_art")
                     title = current_report["after"]["closest_match"]["title"]
@@ -370,7 +372,7 @@ class ctl_tui(App):
             before_width = current_report["before"]["thumbnail_width"]
             before_height = current_report["before"]["thumbnail_height"]
         except Exception as e:
-            # FIXME: this should handle failure
+            # FIXME: this should handle failure ~ BEF
             warning(f"URL Retrieval For Compose Failed: {
                     traceback.format_exc()}")
             warning(e)
@@ -502,6 +504,13 @@ class ctl_tui(App):
     def action_retry_download(self):
         pass
         self.increment_report_key()
+    
+    def action_quit(self):
+        with open(self.report_path, "w") as f:
+            json.dump(self.report_dict, f, indent=2)
+        self.exit()
+        
+        
 
     # def on_mount(self) -> None:
     #     self.title = "Test Application For CloudtoLocal TUI"
