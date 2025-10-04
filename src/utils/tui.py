@@ -323,7 +323,6 @@ class ctl_tui(App):
             self.report_dict = json.load(fptr)
         self.current_report_key_iter = iter(list(self.report_dict))
         self.current_report_key = next(self.current_report_key_iter)
-        # self.current_report_index = 0
         self.theme = "textual-dark"
 
     def increment_report_key(self):

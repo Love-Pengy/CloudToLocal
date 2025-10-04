@@ -4,18 +4,19 @@ import urllib
 import base64
 import pathlib
 import traceback
+from time import sleep
 from io import BytesIO
 from pprint import pprint
 
 from PIL import Image
-from time import sleep
+from mutagen import File
 from mutagen.mp3 import MP3
 from ytmusicapi import YTMusic
 from utils.common import warning
 from globals import ReportStatus
-from utils.printing import info, error
 from mutagen.oggopus import OggOpus
 from mutagen.mp4 import MP4, MP4Cover
+from utils.printing import info, error
 from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
 from youtube_title_parse import get_artist_title
@@ -70,6 +71,11 @@ def get_embedded_thumbnail_res(path) -> tuple:
             return(width, height)
         case _:
             warning(f"Unsupported Filetype: {ext[1:]}")
+
+def delete_file_tags(filepath):
+    audio = File(filepath)
+    audio.delete()
+    audio.save()
  
 
 def tag_file(filepath, artist, album, title, track_num,
@@ -333,7 +339,6 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                                    output_dir)
 
 
-# TODO: this should clear all existing metadata first
 # TODO: should probably also take in objects instead of all elements
 def user_replace_filename(title, artists, filepath, extension,
                           matching_album, url, duration, track_number, album_len,
@@ -356,6 +361,8 @@ def user_replace_filename(title, artists, filepath, extension,
             thumbnail_url (dict)
 
     """
+
+    delete_file_tags(filepath)
 
     tag_file(filepath,
              artists,
