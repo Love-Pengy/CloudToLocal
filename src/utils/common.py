@@ -77,6 +77,7 @@ def increase_img_req_res(low_res):
     high_res["width"] = 1480
     high_res["url"] = low_res["url"].replace("w120-h120",
                                              "w1480-h1480")
+    # TODO: should verify that this exists. Can continually step down until found
     return (high_res)
 
 
