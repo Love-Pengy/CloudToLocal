@@ -29,6 +29,8 @@ from utils.common import (
     increase_img_req_res)
 
 # Add entry to record
+
+
 def add_to_record_pre_replace(context, record, url, status):
     record[url] = {}
     record[url]["before"] = context
@@ -44,39 +46,41 @@ def add_to_record_err(context, record, url, status):
     record[url] = context
     record[url] = status
 
+
 def get_embedded_thumbnail_res(path) -> tuple:
     ext = pathlib.Path(path).suffix
     match ext:
         case ".mp3":
             audio = ID3(path)
             thumb_data = audio[APIC].data
-            return(Image.open(BytesIO(thumb_data)).size)
+            return (Image.open(BytesIO(thumb_data)).size)
         case ".mp4" | ".m4a":
             audio = MP4(path)
             thumb_data = BytesIO(audio["covr"])
-            return(Image.open(thumb_data).size)
+            return (Image.open(thumb_data).size)
         case ".opus" | ".ogg" | ".flac":
             audio = {".opus": OggOpus, ".ogg": OggVorbis}[ext](path)
             for data in audio.get("metadata_block_picture", []):
-                try: 
+                try:
                     data = base64.b64decode(data)
                 except (TypeError, ValueError):
                     continue
             picture = Picture(data)
-            return(picture.width, picture.height)
+            return (picture.width, picture.height)
         case ".flac":
             pic = audio.pictures[0]
             width = pic.width
             height = pic.height
-            return(width, height)
+            return (width, height)
         case _:
             warning(f"Unsupported Filetype: {ext[1:]}")
+
 
 def delete_file_tags(filepath):
     audio = File(filepath)
     audio.delete()
     audio.save()
- 
+
 
 def tag_file(filepath, artist, album, title, track_num,
              total_tracks, year, thumbnail, ext):
@@ -232,6 +236,8 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                             closest_match_miss_count = diff_num
 
                     closest_match["album_len"] = len(album)
+                    thumbs = search[0]["thumbnails"]
+                    closest_match["thumbnail_info"] = increase_img_req_res(thumbs[len(thumbs)-1])
 
                     add_to_record_post_replace({
                         "found_artist": artist,
@@ -317,7 +323,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                         "uploader": uploader,
                         "thumbnail_info": thumbnail,
                         "filename": os.path.basename(new_fname),
-                        "filepath": filepath,
+                        "filepath": new_fname,
                         "album": matching_album[0]["album"],
                         "track_num": track_num,
                         "total_tracks": len(album),
@@ -340,9 +346,10 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
 
 
 # TODO: should probably also take in objects instead of all elements
+# TODO: should also rename this to actually match the function
 def user_replace_filename(title, artists, filepath, extension,
-                          matching_album, url, duration, track_number, album_len,
-                          album_date, thumbnail_url):
+                          matching_album, duration, track_number, album_len,
+                          album_date, thumbnail_obj):
     """
         User Initiated Filename Replacement Method. Replaces filename, tags
             file with relevant metadata, and adds to playlist if desired
@@ -353,12 +360,11 @@ def user_replace_filename(title, artists, filepath, extension,
             filepath (str)
             extension (str)
             matching_album (str)
-            url (str)
             duration (int)
             track_number (int)
             album_len (int)
             album_date (str)
-            thumbnail_url (dict)
+            thumbnail_obj (dict)
 
     """
 
@@ -371,7 +377,7 @@ def user_replace_filename(title, artists, filepath, extension,
              track_number,
              album_len,
              album_date,
-             increase_img_req_res(thumbnail_url),
+             thumbnail_obj,
              extension)
 
     if (not matching_album):
@@ -383,16 +389,17 @@ def user_replace_filename(title, artists, filepath, extension,
          f"{title}"
          f".{extension}")
 
-    shutil.move(filepath, f"{self.output_dir}"
+    shutil.move(filepath, f"{os.path.dirname(filepath)}/"
                 f"{artists[0]}_"
                 f"{matching_album}_"
                 f"{track_number:02d}_"
                 f"{title}"
                 f".{extension}")
 
-    self.playlist_handler.write_to_playlists(url, duration,
-                                             artists[0], title,
-                                             track_number,
-                                             matching_album,
-                                             filepath,
-                                             self.output_dir)
+    # TODO: Playlist entry should be moved to being handles **AFTER** user accepts name
+    # self.playlist_handler.write_to_playlists(url, duration,
+    #                                          artists[0], title,
+    #                                          track_number,
+    #                                          matching_album,
+    #                                          filepath,
+    #                                          self.output_dir)
