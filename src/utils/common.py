@@ -104,3 +104,11 @@ def check_ytdlp_update():
                 f"({local_version} -> {latest_release})")
     else:
         info(f"yt_dlp Is Up To Date (Version {latest_release})")
+
+
+def connectivity_check():
+    """ Request The Source For CloudToLocal To Check For An Internet Connection! """
+    request = requests.get("www.github.com/Love-Pengy/CloudToLocal")
+    if (request.status_code == 200):
+        return True
+    return False
