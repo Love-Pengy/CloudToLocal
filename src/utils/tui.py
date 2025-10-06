@@ -178,8 +178,8 @@ class ctl_tui(App):
                     traceback.format_exc()}")
             warning(e)
 
-        self.title = f"({before_width},{before_height}) {
-            title} ({after_width},{after_height})"
+        after_str = "(X,X)" if not after_width else f"({after_width}px, {after_height}px)"
+        self.title = f"({before_width}px,{before_height}px) {title} {after_str}"
         yield Header()
         yield Rule(line_style="ascii")
 
