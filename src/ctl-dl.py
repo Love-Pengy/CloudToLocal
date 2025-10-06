@@ -7,15 +7,15 @@ import traceback
 from time import sleep
 
 import globals
-from globals import ReportStatus
 import configargparse
 from pprint import pprint
 from yt_dlp import YoutubeDL
 from utils.tui import ctl_tui
+from globals import ReportStatus
 from yt_dlp.utils import DownloadError
-from utils.common import check_ytdlp_update
-from utils.printing import warning, error, success, info
 from utils.playlist_handler import PlaylistHandler
+from utils.printing import warning, error, success, info
+from utils.common import check_ytdlp_update, connectivity_check
 
 from utils.file_operations import (
     replace_filename,
@@ -180,10 +180,13 @@ class CloudToLocal:
 
 
 def main(arguments):
+    if (not connectivity_check()):
+        error("Internet Connection Could Not Be Established! Please Check Your Connection")
+    info("INTERNET CONNECTION VERIFIED")
+
     arguments.outdir = os.path.expanduser(arguments.outdir)
     if (arguments.fix_missing):
         ctl_tui(arguments.outdir+"/ctl_report").run()
-        # correct_missing(arguments.outdir+"/ctl_report")
         exit()
     elif (arguments.fresh
           and os.path.exists(arguments.outdir)):
