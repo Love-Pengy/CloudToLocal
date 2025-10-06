@@ -185,7 +185,7 @@ def main(arguments):
     info("INTERNET CONNECTION VERIFIED")
 
     arguments.outdir = os.path.expanduser(arguments.outdir)
-    if (arguments.fix_missing):
+    if (arguments.start_tui):
         ctl_tui(arguments.outdir+"/ctl_report").run()
         exit()
     elif (arguments.fresh
@@ -218,19 +218,18 @@ if __name__ == "__main__":
                         required=True, help="Directory To Output Unverified Songs To")
 
     parser.add_argument("--retry_amt", "-retry", default=10, type=int,
-                        help="Amount Of Times To Retry Non-Fatal Download"
-                        " Errors")
+                        help="Amount Of Times To Retry Non-Fatal Download Errors")
 
-    parser.add_argument("--fix-missing", "-fm", type=int,
-                        help="Fix Missing Albums From File Path Specified")
+    parser.add_argument("--start_tui", "-s", action="store_true",
+                        help="Start Tui To Edit Metadata")
 
-    parser.add_argument("--fail_on_warning", "-w", type=int,
-                        default=0, help="Exit Program On Failure")
+    parser.add_argument("--fail_on_warning", "-w", action="store_true",
+                        help="Exit Program On Failure")
 
-    parser.add_argument("--verbose", "-v", default=0, type=int,
+    parser.add_argument("--verbose", "-v", action="store_true",
                         help="Enable Verbose Output")
 
-    parser.add_argument("--quiet", "-q", default=0, type=int,
+    parser.add_argument("--quiet", "-q", action="store_true",
                         help="Suppress Everything But Warnings and Errors")
 
     parser.add_argument("--download_sleep", "-ds", default=5, type=int,
@@ -239,7 +238,7 @@ if __name__ == "__main__":
     parser.add_argument("--request_sleep", "-rs", default=1, type=int,
                         help="Amount Of Seconds To Sleep Between Requests")
 
-    parser.add_argument("--fresh", "-f", default=0, type=int,
+    parser.add_argument("--fresh", "-f", action="store_true",
                         help="Delete Directory Before Downloading (Mainly For Testing)")
 
     args = parser.parse_args()
