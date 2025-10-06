@@ -12,7 +12,6 @@ import configargparse
 from pprint import pprint
 from yt_dlp import YoutubeDL
 from utils.tui import ctl_tui
-from utils.tui import correct_missing
 from yt_dlp.utils import DownloadError
 from utils.common import check_ytdlp_update
 from utils.printing import warning, error, success, info
