@@ -1,6 +1,7 @@
 VERBOSE = False
 FAIL_ON_WARNING = False
 QUIET = False
+REQUEST_RESOLUTION = 4000
 
 class ReportStatus:
     DOWNLOAD_FAILURE = 0

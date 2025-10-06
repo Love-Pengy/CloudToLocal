@@ -1,8 +1,10 @@
 import io
 import urllib
 import requests
-from utils.printing import warning, info
+
+import globals
 from PIL import Image
+from utils.printing import warning, info
 from yt_dlp import version as yt_dlp_version
 
 
@@ -63,7 +65,7 @@ def get_img_size_url(url):
 
 def increase_img_req_res(low_res):
     """
-        Replace Thumbnail object of size 120x120 with 1480x1480
+        Replace Thumbnail object of size 120x120 with 4000x4000
 
         Args:
             low_res (dict)
@@ -72,12 +74,22 @@ def increase_img_req_res(low_res):
             Dictionary of increased size
     """
 
-    high_res = {}
-    high_res["height"] = 1480
-    high_res["width"] = 1480
-    high_res["url"] = low_res["url"].replace("w120-h120",
-                                             "w1480-h1480")
-    # TODO: should verify that this exists. Can continually step down until found
+    thumbnail_exists = False
+    width = globals.REQUEST_RESOLUTION
+    height = globals.REQUEST_RESOLUTION
+    while (not thumbnail_exists):
+        high_res = {}
+        high_res["width"] = width
+        high_res["height"] = height
+        high_res["url"] = low_res["url"].replace("w120-h120",
+                                                 f"w{high_res["width"]}-h{high_res["height"]}")
+        response = requests.head(high_res["url"], timeout=1)
+        if (response.status_code == 200):
+            thumbnail_exists = True
+        else:
+            width = width - 100
+            height = height - 100
+
     return (high_res)
 
 
