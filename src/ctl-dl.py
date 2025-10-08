@@ -59,6 +59,8 @@ class CloudToLocal:
                     uploader = entry["uploader"]
                     thumbnail_url = entry["thumbnails"][len(
                         entry["thumbnails"])-1]["url"]
+                    # NOTE: youtube doesn't provide genres so ignore this field for Youtube
+                    genres = None
                 else:
                     # NOTE: Soundcloud's API Gives References To Song Instead
                     #       Of Song Information For Top Level Entry So We Must
@@ -77,6 +79,7 @@ class CloudToLocal:
                     thumbnail_url = sc_info["thumbnail"]
                     # thumbnail_url = entry["thumbnails"][len(entry["thumbnails"])-1]["url"]
                     title = sc_info['title']
+                    genres = sc_info["genres"] if "genres" in sc_info else None
 
                 ydl_opts_download = {
                     # Download Best audio format and fallback to best video
@@ -153,10 +156,10 @@ class CloudToLocal:
                                     curr_filepath = video_dl_info["filepath"]
                                     curr_duration = int(
                                         round(float(video_info["duration"]), 0))
+                                # FIXME: this happens if we skip a download. video_info will
+                                #   be none and requested_downloads won't exist. this should
                                 else:
-                                    # FIXME: this happens if we skip a download. video_info will
-                                    #   be none and requested_downloads won't exist. this should
-                                    continue
+                                    pass
                             break
                         except DownloadError:
                             info(
@@ -184,6 +187,7 @@ class CloudToLocal:
                         "thumbnail_url": thumbnail_url,
                         "thumbnail_width": thumb_dimensions[0],
                         "thumbnail_height": thumb_dimensions[1],
+                        "genres": genres,
                         "path": curr_filepath,
                         "url": url
                     }, self.report, url, ReportStatus.DOWNLOAD_SUCCESS)
