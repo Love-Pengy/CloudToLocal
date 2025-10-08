@@ -13,6 +13,7 @@ from yt_dlp import YoutubeDL
 from utils.tui import ctl_tui
 from globals import ReportStatus
 from yt_dlp.utils import DownloadError
+from yt_dlp.postprocessor import MetadataParserPP
 from utils.playlist_handler import PlaylistHandler
 from utils.printing import warning, error, success, info
 from utils.common import check_ytdlp_update, connectivity_check
@@ -81,10 +82,6 @@ class CloudToLocal:
                     # Download Best audio format and fallback to best video
                     'format': 'bestaudio/best',
                     'postprocessors': [
-                        {
-                            'key': 'FFmpegMetadata',
-                            'add_metadata': True
-                        },
                         # In the case of a video format extract audio with best
                         # quality opus
                         {
@@ -92,9 +89,31 @@ class CloudToLocal:
                             'preferredcodec': 'opus',
                             'preferredquality': '0'
                         },
+                        # --parse-metadata
+                        {
+                            'key': 'MetadataFromField',
+                            'formats': [
+                                # Delete The Following Fields From The Embed List
+                                ':(?P<meta_synopsis>)',
+                                ':(?P<meta_description>)',
+                                ':(?P<meta_purl>)',
+                                ':(?P<meta_comment>)',
+                                # Trim quotes from title
+                                r'title:^(“|")(?P<title>[^“”"]+)(“|”|")$|',
+                                # Trim trailing dot from title
+                                r'title:^(?P<title>.+[^0-9])\.$|'
+                                # TODO: can format release date to make it easier if you want 
+                                # '%(release_date>%Y-%m-%d,upload_date>%Y-%m-%d)s:%(meta_publish_date)s',
+                            ]
+                        },
+                        # --add-metadata
+                        {
+                            'key': 'FFmpegMetadata',
+                        },
+                        # --embed-thumbnail
                         {
                             'key': 'EmbedThumbnail'
-                        }
+                        },
                     ],
                     # Whether to print to stdout
                     'quiet': globals.QUIET,
@@ -153,7 +172,8 @@ class CloudToLocal:
                     attempts += 1
 
                 if (curr_filepath):
-                    thumb_dimensions = get_embedded_thumbnail_res(curr_filepath)
+                    thumb_dimensions = get_embedded_thumbnail_res(
+                        curr_filepath)
                     add_to_record_pre_replace({
                         "title": title,
                         "uploader": uploader,
