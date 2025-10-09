@@ -160,7 +160,7 @@ def tag_file(filepath, artist, album, title, track_num,
 
 
 def replace_filename(title, uploader, filepath, extension, provider, url, duration, output_dir,
-                     handler, report):
+                     report):
     """
         Filename Replacement Method. Replaces filename, tags file with
             relevant metadata, and adds to playlist if desired
@@ -337,12 +337,6 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
             add_to_record_err({"url": url}, report, url, ReportStatus.SEARCH_FOUND_NOTHING)
             info(f"ARTIST AND SONG NOT FOUND: {title}")
 
-        handler.write_to_playlists(url, duration,
-                                   artist, title,
-                                   track_num,
-                                   matching_album_name,
-                                   os.path.basename(new_fname),
-                                   output_dir)
 
 
 # TODO: should probably also take in objects instead of all elements

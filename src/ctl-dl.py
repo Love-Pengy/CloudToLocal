@@ -189,13 +189,14 @@ class CloudToLocal:
                         "thumbnail_height": thumb_dimensions[1],
                         "genres": genres,
                         "path": curr_filepath,
-                        "url": url
+                        "url": url,
+                        "playlists": self.playlist_handler.check_playlists(url)
                     }, self.report, url, ReportStatus.DOWNLOAD_SUCCESS)
 
                     replace_filename(title, uploader,
                                      curr_filepath, curr_ext,
                                      entry["ie_key"], url, curr_duration,
-                                     self.output_dir, self.playlist_handler, self.report)
+                                     self.output_dir, self.report)
 
         with open(self.report_fpath, "w") as f:
             json.dump(self.report, f, indent=2)
