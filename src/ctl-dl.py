@@ -57,8 +57,7 @@ class CloudToLocal:
                     provider = "Youtube"
                     title = entry['title']
                     uploader = entry["uploader"]
-                    thumbnail_url = entry["thumbnails"][len(
-                        entry["thumbnails"])-1]["url"]
+                    thumbnail_url = entry["thumbnails"][len(entry["thumbnails"])-1]["url"]
                     # NOTE: youtube doesn't provide genres so ignore this field for Youtube
                     genres = None
                 else:
@@ -105,8 +104,6 @@ class CloudToLocal:
                                 r'title:^(“|")(?P<title>[^“”"]+)(“|”|")$|',
                                 # Trim trailing dot from title
                                 r'title:^(?P<title>.+[^0-9])\.$|'
-                                # TODO: can format release date to make it easier if you want 
-                                # '%(release_date>%Y-%m-%d,upload_date>%Y-%m-%d)s:%(meta_publish_date)s',
                             ]
                         },
                         # --add-metadata
@@ -211,7 +208,7 @@ def main(arguments):
 
     arguments.outdir = os.path.expanduser(arguments.outdir)
     if (arguments.start_tui):
-        ctl_tui(arguments.outdir+"/ctl_report").run()
+        ctl_tui(arguments).run()
         exit()
     elif (arguments.fresh
           and os.path.exists(arguments.outdir)):
