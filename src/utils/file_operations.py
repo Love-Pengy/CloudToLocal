@@ -28,9 +28,8 @@ from utils.common import (
     sanitize_string,
     increase_img_req_res)
 
+
 # Add entry to record
-
-
 def add_to_record_pre_replace(context, record, url, status):
     record[url] = {}
     record[url]["before"] = context
@@ -132,7 +131,8 @@ def tag_file(filepath, artist, album, title, track_num,
                     'ogg': OggVorbis}[ext](filepath)
 
         picture = Picture()
-        metadata["album"] = album
+        if (album):
+            metadata["album"] = album
         metadata["artist"] = artist
         metadata["title"] = title
         metadata["tracknumber"] = f"{track_num}/{total_tracks}"
@@ -247,7 +247,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                         "ext": extension,
                         "duration": duration,
                         "uploader": uploader,
-                        "path": filepath
+                        "filepath": filepath
                     }, report, url, ReportStatus.DOWNLOAD_NO_UPDATE)
                     info(f"ALBUM MISSED: {title} {artist}")
                 else:
@@ -314,7 +314,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                     shutil.move(filepath, new_fname)
 
                     add_to_record_post_replace({
-                        "artist": artists,
+                        "artists": artists,
                         "title": title,
                         "provider": provider,
                         "ext": extension,
@@ -338,7 +338,6 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
             info(f"ARTIST AND SONG NOT FOUND: {title}")
 
 
-
 # TODO: should probably also take in objects instead of all elements
 # TODO: should also rename this to actually match the function
 def user_replace_filename(title, artists, filepath, extension,
@@ -360,6 +359,8 @@ def user_replace_filename(title, artists, filepath, extension,
             album_date (str)
             thumbnail_obj (dict)
 
+        Returns:
+            new filepath in which song resides
     """
 
     delete_file_tags(filepath)
@@ -383,17 +384,9 @@ def user_replace_filename(title, artists, filepath, extension,
          f"{title}"
          f".{extension}")
 
-    shutil.move(filepath, f"{os.path.dirname(filepath)}/"
-                f"{artists[0]}_"
-                f"{matching_album}_"
-                f"{track_number:02d}_"
-                f"{title}"
-                f".{extension}")
+    new_filepath = f"{os.path.dirname(
+        filepath)}/{artists[0]}_{matching_album}_{track_number:02d}_{title}.{extension}"
 
-    # TODO: Playlist entry should be moved to being handles **AFTER** user accepts name
-    # self.playlist_handler.write_to_playlists(url, duration,
-    #                                          artists[0], title,
-    #                                          track_number,
-    #                                          matching_album,
-    #                                          filepath,
-    #                                          self.output_dir)
+    shutil.move(filepath, new_filepath)
+
+    return (new_filepath)

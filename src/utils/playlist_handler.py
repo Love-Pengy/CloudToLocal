@@ -141,31 +141,46 @@ class PlaylistHandler:
         return (
             [spec for spec in self.playlists if url in self.playlists[spec]])
 
-    def write_to_playlists(self, url, duration, artist, title, track_num, album,
-                           filepath, output_dir):
+    def write_to_playlists(self, playlists: dict, song_url: str, filepath: str, output_dir: str, 
+                           title: str, artist: str, duration: int):
         """ Write song to all playlist files it belongs to
 
             Args:
-                url (str): playlist url
-                duration (int): duration of song in seconds
-                artist (str): artist of song
-                title (str): title of song
-                track_num (int): number of track within album
-                album (str): name of album
-                filepath (str): path to song
+                playlists:      Dictionary of playlists containing url for playlist and name of
+                                    playlist. Specify this if you want to manually give playlists
+                song_url:       Url of song. Specify this if you want to search through matching
+                                    playlists using class's context
+                filepath:       Path to song
+                output_dir:     Path to folder in which playlists will exist
+                title:          Song Title
+                album:          Album name
+                duration:       Duration of song in seconds
         """
-        if(filepath.startswith("#")):
-            sanitized_path = "./" + filepath
+        if (filepath.startswith("#")):
+            sanitized_path = "./" + os.path.basename(filepath)
         else:
-            sanitized_path = filepath
+            sanitized_path = os.path.basename(filepath)
 
-        for playlist_spec in self.check_playlists(url):
-            if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.m3u")):
-                with open(f"{output_dir}{playlist_spec[1]}.m3u", "w") as f:
-                    f.write("#EXTM3U\n")
-                    f.write(f"#EXTINF:{duration},{artist} - {title}\n")
-                    f.write(sanitized_path + "\n")
-            else:
-                with open(f"{output_dir}{playlist_spec[1]}.m3u", "a") as f:
-                    f.write(f"#EXTINF:{duration},{artist} - {title}\n")
-                    f.write(sanitized_path + "\n")
+        if (song_url):
+            for playlist_spec in self.check_playlists(song_url):
+                if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.m3u")):
+                    with open(f"{output_dir}{playlist_spec[1]}.m3u", "w") as f:
+                        f.write("#EXTM3U\n")
+                        f.write(f"#EXTINF:{duration},{artist} - {title}\n")
+                        f.write(sanitized_path + "\n")
+                else:
+                    with open(f"{output_dir}{playlist_spec[1]}.m3u", "a") as f:
+                        f.write(f"#EXTINF:{duration},{artist} - {title}\n")
+                        f.write(sanitized_path + "\n")
+        else:
+            for playlist_spec in playlists:
+                info(f"{output_dir}{playlist_spec[1]}.m3u")
+                if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.m3u")):
+                    with open(f"{output_dir}{playlist_spec[1]}.m3u", "w") as f:
+                        f.write("#EXTM3U\n")
+                        f.write(f"#EXTINF:{duration},{artist} - {title}\n")
+                        f.write(sanitized_path + "\n")
+                else:
+                    with open(f"{output_dir}{playlist_spec[1]}.m3u", "a") as f:
+                        f.write(f"#EXTINF:{duration},{artist} - {title}\n")
+                        f.write(sanitized_path + "\n")

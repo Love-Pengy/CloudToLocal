@@ -3,16 +3,14 @@ import json
 import traceback
 import urllib.request
 
-from ytmusicapi import YTMusic
-from globals import ReportStatus
 from utils.printing import warning
 from textual.reactive import reactive
 from textual_image.widget import Image
 from textual.app import App, ComposeResult
+from utils.playlist_handler import PlaylistHandler
 from textual.containers import Horizontal, Vertical
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
-from utils.common import get_img_size_url, sanitize_string
 from textual.widgets import Footer, Header, Pretty, Rule, Static
 
 
@@ -36,7 +34,7 @@ def format_album_info(report, state) -> dict:
             return (output)
         case "after":
             output["title"] = report["title"]
-            output["artist"] = report["artist"]
+            output["artists"] = report["artists"]
             output["provider"] = report["provider"]
             output["duration"] = report["duration"]
             output["album"] = report["album"]
@@ -113,9 +111,20 @@ class ctl_tui(App):
     }
     """
 
-    def __init__(self, report_path, **kwargs):
+    def __init__(self, arguments, **kwargs):
         super().__init__(**kwargs)
-        self.report_path = report_path
+
+        self.output_filepath = arguments.outdir
+        if (not (self.output_filepath[len(self.output_filepath)-1] == '/')):
+            self.output_filepath += '/'
+
+        self.report_path = self.output_filepath+"/ctl_report"
+        self.playlists_info = []
+        self.playlist_handler = PlaylistHandler(arguments.retry_amt,
+                                                arguments.playlists,
+                                                self.playlists_info,
+                                                arguments.request_sleep)
+
         with open(self.report_path, "r") as fptr:
             self.report_dict = json.load(fptr)
         self.current_report_key_iter = iter(list(self.report_dict))
@@ -127,12 +136,16 @@ class ctl_tui(App):
             self.report_dict.pop(self.current_report_key)
             self.current_report_key = next(self.current_report_key_iter)
         except StopIteration:
+            with open(self.report_path, "w") as f:
+                json.dump(self.report_dict, f, indent=2)
             self.exit()
 
     def increment_report_key(self):
         try:
             self.current_report_key = next(self.current_report_key_iter)
         except StopIteration:
+            with open(self.report_path, "w") as f:
+                json.dump(self.report_dict, f, indent=2)
             self.exit()
 
     def compose(self) -> ComposeResult:
@@ -246,25 +259,31 @@ class ctl_tui(App):
         current_report = self.report_dict[self.current_report_key]
         closest_match = current_report["after"]["closest_match"]
 
-        artists = [artist["name"]
-                   for artist in closest_match["artists"]]
-
         if ("year" in closest_match):
             album_date = closest_match["year"]
         else:
             album_date = None
 
+        artists = [artist["name"]
+                   for artist in closest_match["artists"]]
+
         song_path = current_report["before"]["path"]
 
-        user_replace_filename(closest_match["title"], artists,
-                              song_path,
-                              current_report["after"]["ext"],
-                              closest_match["album"],
-                              current_report["after"]["duration"],
-                              closest_match["trackNumber"],
-                              closest_match["album_len"],
-                              album_date,
-                              closest_match["thumbnail_info"])
+        new_fname = user_replace_filename(closest_match["title"], artists,
+                                          song_path,
+                                          current_report["after"]["ext"],
+                                          closest_match["album"],
+                                          current_report["after"]["duration"],
+                                          closest_match["trackNumber"],
+                                          closest_match["album_len"],
+                                          album_date,
+                                          closest_match["thumbnail_info"])
+
+        self.playlist_handler.write_to_playlists(current_report["before"]["playlists"], None,
+                                                 new_fname, self.output_filepath,
+                                                 closest_match["title"],
+                                                 closest_match["artists"][0]["name"],
+                                                 current_report["after"]["duration"])
 
         self.pop_and_increment_report_key()
 
@@ -276,34 +295,41 @@ class ctl_tui(App):
         else:
             path = before["path"]
 
-        user_replace_filename(before["title"],
-                              before["uploader"],
-                              path,
-                              before["ext"],
-                              None,
-                              before["duration"],
-                              1,
-                              1,
-                              None,
-                              {"height": before["thumbnail_height"],
-                               "width": before["thumbnail_width"],
-                               "url": before["thumbnail_url"]})
+        new_fname = user_replace_filename(before["title"],
+                                          [before["uploader"]],
+                                          path,
+                                          before["ext"],
+                                          None,
+                                          before["duration"],
+                                          1,
+                                          1,
+                                          None,
+                                          {"height": before["thumbnail_height"],
+                                           "width": before["thumbnail_width"],
+                                           "url": before["thumbnail_url"]})
+
+        self.playlist_handler.write_to_playlists(before["playlists"], None, new_fname,
+                                                 self.output_filepath, before["title"],
+                                                 before["uploader"], before["duration"])
 
         self.pop_and_increment_report_key()
 
     # TODO: create new screen for this
     def action_search_again(self):
         pass
+        self.playlist_handler.write_to_playlists()
         self.pop_and_increment_report_key()
 
     # TODO: create new screen for this
     def action_input_scratch(self):
         pass
+        self.playlist_handler.write_to_playlists()
         self.pop_and_increment_report_key()
 
     # TODO: create new screen for this
     def action_replace_entry(self):
         pass
+        self.playlist_handler.write_to_playlists()
         self.pop_and_increment_report_key()
 
     def action_skip_entry(self):
@@ -313,6 +339,14 @@ class ctl_tui(App):
         """ Accept newly written metadata
             @note currently metadata is written when new album is found with confidence, so this
             doesn't need to do anything"""
+
+        current_report = self.report_dict[self.current_report_key]
+
+        after = current_report["after"]
+        self.playlist_handler.write_to_playlists(current_report["before"]["playlists"], None,
+                                                 after["filename"], self.output_filepath,
+                                                 after["title"], after["artists"][0],
+                                                 after["duration"])
         self.pop_and_increment_report_key()
 
     # TODO: create new screen for this
@@ -320,7 +354,7 @@ class ctl_tui(App):
         pass
         self.pop_and_increment_report_key()
 
-    def action_retry_download(self):
+    def action_pick_and_choose(self):
         pass
         self.pop_and_increment_report_key()
 
