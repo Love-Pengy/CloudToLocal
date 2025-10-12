@@ -30,13 +30,13 @@ from utils.common import (
 
 
 # Add entry to record
-def add_to_record_pre_replace(context, record, url, status):
+def add_to_record_pre_search(context, record, url, status):
     record[url] = {}
     record[url]["before"] = context
     record[url]["status"] = status
 
 
-def add_to_record_post_replace(context, record, url, status):
+def add_to_record_post_search(context, record, url, status):
     record[url]["after"] = context
     record[url]["status"] = status
 
@@ -159,12 +159,9 @@ def tag_file(filepath, artist, album, title, track_num,
                          "Supported Types Are: flac, opus, ogg, mp3, and mp4")
 
 
-def replace_filename(title, uploader, filepath, extension, provider, url, duration, output_dir,
-                     report):
+def fill_tentative_metadata(title, uploader, filepath, extension, provider, url, duration,
+                            output_dir, report):
     """
-        Filename Replacement Method. Replaces filename, tags file with
-            relevant metadata, and adds to playlist if desired
-
         Args:
             title (str)
             uploader (str)
@@ -184,13 +181,11 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
         artist = uploader
         track_num = 1
         matching_album = []
-        new_fname = os.path.basename(filepath)
         result = get_artist_title(title,
                                   {"defaultArtist": uploader,
                                    "defaultTitle": title
                                    })
         single = False
-        matching_album_name = None
         if (all(result)):
             artist = result[0]
             title = result[1]
@@ -219,8 +214,6 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                             if track["title"].lower() == title.lower()
                             and track["artists"][0]["name"].lower() == artist.lower()
                         ]
-                        if (matching_album):
-                            matching_album_name = matching_album[0]["album"]
                     else:
                         single = True
 
@@ -239,7 +232,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                     thumbs = search[0]["thumbnails"]
                     closest_match["thumbnail_info"] = increase_img_req_res(thumbs[len(thumbs)-1])
 
-                    add_to_record_post_replace({
+                    add_to_record_post_search({
                         "found_artist": artist,
                         "found_title": title,
                         "closest_match": closest_match,
@@ -261,7 +254,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                         try:
                             track_num = matching_album[0]["trackNumber"]
                         except:
-                            # NOTE: Still tracking this down
+                            # FIXME: Still tracking this down
                             error(f"UNKNOWN FAILURE: {
                                   matching_album=}, {search[0]=}")
                         if (("thumbnails" in matching_album[0])
@@ -280,40 +273,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                                for artist in search[0]["artists"]]
                     thumbnail = increase_img_req_res(thumbs[len(thumbs)-1])
 
-                    if (matching_album):
-                        tag_file(filepath,
-                                 artists,
-                                 matching_album[0]["album"],
-                                 search[0]["title"],
-                                 track_num,
-                                 len(album),
-                                 year,
-                                 thumbnail,
-                                 extension)
-                    else:
-                        tag_file(filepath,
-                                 artists,
-                                 None,
-                                 search[0]["title"],
-                                 track_num,
-                                 len(album),
-                                 year,
-                                 thumbnail,
-                                 extension)
-
-                    new_fname = (f"{output_dir}{artists[0]}_"
-                                 f"{sanitize_string(
-                                     matching_album[0]["album"])}"
-                                 f"_{matching_album[0]["trackNumber"]:02d}_"
-                                 f"{sanitize_string(search[0]["title"])}"
-                                 f".{extension}")
-
-                    info(f"{os.path.basename(filepath)} -> "
-                         f"{os.path.basename(new_fname)}")
-
-                    shutil.move(filepath, new_fname)
-
-                    add_to_record_post_replace({
+                    add_to_record_post_search({
                         "artists": artists,
                         "title": title,
                         "provider": provider,
@@ -322,8 +282,8 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
                         "duration": duration,
                         "uploader": uploader,
                         "thumbnail_info": thumbnail,
-                        "filename": os.path.basename(new_fname),
-                        "filepath": new_fname,
+                        "filename": os.path.basename(filepath),
+                        "filepath": filepath,
                         "album": matching_album[0]["album"],
                         "track_num": track_num,
                         "total_tracks": len(album),
@@ -332,7 +292,7 @@ def replace_filename(title, uploader, filepath, extension, provider, url, durati
 
         # NOTE: This occurs when both title and artist cannot be parsed.
         # Should only happen when you have a delimiter that can't clearly
-        # be used to distinguish betwen artist and title such as a space
+        # be used to distinguish betwen artist and title such as a space ~ BEF
         else:
             add_to_record_err({"url": url}, report, url, ReportStatus.SEARCH_FOUND_NOTHING)
             info(f"ARTIST AND SONG NOT FOUND: {title}")

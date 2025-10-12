@@ -19,9 +19,9 @@ from utils.printing import warning, error, success, info
 from utils.common import check_ytdlp_update, connectivity_check
 
 from utils.file_operations import (
-    replace_filename,
     add_to_record_err,
-    add_to_record_pre_replace,
+    fill_tentative_metadata,
+    add_to_record_pre_search,
     get_embedded_thumbnail_res
 )
 
@@ -174,7 +174,7 @@ class CloudToLocal:
                 if (curr_filepath):
                     thumb_dimensions = get_embedded_thumbnail_res(
                         curr_filepath)
-                    add_to_record_pre_replace({
+                    add_to_record_pre_search({
                         "title": title,
                         "uploader": uploader,
                         "provider": provider,
@@ -190,10 +190,10 @@ class CloudToLocal:
                         "playlists": self.playlist_handler.check_playlists(url)
                     }, self.report, url, ReportStatus.DOWNLOAD_SUCCESS)
 
-                    replace_filename(title, uploader,
-                                     curr_filepath, curr_ext,
-                                     entry["ie_key"], url, curr_duration,
-                                     self.output_dir, self.report)
+                    fill_tentative_metadata(title, uploader,
+                                            curr_filepath, curr_ext,
+                                            entry["ie_key"], url, curr_duration,
+                                            self.output_dir, self.report)
 
         with open(self.report_fpath, "w") as f:
             json.dump(self.report, f, indent=2)

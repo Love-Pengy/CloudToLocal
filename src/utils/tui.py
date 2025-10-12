@@ -347,6 +347,18 @@ class ctl_tui(App):
                                                  after["filename"], self.output_filepath,
                                                  after["title"], after["artists"][0],
                                                  after["duration"])
+
+        user_replace_filename(after["title"],
+                              after["artists"],
+                              after["filepath"],
+                              after["ext"],
+                              after["album"],
+                              after["duration"],
+                              after["track_num"],
+                              after["total_tracks"],
+                              after["year"],
+                              after["thumbnail_info"])
+
         self.pop_and_increment_report_key()
 
     # TODO: create new screen for this
