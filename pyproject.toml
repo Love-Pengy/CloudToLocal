@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [
-  { name = "Brandon Frazier" }
+  { name = "Brandon Elias Frazier" }
 ]
 # Regular dependencies
 dependencies = [
@@ -25,7 +25,7 @@ dependencies = [
   "pillow",
   "youtube_title_parse @ https://github.com/Love-Pengy/youtube_title_parse/archive/refs/heads/master.zip",
   "textual",
-  "textual_image" 
+  "textual_image"
 ]
 
 [project.urls]
