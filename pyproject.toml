@@ -28,6 +28,11 @@ dependencies = [
   "textual_image"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "textual-dev"
+]
+
 [project.urls]
 Repository = "https://github.com/Love-Pengy/CloudToLocal"
 Issues = "https://github.com/Love-Pengy/CloudToLocal/issues"
