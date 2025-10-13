@@ -3,6 +3,7 @@ FAIL_ON_WARNING = False
 QUIET = False
 REQUEST_RESOLUTION = 4000
 
+
 class ReportStatus:
     DOWNLOAD_FAILURE = 0
     DOWNLOAD_SUCCESS = 1
@@ -11,6 +12,7 @@ class ReportStatus:
     SINGLE = 4
     ALBUM_FOUND = 5
 
+
 def get_report_status_str(val):
     rstat_dict = ReportStatus.__dict__
-    return(list(rstat_dict.keys())[list(rstat_dict.values()).index(val)])
+    return (list(rstat_dict.keys())[list(rstat_dict.values()).index(val)])

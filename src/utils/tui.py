@@ -152,8 +152,6 @@ class ctl_tui(App):
         current_report = self.report_dict[self.current_report_key]
         after_width = None
         after_height = None
-        after_present = False
-        closest_match_present = False
         try:
             with urllib.request.urlopen(current_report
                                         ["before"]["thumbnail_url"]) as response:
@@ -174,60 +172,52 @@ class ctl_tui(App):
                     title = current_report["after"]["title"]
                     after_width = current_report["after"]["thumbnail_info"]["width"]
                     after_height = current_report["after"]["thumbnail_info"]["height"]
-                    after_present = True
+                    after_source = "after"
+
                 else:
                     yield Horizontal(Image(image1_data, id="full_img"), id="album_art")
                     title = current_report["after"]["closest_match"]["title"]
-                    closest_match_present = True
+                    after_source = "closest"
+
+                info_content = [
+                    Static(get_report_status_str(
+                        current_report["status"]), id="status"),
+                    Horizontal(
+                        Pretty(format_album_info(
+                            current_report["before"], "before"), id="before_info"),
+                        Pretty(format_album_info(
+                            current_report["after"], after_source), id="after_info"),
+                        id="album_info"
+                    )
+                ]
+
             else:
                 yield Horizontal(Image(image1_data, id="full_img"), id="album_art")
                 title = current_report["before"]["title"]
+                info_content = [
+                    Static(get_report_status_str(
+                        current_report["status"]), id="status"),
+                    Pretty(format_album_info(
+                        current_report["before"], "before"), id="before_info")
+                ]
 
             before_width = current_report["before"]["thumbnail_width"]
             before_height = current_report["before"]["thumbnail_height"]
         except Exception as e:
-            # FIXME: this should handle failure ~ BEF
-            warning(f"URL Retrieval For Compose Failed: {
+            warning(f"URL Retrieval For Compose Failed. Skipping Entry: {
                     traceback.format_exc()}")
             warning(e)
+            self.action_skip_entry()
+            return
 
         after_str = "(X,X)" if not after_width else f"({after_width}px, {after_height}px)"
         self.title = f"({before_width}px,{before_height}px) {title} {after_str}"
         yield Header()
         yield Rule(line_style="ascii")
 
-        # FIXME: fix this when not lazy ~ BEF
-        if (after_present):
-            yield Vertical(
-                Static(get_report_status_str(
-                    current_report["status"]), id="status"),
-                Horizontal(
-                    Pretty(format_album_info(
-                        current_report["before"], "before"), id="before_info"),
-                    Pretty(format_album_info(
-                        current_report["after"], "after"), id="after_info"),
-                    id="album_info"
-                )
-            )
-        elif (closest_match_present):
-            yield Vertical(
-                Static(get_report_status_str(
-                    current_report["status"]), id="status"),
-                Horizontal(
-                    Pretty(format_album_info(
-                        current_report["before"], "before"), id="before_info"),
-                    Pretty(format_album_info(
-                        current_report["after"], "closest"), id="after_info"),
-                    id="album_info"
-                )
-            )
-        else:
-            yield Vertical(
-                Static(get_report_status_str(
-                    current_report["status"]), id="status"),
-                Pretty(format_album_info(
-                    current_report["before"], "before"), id="before_info"), id="album_info"
-            )
+        with Vertical(id="album_info"):
+            for content in info_content:
+                yield content
 
         yield Footer()
 
@@ -305,7 +295,7 @@ class ctl_tui(App):
                                           1,
                                           None,
                                           {"height": before["thumbnail_height"],
-                                           "width": before["thumbnail_width"],
+                                          "width": before["thumbnail_width"],
                                            "url": before["thumbnail_url"]})
 
         self.playlist_handler.write_to_playlists(before["playlists"], None, new_fname,
