@@ -2,6 +2,8 @@ import io
 import json
 import traceback
 import urllib.request
+from time import strptime
+from datetime import timedelta
 
 from utils.printing import warning
 from textual.reactive import reactive
@@ -21,8 +23,7 @@ def format_album_info(report, state) -> dict:
             report (dict): before or after dictionary
             state (str): specifes whether report is before or after
     """
-    # FIXME: dawg why didn't I match these to begin with
-    # also put docstring for how this works
+
     output = {}
     match (state):
         case "before":
@@ -46,8 +47,19 @@ def format_album_info(report, state) -> dict:
             output["title"] = closest["title"]
             output["artists"] = closest["artists"]
             output["album"] = closest["album"]
-            # TODO: might have to convert this back to seconds to match
-            output["duration"] = closest["duration"]
+
+            # quick and extremely dirty
+            if (not type(closest["duration"]) is int):
+                try:
+                    ptime = strptime(closest["duration"], "%H:%M:%S")
+                except ValueError:
+                    ptime = strptime(closest["duration"], "%M:%S")
+                finally:
+                    output["duration"] = int(timedelta(hours=ptime.tm_hour, minutes=ptime.tm_min,
+                                                       seconds=ptime.tm_sec).total_seconds())
+            else:
+                output["duration"] = closest["duration"]
+
             return ({"closest_match": output})
         case _:
             warning("Invalid State For Formatting Album Info")
