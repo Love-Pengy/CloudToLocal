@@ -242,7 +242,7 @@ if __name__ == "__main__":
     parser.add_argument("--retry_amt", "-retry", default=10, type=int,
                         help="Amount Of Times To Retry Non-Fatal Download Errors")
 
-    parser.add_argument("--start_tui", "-s", action="store_true",
+    parser.add_argument("--start_tui", "-t", action="store_true",
                         help="Start Tui To Edit Metadata")
 
     parser.add_argument("--fail_on_warning", "-w", action="store_true",
