@@ -41,7 +41,7 @@ class CloudToLocal:
                                                 self.playlists_info,
                                                 self.request_delay)
         self.report = {}
-        self.report_fpath = self.output_dir+"/ctl_report"
+        self.report_fpath = self.output_dir+"ctl_report"
 
     def download(self):
         for curr_playlist_info in self.playlists_info:
@@ -74,9 +74,7 @@ class CloudToLocal:
                     else:
                         uploader = sc_info['uploader']
 
-                    # TODO: this can probably just be used to get high res thumbnail
                     thumbnail_url = sc_info["thumbnail"]
-                    # thumbnail_url = entry["thumbnails"][len(entry["thumbnails"])-1]["url"]
                     title = sc_info['title']
                     genres = sc_info["genres"] if "genres" in sc_info else None
 
@@ -153,10 +151,9 @@ class CloudToLocal:
                                     curr_filepath = video_dl_info["filepath"]
                                     curr_duration = int(
                                         round(float(video_info["duration"]), 0))
-                                # FIXME: this happens if we skip a download. video_info will
-                                #   be none and requested_downloads won't exist. this should
                                 else:
-                                    pass
+                                    self.retries == attempts-1
+                                    continue
                             break
                         except DownloadError:
                             info(
@@ -195,7 +192,9 @@ class CloudToLocal:
                                             entry["ie_key"], url, curr_duration,
                                             self.output_dir, self.report)
 
-                with open(self.report_fpath, "a+") as f:
+                # FIXME: should format file in a way that it can be appended. This operation is
+                #        very expensive
+                with open(self.report_fpath, "w") as f:
                     json.dump(self.report, f, indent=2)
 
         success("Download Completed")

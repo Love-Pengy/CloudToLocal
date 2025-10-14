@@ -89,6 +89,7 @@ class ctl_tui(App):
 
     Screen {
         align: center middle;
+        overflow-y: hidden;
     }
 
     #img1, #img2 {
@@ -130,7 +131,7 @@ class ctl_tui(App):
         if (not (self.output_filepath[len(self.output_filepath)-1] == '/')):
             self.output_filepath += '/'
 
-        self.report_path = self.output_filepath+"/ctl_report"
+        self.report_path = self.output_filepath+"ctl_report"
         self.playlists_info = []
         self.playlist_handler = PlaylistHandler(arguments.retry_amt,
                                                 arguments.playlists,
@@ -235,23 +236,23 @@ class ctl_tui(App):
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
 
-        disabled_action_list = None
+        disabled_action_list = ["command_palette"]
         match (self.report_dict[self.current_report_key]["status"]):
             case ReportStatus.DOWNLOAD_FAILURE:
-                disabled_action_list = ["accept_new", "accept_closest", "accept_original",
-                                        "search_again", "input_scratch", "pick_and_choose"]
+                disabled_action_list += ["accept_new", "accept_closest", "accept_original",
+                                         "search_again", "input_scratch", "pick_and_choose"]
             case ReportStatus.DOWNLOAD_SUCCESS:
-                disabled_action_list = ["accept_new",
-                                        "accept_closest", "retry_download", "pick_and_choose"]
+                disabled_action_list += ["accept_new",
+                                         "accept_closest", "retry_download", "pick_and_choose"]
             case ReportStatus.DOWNLOAD_NO_UPDATE:
-                disabled_action_list = ["accept_new", "retry_download", "pick_and_choose"]
+                disabled_action_list += ["accept_new", "retry_download", "pick_and_choose"]
             case ReportStatus.SEARCH_FOUND_NOTHING:
-                disabled_action_list = ["accept_new",
-                                        "accept_closest", "retry_download", "pick_and_choose"]
+                disabled_action_list += ["accept_new",
+                                         "accept_closest", "retry_download", "pick_and_choose"]
             case ReportStatus.SINGLE:
-                disabled_action_list = ["accept_new", "accept_closest", "retry_download"]
+                disabled_action_list += ["accept_new", "accept_closest", "retry_download"]
             case ReportStatus.ALBUM_FOUND:
-                disabled_action_list = ["accept_closest", "retry_download"]
+                disabled_action_list += ["accept_closest", "retry_download"]
 
         if (action in disabled_action_list):
             return False
