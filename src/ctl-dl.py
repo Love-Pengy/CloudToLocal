@@ -195,8 +195,8 @@ class CloudToLocal:
                                             entry["ie_key"], url, curr_duration,
                                             self.output_dir, self.report)
 
-        with open(self.report_fpath, "w") as f:
-            json.dump(self.report, f, indent=2)
+                with open(self.report_fpath, "a+") as f:
+                    json.dump(self.report, f, indent=2)
 
         success("Download Completed")
 
