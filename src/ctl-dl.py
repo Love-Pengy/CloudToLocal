@@ -192,8 +192,6 @@ class CloudToLocal:
                                             entry["ie_key"], url, curr_duration,
                                             self.output_dir, self.report)
 
-                # FIXME: should format file in a way that it can be appended. This operation is
-                #        very expensive
                 with open(self.report_fpath, "w") as f:
                     json.dump(self.report, f, indent=2)
 

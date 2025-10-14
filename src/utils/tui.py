@@ -21,7 +21,7 @@ def format_album_info(report, state) -> dict:
 
         Args:
             report (dict): before or after dictionary
-            state (str): specifes whether report is before or after
+            state (str): specifies whether report is before or after
     """
 
     output = {}
@@ -81,48 +81,12 @@ class ctl_tui(App):
         # ("p", "pick_and_choose", "Pick Elements To Pick From Both Before And After")
     ]
 
+    CSS_PATH = "../ctl-dl.tcss"
+
     # Refresh Footer/Bindings and recompose on change
     current_report_key = reactive(None, recompose=True, bindings=True)
 
     # TODO: this should be moved to a file
-    CSS = """
-
-    Screen {
-        align: center middle;
-        overflow-y: hidden;
-    }
-
-    #img1, #img2 {
-        width: 50vw;
-        height: auto;
-    }
-
-    #before_info, #after_info {
-        width: 50vw;
-        height: 100vh;
-    }
-
-    #full_img {
-        width: auto;
-        height: auto;
-    }
-
-    #album_info {
-        width: 100vw;
-        height: 25vh;
-    }
-
-    #status {
-        width: 100%;
-        text-align: center;
-    }
-
-    #album_art {
-        width: 100%;
-        height: 75vh;
-        align: center middle;
-    }
-    """
 
     def __init__(self, arguments, **kwargs):
         super().__init__(**kwargs)
