@@ -174,7 +174,6 @@ class PlaylistHandler:
                         f.write(sanitized_path + "\n")
         else:
             for playlist_spec in playlists:
-                info(f"{output_dir}{playlist_spec[1]}.m3u")
                 if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.m3u")):
                     with open(f"{output_dir}{playlist_spec[1]}.m3u", "w") as f:
                         f.write("#EXTM3U\n")

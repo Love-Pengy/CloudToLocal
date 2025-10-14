@@ -1,5 +1,8 @@
-import globals
 from pprint import pprint
+
+import globals
+from textual import log
+
 
 def info(*args, **kwargs):
     if (not globals.QUIET):
@@ -19,7 +22,7 @@ def warning(*args, **kwargs):
 
 
 def success(*args, **kwargs):
-    if(not globals.QUIET):
+    if (not globals.QUIET):
         print("\033[92m")
         print("✅", end="")
         pprint(*args, **kwargs)
@@ -32,3 +35,8 @@ def error(*args, **kwargs):
     pprint(*args, **kwargs)
     print("\033[0m")
     exit()
+
+
+def tui_log(*args, **kwargs):
+    if (not globals.QUIET):
+        log(*args, **kwargs)

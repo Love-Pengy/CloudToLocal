@@ -16,9 +16,9 @@ from utils.common import warning
 from globals import ReportStatus
 from mutagen.oggopus import OggOpus
 from mutagen.mp4 import MP4, MP4Cover
-from utils.printing import info, error
 from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
+from utils.printing import info, error, tui_log
 from youtube_title_parse import get_artist_title
 from ytmusicapi.exceptions import YTMusicServerError
 from mutagen.id3 import TIT2, TOPE, TALB, TRCK, TDAT, APIC, ID3
@@ -338,11 +338,11 @@ def user_replace_filename(title, artists, filepath, extension,
     if (not matching_album):
         matching_album = title
 
-    info(f"{os.path.basename(filepath)} -> {artists[0]}_"
-         f"{sanitize_string(matching_album)}_"
-         f"{track_number:02d}_"
-         f"{title}"
-         f".{extension}")
+    tui_log(f"{os.path.basename(filepath)} -> {artists[0]}_"
+            f"{sanitize_string(matching_album)}_"
+            f"{track_number:02d}_"
+            f"{title}"
+            f".{extension}")
 
     new_filepath = f"{os.path.dirname(
         filepath)}/{artists[0]}_{matching_album}_{track_number:02d}_{title}.{extension}"
