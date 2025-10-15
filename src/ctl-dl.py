@@ -9,12 +9,10 @@ from time import sleep
 
 import globals
 import configargparse
-from pprint import pprint
 from yt_dlp import YoutubeDL
 from utils.tui import ctl_tui
 from globals import ReportStatus
 from yt_dlp.utils import DownloadError
-from yt_dlp.postprocessor import MetadataParserPP
 from utils.playlist_handler import PlaylistHandler
 from utils.printing import warning, error, success, info
 from utils.common import check_ytdlp_update, connectivity_check
@@ -23,7 +21,8 @@ from utils.file_operations import (
     add_to_record_err,
     fill_tentative_metadata,
     add_to_record_pre_search,
-    get_embedded_thumbnail_res
+    get_embedded_thumbnail_res,
+    clean_ytdlp_artifacts
 )
 
 
@@ -193,6 +192,7 @@ class CloudToLocal:
                                             curr_filepath, curr_ext,
                                             entry["ie_key"], url, curr_duration,
                                             self.output_dir, self.report)
+        clean_ytdlp_artifacts(self.output_dir)
         success("Download Completed")
 
     def dump_report(self):
