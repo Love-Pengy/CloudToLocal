@@ -1,4 +1,5 @@
 import os
+import glob
 import shutil
 import urllib
 import base64
@@ -6,7 +7,6 @@ import pathlib
 import traceback
 from time import sleep
 from io import BytesIO
-from pprint import pprint
 
 from PIL import Image
 from mutagen import File
@@ -350,3 +350,16 @@ def user_replace_filename(title, artists, filepath, extension,
     shutil.move(filepath, new_filepath)
 
     return (new_filepath)
+
+
+def clean_ytdlp_artifacts(path):
+    """Delete .ytdl And .part Files From Download Director"""
+
+    if path[-1] == '/':
+        fixed_path = path
+    else:
+        fixed_path = path + '/'
+
+    for f in (glob.glob(fixed_path+"*.part") + glob.glob(path+"*.ytdl") +
+              glob.glob(fixed_path+"*.webp")):
+        os.remove(f)
