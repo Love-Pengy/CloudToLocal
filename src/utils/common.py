@@ -83,12 +83,15 @@ def increase_img_req_res(low_res):
         high_res["height"] = height
         high_res["url"] = low_res["url"].replace("w120-h120",
                                                  f"w{high_res["width"]}-h{high_res["height"]}")
-        response = requests.head(high_res["url"], timeout=1)
-        if (response.status_code == 200):
-            thumbnail_exists = True
-        else:
-            width = width - 100
-            height = height - 100
+        try:
+            response = requests.head(high_res["url"], timeout=1)
+            if (response.status_code == 200):
+                thumbnail_exists = True
+            else:
+                width = width - 100
+                height = height - 100
+        except requests.exceptions.ReadTimeout:
+            pass
 
     return (high_res)
 
