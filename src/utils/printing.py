@@ -5,7 +5,10 @@ from textual import log
 
 
 def pretty_print(*args, **kwargs):
-    print(pformat(*args, **kwargs).replace("'", ""))
+    if (type(*args) is str):
+        print(pformat(*args, **kwargs)[1:-1])
+    else:
+        print(pformat(*args, **kwargs))
 
 
 def info(*args, **kwargs):

@@ -3,6 +3,7 @@
 import os
 import json
 import shutil
+import atexit
 import traceback
 from time import sleep
 
@@ -42,6 +43,7 @@ class CloudToLocal:
                                                 self.request_delay)
         self.report = {}
         self.report_fpath = self.output_dir+"ctl_report"
+        atexit.register(self.dump_report)
 
     def download(self):
         for curr_playlist_info in self.playlists_info:
@@ -191,11 +193,12 @@ class CloudToLocal:
                                             curr_filepath, curr_ext,
                                             entry["ie_key"], url, curr_duration,
                                             self.output_dir, self.report)
-
-                with open(self.report_fpath, "w") as f:
-                    json.dump(self.report, f, indent=2)
-
         success("Download Completed")
+
+    def dump_report(self):
+        info("Dumping Report")
+        with open(self.report_fpath, "w") as f:
+            json.dump(self.report, f, indent=2)
 
 
 def main(arguments):
