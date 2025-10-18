@@ -1,13 +1,14 @@
 [project]
 name = "CloudToLocal"
-version = "0.0.0"
+version = "0.1.0"
 description = "Automated Online Service Backup Tool"
 readme = "README.md"
-requires-python = ">=3.8"
-license = { text = "MIT" }
+requires-python = ">=3.10"
+license = "MIT"
 authors = [
   { name = "Brandon Elias Frazier" }
 ]
+
 # Regular dependencies
 dependencies = [
   "certifi",
@@ -36,11 +37,4 @@ dev = [
 [project.urls]
 Repository = "https://github.com/Love-Pengy/CloudToLocal"
 Issues = "https://github.com/Love-Pengy/CloudToLocal/issues"
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
 
