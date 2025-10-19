@@ -214,8 +214,6 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                             if track["title"].lower() == title.lower()
                             and track["artists"][0]["name"].lower() == artist.lower()
                         ]
-                    else:
-                        single = True
 
                 if (not matching_album
                     and "album" in search[0]
@@ -244,7 +242,7 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                     }, report, url, ReportStatus.DOWNLOAD_NO_UPDATE)
                     info(f"ALBUM MISSED: {title} {artist}")
                 else:
-                    if (single):
+                    if (not matching_album):
                         track_num = 1
                         thumbs = search[0]["thumbnails"]
                         matching_album = [{"album": None}]
