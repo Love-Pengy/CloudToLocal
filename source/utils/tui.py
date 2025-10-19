@@ -150,10 +150,21 @@ class ctl_tui(App):
                     after_width = current_report["after"]["thumbnail_info"]["width"]
                     after_height = current_report["after"]["thumbnail_info"]["height"]
                     after_source = "after"
-
                 else:
-                    yield Horizontal(Image(image1_data, id="full_img"), id="album_art")
+                    with urllib.request.urlopen(current_report["after"]["closest_match"]
+                                                ["thumbnail_info"]["url"]) as response:
+                        request_response = response.read()
+                        image2_data = io.BytesIO(request_response)
+
+                    yield Horizontal(
+                        Image(image1_data, id="img1"),
+                        Image(image2_data, id="img2"), id="album_art"
+                    )
                     title = current_report["after"]["closest_match"]["title"]
+                    after_width = current_report["after"]["closest_match"]["thumbnail_info"]
+                    ["width"]
+                    after_height = current_report["after"]["closest_match"]["thumbnail_info"]
+                    ["height"]
                     after_source = "closest"
 
                 info_content = [
