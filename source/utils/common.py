@@ -115,3 +115,18 @@ def connectivity_check():
     if (request.status_code == 200):
         return True
     return False
+
+
+def list_to_comma_str(input: list):
+    if (not len(input)):
+        return (None)
+
+    output = str(input[0]) + ','
+    for value in input[1:]:
+        output += ' ' + str(value) + ','
+
+    return (output[:-1])
+
+
+def comma_str_to_list(input: str):
+    return (input.split(','))

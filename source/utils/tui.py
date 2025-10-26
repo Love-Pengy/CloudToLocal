@@ -7,13 +7,15 @@ from datetime import timedelta
 
 from utils.printing import warning
 from textual.reactive import reactive
-from textual_image.widget import Image
+from textual.screen import ModalScreen
 from textual.app import App, ComposeResult
+from textual_image.widget import Image
 from utils.playlist_handler import PlaylistHandler
-from textual.containers import Horizontal, Vertical
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
-from textual.widgets import Footer, Header, Pretty, Rule, Static
+from textual.containers import Horizontal, Vertical, Grid
+from utils.common import list_to_comma_str, comma_str_to_list
+from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input
 
 
 def format_album_info(report, state) -> dict:
@@ -63,6 +65,117 @@ def format_album_info(report, state) -> dict:
             return ({"closest_match": output})
         case _:
             warning("Invalid State For Formatting Album Info")
+            return (None)
+
+
+class EditInputMenu(ModalScreen[dict]):
+    def __init__(self, metadata: dict, metadata_type: str):
+
+        self.metadata = metadata
+        self.metadata_type = metadata_type
+        self.output_metadata = self.metadata
+
+        super().__init__()
+
+    def compose(self) -> ComposeResult:
+        meta = self.metadata
+        match (self.metadata_type):
+            case ("before"):
+                yield Input(placeholder="title", value=meta["title"], type="text", id="title")
+                yield Input(placeholder="artists", value=meta["uploader"],
+                            type="text", id="artists")
+                yield Input(placeholder="duration", value=str(meta["duration"]), type="integer",
+                            id="duration")
+                yield Input(placeholder="album", type="text", id="album")
+            case ("after"):
+                yield Input(placeholder="title", value=meta["title"], type="text", id="title")
+                yield Input(placeholder="artists", value=list_to_comma_str(meta["artists"]),
+                            type="text", id="artists")
+                yield Input(placeholder="duration", value=str(meta["duration"]), type="integer",
+                            id="duration")
+                yield Input(placeholder="album", value=meta["album"], type="text", id="album")
+            case ("closest"):
+                yield Input(placeholder="title", value=meta["title"], type="text", id="title")
+                yield Input(placeholder="artists", value=list_to_comma_str(meta["artists"]),
+                            type="text", id="artists")
+                yield Input(placeholder="duration", value=str(meta["duration_seconds"]),
+                            type="integer", id="duration")
+                yield Input(placeholder="album", value=meta["album"], type="text", id="album")
+            case _:
+                raise TypeError(f"Invalid metadata type: {self.metadata_type}")
+        yield Button("All Done!", variant="primary", id="completion_button")
+
+    def on_input_blurred(self, blurred_widget):
+
+        if (not (blurred_widget.input.id == "artists")):
+            self.output_metadata[blurred_widget.input.id] = blurred_widget.value
+        else:
+            self.output_metadata[blurred_widget.input.id] = comma_str_to_list(
+                blurred_widget.value)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(self.output_metadata)
+
+
+class EditSelectionMenu(ModalScreen):
+    BINDINGS = []
+
+    # Possible metadata types
+    METADATA_TYPE_OPTIONS = ["before", "closest", "after", None]
+
+    def __init__(self, metadata1: dict, meta_type1: str, metadata2: dict = None,
+                 meta_type2: str = None):
+        """ Initialize Edit Metadata Screen """
+
+        if ((metadata1 not in self.METADATA_TYPE_OPTIONS)
+                or (metadata2 and (meta_type2.lower() not in self.METADATA_TYPE_OPTIONS))):
+            self.dismiss(None)
+
+        self.meta1 = metadata1
+        self.meta2 = metadata2
+        self.meta_type1 = meta_type1.lower()
+        self.meta_type2 = meta_type2.lower()
+
+        self.meta_chosen = self.meta1 if not self.meta2 else None
+        self.meta_type_chosen = self.meta_type1.lower() if not self.meta2 else None
+
+        if (not self.meta2):
+            self.meta_chosen = metadata1
+            self.meta_type_chosen = meta_type1.lower()
+            if (self.meta_type1 not in self.METADATA_TYPE_OPTIONS):
+                self.dismiss(None)
+            else:
+                self.exit_menu()
+
+        super().__init__()
+
+    def compose(self) -> ComposeResult:
+        yield Grid(
+            Label("Which Metadata Would You Like To Edit?"),
+            Button("Original", variant="primary", id="original_meta_edit"),
+            Button("New/Closest", variant="primary", id="new_meta_edit")
+        )
+
+    def exit_menu(self):
+
+        self.dismiss((self.meta_chosen, self.meta_type_chosen))
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if (event.button.id == "original_meta_edit"):
+            if (self.meta_type1 == "before"):
+                self.meta_chosen = self.meta1
+            else:
+                self.meta_chosen = self.meta2
+            self.meta_type_chosen = "before"
+        else:
+            if (self.meta_type1 in ["after", "closest"]):
+                self.meta = self.meta1
+                self.meta_type_chosen = self.meta_type1
+            else:
+                self.meta_chosen = self.meta2
+                self.meta_type_chosen = self.meta_type2
+
+        self.exit_menu()
 
 
 class ctl_tui(App):
@@ -73,6 +186,7 @@ class ctl_tui(App):
         ("c", "accept_closest", "Accept Closest Match"),
         # NOTE: this is a little silly, should have user input album.
         ("o", "accept_original", "Accept Original (No Album)"),
+        ("e", "edit_metadata", "Manually Edit Metadata"),
         # ("s", "search_again", "Search Again"),
         # ("i", "input_scratch", "Input From Scratch"),
         # ("r", "replace_entry", "Retry Download Process With New URL"),
@@ -80,13 +194,10 @@ class ctl_tui(App):
         # ("ctrl+r", "retry_download", "Retry Download Process"),
         # ("p", "pick_and_choose", "Pick Elements To Pick From Both Before And After")
     ]
-
     CSS_PATH = "../ctl-dl.tcss"
 
     # Refresh Footer/Bindings and recompose on change
     current_report_key = reactive(None, recompose=True, bindings=True)
-
-    # TODO: this should be moved to a file
 
     def __init__(self, arguments, **kwargs):
         super().__init__(**kwargs)
@@ -107,6 +218,7 @@ class ctl_tui(App):
         self.current_report_key_iter = iter(list(self.report_dict))
         self.current_report_key = next(self.current_report_key_iter)
         self.theme = "textual-dark"
+        self.right_info = self.right_type = None
 
     def pop_and_increment_report_key(self):
         try:
@@ -116,6 +228,8 @@ class ctl_tui(App):
             with open(self.report_path, "w") as f:
                 json.dump(self.report_dict, f, indent=2)
             self.exit()
+        self.right_info = None
+        self.right_type = None
 
     def increment_report_key(self):
         try:
@@ -124,6 +238,8 @@ class ctl_tui(App):
             with open(self.report_path, "w") as f:
                 json.dump(self.report_dict, f, indent=2)
             self.exit()
+        self.right_info = None
+        self.right_type = None
 
     def compose(self) -> ComposeResult:
         current_report = self.report_dict[self.current_report_key]
@@ -150,6 +266,8 @@ class ctl_tui(App):
                     after_width = current_report["after"]["thumbnail_info"]["width"]
                     after_height = current_report["after"]["thumbnail_info"]["height"]
                     after_source = "after"
+                    self.right_info = current_report["after"]
+                    self.right_type = "after"
                 else:
                     with urllib.request.urlopen(current_report["after"]["closest_match"]
                                                 ["thumbnail_info"]["url"]) as response:
@@ -166,6 +284,8 @@ class ctl_tui(App):
                     after_height = current_report["after"]["closest_match"]["thumbnail_info"]
                     ["height"]
                     after_source = "closest"
+                    self.right_info = current_report["after"]["closest_match"]
+                    self.right_type = "closest"
 
                 info_content = [
                     Static(get_report_status_str(
@@ -291,6 +411,27 @@ class ctl_tui(App):
                                                  before["uploader"], before["duration"])
 
         self.pop_and_increment_report_key()
+
+    def action_edit_metadata(self) -> None:
+
+        def complete_edit_of_metadata(new_metadata: dict):
+            current_report = self.report_dict[self.current_report_key]
+
+            # FIXME: set track number to 1 for testing
+            user_replace_filename(new_metadata["title"], new_metadata["artists"],
+                                  current_report["before"]["path"],
+                                  current_report["before"]["ext"], new_metadata["album"],
+                                  new_metadata["duration"], 1, None, None)
+
+            self.pop_and_increment_report_key()
+
+        def pass_selection_menu_output(new_metadata: (dict, str)) -> None:
+            self.push_screen(EditInputMenu(new_metadata[0], new_metadata[1]),
+                             complete_edit_of_metadata)
+
+        self.push_screen(EditSelectionMenu(self.report_dict[self.current_report_key]["before"],
+                                           "before", self.right_info, self.right_type),
+                         pass_selection_menu_output)
 
     # TODO: create new screen for this
     def action_search_again(self):
