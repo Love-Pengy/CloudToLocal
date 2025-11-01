@@ -8,6 +8,7 @@ import traceback
 from time import sleep
 from io import BytesIO
 
+
 from PIL import Image
 from mutagen import File
 from mutagen.mp3 import MP3
@@ -185,7 +186,7 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                                   {"defaultArtist": uploader,
                                    "defaultTitle": title
                                    })
-        single = False
+
         if (all(result)):
             artist = result[0]
             title = result[1]
@@ -251,7 +252,7 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                         status = ReportStatus.ALBUM_FOUND
                         try:
                             track_num = matching_album[0]["trackNumber"]
-                        except:
+                        except KeyError:
                             # FIXME: Still tracking this down
                             error(f"UNKNOWN FAILURE: {
                                   matching_album=}, {search[0]=}")

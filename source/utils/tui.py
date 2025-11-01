@@ -13,9 +13,9 @@ from textual_image.widget import Image
 from utils.playlist_handler import PlaylistHandler
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
-from textual.containers import Horizontal, Vertical, Grid
+from textual.containers import Horizontal, Vertical, Grid, VerticalScroll
 from utils.common import list_to_comma_str, comma_str_to_list
-from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input
+from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input, Checkbox
 
 
 def format_album_info(report, state) -> dict:
@@ -103,6 +103,16 @@ class EditInputMenu(ModalScreen[dict]):
                 yield Input(placeholder="album", value=meta["album"], type="text", id="album")
             case _:
                 raise TypeError(f"Invalid metadata type: {self.metadata_type}")
+
+        with VerticalScroll():
+            # NOTE: Currently playlists list is held in before section of report ~ BEF
+            before = self.app.report_dict[self.app.current_report_key]["before"]
+            for playlist in self.app.playlist_handler.list_playlists_str():
+                if (playlist in [play[1] for play in before["playlists"]]):
+                    yield Checkbox(playlist, True, name=playlist)
+                else:
+                    yield Checkbox(playlist, False, name=playlist)
+
         yield Button("All Done!", variant="primary", id="completion_button")
 
     def on_input_blurred(self, blurred_widget):
@@ -112,6 +122,20 @@ class EditInputMenu(ModalScreen[dict]):
         else:
             self.output_metadata[blurred_widget.input.id] = comma_str_to_list(
                 blurred_widget.value)
+
+    def on_checkbox_changed(self, changed_checkbox):
+        # NOTE: might need to append playlist to closest album metadata ~ BEF
+
+        playlist = self.app.playlist_handler.get_playlist_tuple(changed_checkbox.checkbox.name)
+
+        if "playlists" not in self.output_metadata:
+            self.output_metadata["playlists"] = []
+
+        if (changed_checkbox.value and
+                (not (playlist in self.output_metadata["playlists"]))):
+            self.output_metadata["playlists"].append(playlist)
+        elif ((not changed_checkbox.value) and (playlist in self.output_metadata["playlists"])):
+            self.output_metadata["playlists"].remove(playlist)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(self.output_metadata)

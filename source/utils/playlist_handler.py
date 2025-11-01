@@ -141,7 +141,25 @@ class PlaylistHandler:
         return (
             [spec for spec in self.playlists if url in self.playlists[spec]])
 
-    def write_to_playlists(self, playlists: dict, song_url: str, filepath: str, output_dir: str, 
+    def list_playlists_str(self):
+        """ Returns List Of Playlist Strings With No Dups """
+        output = []
+        for spec in self.playlists:
+            if spec[1] not in output:
+                output.append(spec[1])
+        return (output)
+
+
+    def get_playlist_tuple(self, input):
+        """ Get Playlist Tuple From String Name """
+
+        out_list = [playlist for playlist in self.playlists if playlist[1] == input]
+        if (out_list is None):
+            return (None)
+
+        return (out_list[0])
+
+    def write_to_playlists(self, playlists: dict, song_url: str, filepath: str, output_dir: str,
                            title: str, artist: str, duration: int):
         """ Write song to all playlist files it belongs to
 
