@@ -95,6 +95,8 @@ class EditInputMenu(ModalScreen[dict]):
                             id="duration", validators=validator, classes="EditPageInput")
                 yield Input(placeholder="album", type="text", id="album", validators=validator,
                             classes="EditPageInput")
+                yield Input(placeholder="Track Number", type="integer", id="track_num",
+                            validators=validator, classes="EditPageInput")
             case ("after"):
                 yield Input(placeholder="title", value=meta["title"], type="text", id="title",
                             validators=validator, classes="EditPageInput")
@@ -107,6 +109,9 @@ class EditInputMenu(ModalScreen[dict]):
                             id="duration", validators=validator, classes="EditPageInput")
                 yield Input(placeholder="album", value=meta["album"], type="text", id="album",
                             validators=validator, classes="EditPageInput")
+                yield Input(placeholder="Track Number", value=str(meta["track_num"]),
+                            type="integer", id="track_num", validators=validator,
+                            classes="EditPageInput")
             case ("closest"):
                 yield Input(placeholder="title", value=meta["title"], type="text", id="title",
                             validators=validator, classes="EditPageInput")
@@ -120,6 +125,9 @@ class EditInputMenu(ModalScreen[dict]):
                             classes="EditPageInput"))
                 yield Input(placeholder="album", value=meta["album"], type="text", id="album",
                             validators=validator, classes="EditPageInput")
+                yield Input(placeholder="Track Number", value=str(meta["trackNumber"]),
+                            type="integer", id="track_num", validators=validator,
+                            classes="EditPageInput")
             case _:
                 raise TypeError(f"Invalid metadata type: {self.metadata_type}")
 
@@ -142,10 +150,10 @@ class EditInputMenu(ModalScreen[dict]):
             return (False)
 
     def check_input_validity(self) -> bool:
-        metadata_fields = ["title", "artists", "album", "duration"]
+        metadata_field_ids = ["title", "artists", "album", "duration", "track_num"]
         curr_query = None
         err_static = self.query_one("#EditInputErr", Static)
-        for field in metadata_fields:
+        for field in metadata_field_ids:
             curr_query = self.query_one(f"#{field}", Input)
             if (not curr_query.is_valid):
                 err_static.disabled = False
