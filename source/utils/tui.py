@@ -6,22 +6,24 @@ from time import strptime
 from datetime import timedelta
 
 from utils.printing import warning
+from textual.content import Content
 from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.app import App, ComposeResult
 from textual_image.widget import Image
+from textual.app import App, ComposeResult
 from utils.playlist_handler import PlaylistHandler
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
-from textual.containers import Horizontal, Vertical, Grid, VerticalScroll
 from utils.common import list_to_comma_str, comma_str_to_list
+from textual.containers import Horizontal, Vertical, Grid, VerticalScroll
+from textual.validation import Function, Number, ValidationResult, Validator
 from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input, Checkbox
 
 
 def format_album_info(report, state) -> dict:
     """Format report into a dict able to be pretty printed as the album info
 
-        Args:
+        Arguments:
             report (dict): before or after dictionary
             state (str): specifies whether report is before or after
     """
@@ -50,7 +52,7 @@ def format_album_info(report, state) -> dict:
             output["artists"] = closest["artists"]
             output["album"] = closest["album"]
 
-            # quick and extremely dirty
+            # FIXME: duration seconds exists in closest match, so may not need to do this ~ BEF
             if (not type(closest["duration"]) is int):
                 try:
                     ptime = strptime(closest["duration"], "%H:%M:%S")
@@ -79,28 +81,45 @@ class EditInputMenu(ModalScreen[dict]):
 
     def compose(self) -> ComposeResult:
         meta = self.metadata
+        validator = [Function(self.is_empty)]
         match (self.metadata_type):
             case ("before"):
-                yield Input(placeholder="title", value=meta["title"], type="text", id="title")
+                yield Input(placeholder="title", value=meta["title"], type="text", id="title",
+                            validators=validator, classes="EditPageInput")
+                yield Label("Enter Comma Delimited List Of Artists", classes="EditPageLabel")
                 yield Input(placeholder="artists", value=meta["uploader"],
-                            type="text", id="artists")
+                            type="text", id="artists", validators=validator,
+                            classes="EditPageInput")
+                yield Label("Enter Duration In Seconds", classes="EditPageLabel")
                 yield Input(placeholder="duration", value=str(meta["duration"]), type="integer",
-                            id="duration")
-                yield Input(placeholder="album", type="text", id="album")
+                            id="duration", validators=validator, classes="EditPageInput")
+                yield Input(placeholder="album", type="text", id="album", validators=validator,
+                            classes="EditPageInput")
             case ("after"):
-                yield Input(placeholder="title", value=meta["title"], type="text", id="title")
+                yield Input(placeholder="title", value=meta["title"], type="text", id="title",
+                            validators=validator, classes="EditPageInput")
+                yield Label("Enter Comma Delimited List Of Artists", classes="EditPageLabel")
                 yield Input(placeholder="artists", value=list_to_comma_str(meta["artists"]),
-                            type="text", id="artists")
+                            type="text", id="artists", validators=validator,
+                            classes="EditPageInput")
+                yield Label("Enter Duration In Seconds", classes="EditPageLabel")
                 yield Input(placeholder="duration", value=str(meta["duration"]), type="integer",
-                            id="duration")
-                yield Input(placeholder="album", value=meta["album"], type="text", id="album")
+                            id="duration", validators=validator, classes="EditPageInput")
+                yield Input(placeholder="album", value=meta["album"], type="text", id="album",
+                            validators=validator, classes="EditPageInput")
             case ("closest"):
-                yield Input(placeholder="title", value=meta["title"], type="text", id="title")
+                yield Input(placeholder="title", value=meta["title"], type="text", id="title",
+                            validators=validator, classes="EditPageInput")
+                yield Label("Enter a comma delimited list of artists", classes="EditPageInput")
                 yield Input(placeholder="artists", value=list_to_comma_str(meta["artists"]),
-                            type="text", id="artists")
-                yield Input(placeholder="duration", value=str(meta["duration_seconds"]),
-                            type="integer", id="duration")
-                yield Input(placeholder="album", value=meta["album"], type="text", id="album")
+                            type="text", id="artists", validators=validator,
+                            classes="EditPageInput")
+                yield Label("Enter Duration In Seconds", classes="EditPageInput")
+                yield Input(placeholder="duration", value=str(meta["duration_seconds"],
+                            type="integer", id="duration", validators=validator,
+                            classes="EditPageInput"))
+                yield Input(placeholder="album", value=meta["album"], type="text", id="album",
+                            validators=validator, classes="EditPageInput")
             case _:
                 raise TypeError(f"Invalid metadata type: {self.metadata_type}")
 
@@ -114,6 +133,25 @@ class EditInputMenu(ModalScreen[dict]):
                     yield Checkbox(playlist, False, name=playlist)
 
         yield Button("All Done!", variant="primary", id="completion_button")
+        yield Static("", disabled=True, id="EditInputErr")
+
+    def is_empty(self, value) -> bool:
+        if (value):
+            return (True)
+        else:
+            return (False)
+
+    def check_input_validity(self) -> bool:
+        metadata_fields = ["title", "artists", "album", "duration"]
+        curr_query = None
+        err_static = self.query_one("#EditInputErr", Static)
+        for field in metadata_fields:
+            curr_query = self.query_one(f"#{field}", Input)
+            if (not curr_query.is_valid):
+                err_static.disabled = False
+                err_static.update(Content(f'"{field}" Is Empty'))
+                return False
+        return True
 
     def on_input_blurred(self, blurred_widget):
 
@@ -124,7 +162,7 @@ class EditInputMenu(ModalScreen[dict]):
                 blurred_widget.value)
 
     def on_checkbox_changed(self, changed_checkbox):
-        # NOTE: might need to append playlist to closest album metadata ~ BEF
+        # NOTE: might need to append playlists to closest album metadata ~ BEF
 
         playlist = self.app.playlist_handler.get_playlist_tuple(changed_checkbox.checkbox.name)
 
@@ -138,6 +176,8 @@ class EditInputMenu(ModalScreen[dict]):
             self.output_metadata["playlists"].remove(playlist)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        if (not self.check_input_validity()):
+            return
         self.dismiss(self.output_metadata)
 
 

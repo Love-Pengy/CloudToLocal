@@ -70,3 +70,24 @@ Screen {
     height: 75vh;
     align: center middle;
 }
+
+#EditInputErr {
+    color: red;
+    margin: 1 2;
+}
+
+.EditPageInput {
+    margin: 1 1;
+}
+
+.EditPageLabel {
+    margin: 1 2;
+}
+
+Input.-valid {
+    border: tall $success 60%;
+}
+
+Input.-valid:focus {
+    border: tall $success;
+}
