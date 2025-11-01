@@ -76,6 +76,11 @@ Screen {
     margin: 1 2;
 }
 
+#EditInputUrlPreview {
+    width: 50;
+    height: 30;
+}
+
 .EditPageInput {
     margin: 1 1;
 }

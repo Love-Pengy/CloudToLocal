@@ -10,13 +10,13 @@ from textual.content import Content
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual_image.widget import Image
+from textual.validation import Function
 from textual.app import App, ComposeResult
 from utils.playlist_handler import PlaylistHandler
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
-from utils.common import list_to_comma_str, comma_str_to_list
 from textual.containers import Horizontal, Vertical, Grid, VerticalScroll
-from textual.validation import Function, Number, ValidationResult, Validator
+from utils.common import list_to_comma_str, comma_str_to_list, get_img_size_url
 from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input, Checkbox
 
 
@@ -82,6 +82,7 @@ class EditInputMenu(ModalScreen[dict]):
     def compose(self) -> ComposeResult:
         meta = self.metadata
         validator = [Function(self.is_empty)]
+        # TO-DO: these should be broken out into separate functions ~ BEF
         match (self.metadata_type):
             case ("before"):
                 yield Input(placeholder="title", value=meta["title"], type="text", id="title",
@@ -93,10 +94,19 @@ class EditInputMenu(ModalScreen[dict]):
                 yield Label("Enter Duration In Seconds", classes="EditPageLabel")
                 yield Input(placeholder="duration", value=str(meta["duration"]), type="integer",
                             id="duration", validators=validator, classes="EditPageInput")
+
+                # TO-DO: In help page add that this can be a year or MMDDYYYY | YYYYMMDD | DDMMYYYY
+                yield Input(placeholder="Album Date", type="text", id="album_date",
+                            validators=validator, classes="EditPageInput")
                 yield Input(placeholder="album", type="text", id="album", validators=validator,
                             classes="EditPageInput")
+                yield Input(placeholder="Album Length", type="integer", id="album_len",
+                            validators=validator, classes="EditPageInput")
                 yield Input(placeholder="Track Number", type="integer", id="track_num",
                             validators=validator, classes="EditPageInput")
+                yield Input(placeholder="Thumbnail Link", value=meta["thumbnail_url"], type="text",
+                            id="thumb_link", validators=validator, classes="EditPageInput")
+                yield self.render_image(meta["thumbnail_url"])
             case ("after"):
                 yield Input(placeholder="title", value=meta["title"], type="text", id="title",
                             validators=validator, classes="EditPageInput")
@@ -107,11 +117,20 @@ class EditInputMenu(ModalScreen[dict]):
                 yield Label("Enter Duration In Seconds", classes="EditPageLabel")
                 yield Input(placeholder="duration", value=str(meta["duration"]), type="integer",
                             id="duration", validators=validator, classes="EditPageInput")
+                yield Input(placeholder="Album Date", type="text", id="album_date",
+                            validators=validator, classes="EditPageInput")
                 yield Input(placeholder="album", value=meta["album"], type="text", id="album",
                             validators=validator, classes="EditPageInput")
+                yield Input(placeholder="Album Length", type="integer",
+                            value=str(meta["total_tracks"]), id="album_len", validators=validator,
+                            classes="EditPageInput")
                 yield Input(placeholder="Track Number", value=str(meta["track_num"]),
                             type="integer", id="track_num", validators=validator,
                             classes="EditPageInput")
+                yield Input(placeholder="Thumbnail Link", value=meta["thumbnail_info"]["url"],
+                            type="text", id="thumb_link", validators=validator,
+                            classes="EditPageInput")
+                yield self.render_image(meta["thumbnail_info"]["url"])
             case ("closest"):
                 yield Input(placeholder="title", value=meta["title"], type="text", id="title",
                             validators=validator, classes="EditPageInput")
@@ -123,11 +142,20 @@ class EditInputMenu(ModalScreen[dict]):
                 yield Input(placeholder="duration", value=str(meta["duration_seconds"],
                             type="integer", id="duration", validators=validator,
                             classes="EditPageInput"))
+                yield Input(placeholder="Album Date", type="text", id="album_date",
+                            validators=validator, classes="EditPageInput")
                 yield Input(placeholder="album", value=meta["album"], type="text", id="album",
                             validators=validator, classes="EditPageInput")
+                yield Input(placeholder="Album Length", type="integer",
+                            value=str(meta["album_len"]), id="album_len", validators=validator,
+                            classes="EditPageInput")
                 yield Input(placeholder="Track Number", value=str(meta["trackNumber"]),
                             type="integer", id="track_num", validators=validator,
                             classes="EditPageInput")
+                yield Input(placeholder="Thumbnail Link", value=meta["thumbnail_info"]["url"],
+                            type="text", id="thumb_link", validators=validator,
+                            classes="EditPageInput")
+                yield self.render_image(meta["thumbnail_info"]["url"])
             case _:
                 raise TypeError(f"Invalid metadata type: {self.metadata_type}")
 
@@ -143,6 +171,15 @@ class EditInputMenu(ModalScreen[dict]):
         yield Button("All Done!", variant="primary", id="completion_button")
         yield Static("", disabled=True, id="EditInputErr")
 
+    def render_image(self, url: str):
+        try:
+            with urllib.request.urlopen(url) as response:
+                request_response = response.read()
+                image_data = io.BytesIO(request_response)
+                return (Image(image_data, id="EditInputUrlPreview"))
+        except urllib.error.URLError:
+            return (None)
+
     def is_empty(self, value) -> bool:
         if (value):
             return (True)
@@ -150,7 +187,8 @@ class EditInputMenu(ModalScreen[dict]):
             return (False)
 
     def check_input_validity(self) -> bool:
-        metadata_field_ids = ["title", "artists", "album", "duration", "track_num"]
+        metadata_field_ids = ["title", "artists", "album", "duration", "album_date",
+                              "album_len", "track_num", "thumb_link"]
         curr_query = None
         err_static = self.query_one("#EditInputErr", Static)
         for field in metadata_field_ids:
@@ -163,8 +201,20 @@ class EditInputMenu(ModalScreen[dict]):
 
     def on_input_blurred(self, blurred_widget):
 
-        if (not (blurred_widget.input.id == "artists")):
-            self.output_metadata[blurred_widget.input.id] = blurred_widget.value
+        if (blurred_widget.input.id == "thumb_link"):
+            dimensions = get_img_size_url(blurred_widget.value)
+            self.output_metadata["thumbnail_info"] = {
+                "url": blurred_widget.value,
+                "width": dimensions[0],
+                "height": dimensions[1]
+            }
+        elif (not (blurred_widget.input.id == "artists")):
+            if (not blurred_widget.input.type == "integer"):
+                self.output_metadata[blurred_widget.input.id] = blurred_widget.value
+            else:
+                self.output_metadata[blurred_widget.input.id] = (
+                    None if blurred_widget.value is None else int(blurred_widget.value)
+                )
         else:
             self.output_metadata[blurred_widget.input.id] = comma_str_to_list(
                 blurred_widget.value)
@@ -493,7 +543,9 @@ class ctl_tui(App):
             user_replace_filename(new_metadata["title"], new_metadata["artists"],
                                   current_report["before"]["path"],
                                   current_report["before"]["ext"], new_metadata["album"],
-                                  new_metadata["duration"], 1, None, None)
+                                  new_metadata["duration"], new_metadata["track_num"],
+                                  new_metadata["album_len"], new_metadata["album_date"],
+                                  new_metadata["thumbnail_info"])
 
             self.pop_and_increment_report_key()
 
