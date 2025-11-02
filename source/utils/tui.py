@@ -200,8 +200,12 @@ class EditInputMenu(ModalScreen[dict]):
                     (int(album_len.value) >= int(value))):
                 return (True)
 
-        except (ValueError, NoMatches):
+        except ValueError:
             return (False)
+        except NoMatches:
+            # NOTE: Ordering matters here. Album length is loaded after track number therefore it
+            #       doesn't exist the first time around.
+            return (True)
 
     def check_input_validity(self) -> bool:
         metadata_field_ids = ["title", "artists", "album", "duration", "album_date",
