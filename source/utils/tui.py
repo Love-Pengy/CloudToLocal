@@ -192,6 +192,16 @@ class EditInputMenu(ModalScreen[dict]):
             self.image_rendered = False
             return (None)
 
+    def obtain_image(self, url: str):
+
+        try:
+            with urllib.request.urlopen(url) as response:
+                request_response = response.read()
+                image_data = io.BytesIO(request_response)
+                return (image_data)
+        except urllib.error.URLError:
+            return (None)
+
     def is_empty(self, value) -> bool:
         if (value):
             return (True)
@@ -242,6 +252,10 @@ class EditInputMenu(ModalScreen[dict]):
                 "width": dimensions[0],
                 "height": dimensions[1]
             }
+
+            self.query_one("#EditInputUrlPreview", Image).image = self.obtain_image(
+                blurred_widget.value)
+
         elif (not (blurred_widget.input.id == "artists")):
             if (not blurred_widget.input.type == "integer"):
                 self.output_metadata[blurred_widget.input.id] = blurred_widget.value
