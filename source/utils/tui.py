@@ -78,8 +78,9 @@ class EditInputMenu(ModalScreen[dict]):
         self.metadata = metadata
         self.metadata_type = metadata_type
         self.output_metadata = self.metadata
-        self.default_validator = [Function(self.is_empty)]
-        self.track_num_validator = self.default_validator + [Function(self.is_valid_track)]
+        self.default_validator = [Function(self.is_empty, "Is Empty")]
+        self.track_num_validator = self.default_validator + [Function(self.is_valid_track,
+                                                                      "Is Invalid")]
         self.yield_table = {"before": self.yield_before, "after": self.yield_after,
                             "closest": self.yield_closest}
 
@@ -216,7 +217,9 @@ class EditInputMenu(ModalScreen[dict]):
             curr_query = self.query_one(f"#{field}", Input)
             if (not curr_query.is_valid):
                 err_static.disabled = False
-                err_static.update(Content(f'"{field}" Is Empty'))
+                for validator in curr_query.validators:
+                    if (validator.failure_description):
+                        err_static.update(Content(f'"{field}" {validator.failure_description}'))
                 return False
         return True
 
