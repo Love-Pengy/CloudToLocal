@@ -16,7 +16,7 @@ from textual.app import App, ComposeResult
 from utils.playlist_handler import PlaylistHandler
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
-from textual.containers import Horizontal, Vertical, Grid, VerticalScroll
+from textual.containers import Horizontal, Vertical, Grid
 from utils.common import list_to_comma_str, comma_str_to_list, get_img_size_url
 from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input, Checkbox
 
@@ -76,11 +76,15 @@ class EditInputMenu(ModalScreen[dict]):
     def __init__(self, metadata: dict, metadata_type: str):
 
         self.metadata = metadata
+        self.image_rendered = True
         self.metadata_type = metadata_type
         self.output_metadata = self.metadata
         self.default_validator = [Function(self.is_empty, "Is Empty")]
         self.track_num_validator = self.default_validator + [Function(self.is_valid_track,
                                                                       "Is Invalid")]
+        self.image_validator = self.default_validator + [Function(self.is_valid_image,
+                                                                  "Invalid URL")]
+
         self.yield_table = {"before": self.yield_before, "after": self.yield_after,
                             "closest": self.yield_closest}
 
@@ -108,7 +112,7 @@ class EditInputMenu(ModalScreen[dict]):
         yield Input(placeholder="Track Number", type="integer", id="track_num",
                     validators=self.track_num_validator, classes="EditPageInput")
         yield Input(placeholder="Thumbnail Link", value=metadata["thumbnail_url"], type="text",
-                    id="thumb_link", validators=self.default_validator, classes="EditPageInput")
+                    id="thumb_link", validators=self.image_validator, classes="EditPageInput")
         yield self.render_image(metadata["thumbnail_url"])
 
     def yield_after(self, metadata):
@@ -132,7 +136,7 @@ class EditInputMenu(ModalScreen[dict]):
                     type="integer", id="track_num", validators=self.track_num_validator,
                     classes="EditPageInput")
         yield Input(placeholder="Thumbnail Link", value=metadata["thumbnail_info"]["url"],
-                    type="text", id="thumb_link", validators=self.default_validator,
+                    type="text", id="thumb_link", validators=self.image_validator,
                     classes="EditPageInput")
         yield self.render_image(metadata["thumbnail_info"]["url"])
 
@@ -158,7 +162,7 @@ class EditInputMenu(ModalScreen[dict]):
                     type="integer", id="track_num", validators=self.track_num_validator,
                     classes="EditPageInput")
         yield Input(placeholder="Thumbnail Link", value=metadata["thumbnail_info"]["url"],
-                    type="text", id="thumb_link", validators=self.default_validator,
+                    type="text", id="thumb_link", validators=self.image_validator,
                     classes="EditPageInput")
         yield self.render_image(metadata["thumbnail_info"]["url"])
 
@@ -182,8 +186,10 @@ class EditInputMenu(ModalScreen[dict]):
             with urllib.request.urlopen(url) as response:
                 request_response = response.read()
                 image_data = io.BytesIO(request_response)
+                self.image_rendered = True
                 return (Image(image_data, id="EditInputUrlPreview"))
         except urllib.error.URLError:
+            self.image_rendered = False
             return (None)
 
     def is_empty(self, value) -> bool:
@@ -192,7 +198,10 @@ class EditInputMenu(ModalScreen[dict]):
         else:
             return (False)
 
-    def is_valid_track(self, value):
+    def is_valid_image(self, image: str) -> bool:
+        return (self.image_rendered)
+
+    def is_valid_track(self, value) -> bool:
         try:
             album_len = self.query_one("#album_len", Input)
 
@@ -225,7 +234,8 @@ class EditInputMenu(ModalScreen[dict]):
 
     def on_input_blurred(self, blurred_widget):
 
-        if (blurred_widget.input.id == "thumb_link"):
+        if ((blurred_widget.input.id == "thumb_link") and
+                (blurred_widget.input.is_valid)):
             dimensions = get_img_size_url(blurred_widget.value)
             self.output_metadata["thumbnail_info"] = {
                 "url": blurred_widget.value,
