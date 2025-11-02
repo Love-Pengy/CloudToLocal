@@ -165,14 +165,13 @@ class EditInputMenu(ModalScreen[dict]):
         meta = self.metadata
         yield from self.yield_table[self.metadata_type](meta)
 
-        with VerticalScroll():
-            # NOTE: Currently playlists list is held in before section of report ~ BEF
-            before = self.app.report_dict[self.app.current_report_key]["before"]
-            for playlist in self.app.playlist_handler.list_playlists_str():
-                if (playlist in [play[1] for play in before["playlists"]]):
-                    yield Checkbox(playlist, True, name=playlist)
-                else:
-                    yield Checkbox(playlist, False, name=playlist)
+        # NOTE: Currently playlists list is held in before section of report ~ BEF
+        before = self.app.report_dict[self.app.current_report_key]["before"]
+        for playlist in self.app.playlist_handler.list_playlists_str():
+            if (playlist in [play[1] for play in before["playlists"]]):
+                yield Checkbox(playlist, True, name=playlist, classes="EditPageCheckbox")
+            else:
+                yield Checkbox(playlist, False, name=playlist, classes="EditPageCheckbox")
 
         yield Button("All Done!", variant="primary", id="completion_button")
         yield Static("", disabled=True, id="EditInputErr")
@@ -291,9 +290,10 @@ class EditSelectionMenu(ModalScreen):
 
     def compose(self) -> ComposeResult:
         yield Grid(
-            Label("Which Metadata Would You Like To Edit?"),
-            Button("Original", variant="primary", id="original_meta_edit"),
-            Button("New/Closest", variant="primary", id="new_meta_edit")
+            Label("Which Metadata Would You Like To Edit?", id="EditSelectionLabel"),
+            Button("Original", variant="primary", id="EditSelectionButtonOrig"),
+            Button("After/Closest", variant="success", id="EditSelectionButtonNew"),
+            id="EditSelectionGrid"
         )
 
     def exit_menu(self):
