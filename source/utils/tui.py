@@ -356,7 +356,7 @@ class ctl_tui(App):
         ("n", "accept_new", "Accept New Metadata"),
         ("c", "accept_closest", "Accept Closest Match"),
         # NOTE: this is a little silly, should have user input album.
-        ("o", "accept_original", "Accept Original (No Album)"),
+        ("o", "accept_original", "Accept Original"),
         ("e", "edit_metadata", "Manually Edit Metadata"),
         # ("s", "search_again", "Search Again"),
         # ("i", "input_scratch", "Input From Scratch"),
@@ -559,29 +559,33 @@ class ctl_tui(App):
     def action_accept_original(self):
         current_report = self.report_dict[self.current_report_key]
         before = current_report["before"]
+        temp_metadata = before
+
         if ("after" in current_report):
-            path = current_report["after"]["filepath"]
-        else:
-            path = before["path"]
+            temp_metadata["path"] = current_report["after"]["filepath"]
 
-        new_fname = user_replace_filename(before["title"],
-                                          [before["uploader"]],
-                                          path,
-                                          before["ext"],
-                                          None,
-                                          before["duration"],
-                                          1,
-                                          1,
-                                          None,
-                                          {"height": before["thumbnail_height"],
-                                          "width": before["thumbnail_width"],
-                                           "url": before["thumbnail_url"]})
+        def complete_edit_of_metadata(new_metadata: dict):
 
-        self.playlist_handler.write_to_playlists(before["playlists"], None, new_fname,
-                                                 self.output_filepath, before["title"],
-                                                 before["uploader"], before["duration"])
+            new_fname = user_replace_filename(new_metadata["title"],
+                                              new_metadata["artists"],
+                                              new_metadata["path"],
+                                              new_metadata["ext"],
+                                              new_metadata["album"],
+                                              new_metadata["duration"],
+                                              new_metadata["track_num"],
+                                              new_metadata["album_len"],
+                                              new_metadata["album_date"],
+                                              new_metadata["thumbnail_info"]
+                                              )
 
-        self.pop_and_increment_report_key()
+            self.playlist_handler.write_to_playlists(new_metadata["playlists"], None, new_fname,
+                                                     self.output_filepath, new_metadata["title"],
+                                                     new_metadata["artists"],
+                                                     new_metadata["duration"])
+
+            self.pop_and_increment_report_key()
+
+        self.push_screen(EditInputMenu(temp_metadata, "before"), complete_edit_of_metadata)
 
     def action_edit_metadata(self) -> None:
 
