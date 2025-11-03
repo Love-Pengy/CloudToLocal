@@ -10,9 +10,9 @@ from textual.content import Content
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual_image.widget import Image
-from textual.validation import Function
 from textual.css.query import NoMatches
 from textual.app import App, ComposeResult
+from textual.validation import Function, Number
 from utils.playlist_handler import PlaylistHandler
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
@@ -81,6 +81,7 @@ class EditInputMenu(ModalScreen[dict]):
         self.default_validator = [Function(self.is_empty, "Is Empty")]
         self.track_num_validator = self.default_validator + [Function(self.is_valid_track,
                                                                       "Is Invalid")]
+        self.album_len_validator = self.default_validator + [Number(minimum=1)]
         self.image_validator = self.default_validator + [Function(self.is_valid_image,
                                                                   "Invalid URL")]
 
@@ -107,7 +108,7 @@ class EditInputMenu(ModalScreen[dict]):
         yield Input(placeholder="album", type="text", id="album",
                     validators=self.default_validator, classes="EditPageInput")
         yield Input(placeholder="Album Length", type="integer", id="album_len",
-                    validators=self.default_validator, classes="EditPageInput")
+                    validators=self.album_len_validator, classes="EditPageInput")
         yield Input(placeholder="Track Number", type="integer", id="track_num",
                     validators=self.track_num_validator, classes="EditPageInput")
         yield Input(placeholder="Thumbnail Link", value=metadata["thumbnail_url"], type="text",
@@ -130,7 +131,7 @@ class EditInputMenu(ModalScreen[dict]):
                     validators=self.default_validator, classes="EditPageInput")
         yield Input(placeholder="Album Length", type="integer",
                     value=str(metadata["total_tracks"]), id="album_len",
-                    validators=self.default_validator, classes="EditPageInput")
+                    validators=self.album_len_validator, classes="EditPageInput")
         yield Input(placeholder="Track Number", value=str(metadata["track_num"]),
                     type="integer", id="track_num", validators=self.track_num_validator,
                     classes="EditPageInput")
@@ -156,7 +157,7 @@ class EditInputMenu(ModalScreen[dict]):
                     validators=self.default_validator, classes="EditPageInput")
         yield Input(placeholder="Album Length", type="integer",
                     value=str(metadata["album_len"]), id="album_len",
-                    validators=self.default_validator, classes="EditPageInput")
+                    validators=self.album_len_validator, classes="EditPageInput")
         yield Input(placeholder="Track Number", value=str(metadata["trackNumber"]),
                     type="integer", id="track_num", validators=self.track_num_validator,
                     classes="EditPageInput")
@@ -232,18 +233,24 @@ class EditInputMenu(ModalScreen[dict]):
             #       doesn't exist the first time around.
             return (True)
 
+    def validate_all(self):
+        for widget in self.children:
+            if hasattr(widget, "validate") and callable(widget.validate):
+                widget.validate(widget.value)
+
     def check_input_validity(self) -> bool:
-        metadata_field_ids = ["title", "artists", "album", "duration", "album_date",
-                              "album_len", "track_num", "thumb_link"]
-        curr_query = None
+
+        # NOTE: Even though not needed we validate all to update borders ~ BEF
+        self.validate_all()
         err_static = self.query_one("#EditInputErr", Static)
-        for field in metadata_field_ids:
-            curr_query = self.query_one(f"#{field}", Input)
-            if (not curr_query.is_valid):
+        input_widgets = [widget for widget in self.children if isinstance(widget, Input)]
+        for widget in input_widgets:
+            if (not widget.is_valid):
                 err_static.disabled = False
-                for validator in curr_query.validators:
+                for validator in widget.validators:
                     if (validator.failure_description):
-                        err_static.update(Content(f'"{field}" {validator.failure_description}'))
+                        err_static.update(Content(f'"{widget.id}" {
+                            validator.failure_description}'))
                 return False
         return True
 
