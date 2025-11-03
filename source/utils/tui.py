@@ -300,7 +300,10 @@ class EditInputMenu(ModalScreen[dict]):
 
 
 class EditSelectionMenu(ModalScreen):
-    BINDINGS = []
+    BINDINGS = [
+        ("q", "quit_menu", "Quit Menu"),
+        ("escape", "quit_menu", "Quit Menu"),
+    ]
 
     # Possible metadata types
     METADATA_TYPE_OPTIONS = ["before", "closest", "after", None]
@@ -338,6 +341,9 @@ class EditSelectionMenu(ModalScreen):
             Button("After/Closest", variant="success", id="EditSelectionButtonNew"),
             id="EditSelectionGrid"
         )
+
+    def action_quit_menu(self):
+        self.dismiss(None)
 
     def exit_menu(self):
 
@@ -614,8 +620,9 @@ class ctl_tui(App):
             self.pop_and_increment_report_key()
 
         def pass_selection_menu_output(new_metadata: (dict, str)) -> None:
-            self.push_screen(EditInputMenu(new_metadata[0], new_metadata[1]),
-                             complete_edit_of_metadata)
+            if (new_metadata):
+                self.push_screen(EditInputMenu(new_metadata[0], new_metadata[1]),
+                                 complete_edit_of_metadata)
 
         self.push_screen(EditSelectionMenu(self.report_dict[self.current_report_key]["before"],
                                            "before", self.right_info, self.right_type),
