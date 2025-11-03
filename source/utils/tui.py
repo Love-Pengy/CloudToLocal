@@ -76,7 +76,6 @@ class EditInputMenu(ModalScreen[dict]):
     def __init__(self, metadata: dict, metadata_type: str):
 
         self.metadata = metadata
-        self.image_rendered = True
         self.metadata_type = metadata_type
         self.output_metadata = self.metadata
         self.default_validator = [Function(self.is_empty, "Is Empty")]
@@ -186,10 +185,8 @@ class EditInputMenu(ModalScreen[dict]):
             with urllib.request.urlopen(url) as response:
                 request_response = response.read()
                 image_data = io.BytesIO(request_response)
-                self.image_rendered = True
                 return (Image(image_data, id="EditInputUrlPreview"))
         except urllib.error.URLError:
-            self.image_rendered = False
             return (None)
 
     def obtain_image(self, url: str):
@@ -209,7 +206,15 @@ class EditInputMenu(ModalScreen[dict]):
             return (False)
 
     def is_valid_image(self, image: str) -> bool:
-        return (self.image_rendered)
+
+        try:
+            with urllib.request.urlopen(image) as response:
+                if response.status == 200:
+                    type = response.headers.get("Content-Type")
+                    if type and type.startswith("image"):
+                        return (True)
+        except (urllib.error.URLError, ValueError):
+            return (False)
 
     def is_valid_track(self, value) -> bool:
         try:
