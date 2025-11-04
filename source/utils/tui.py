@@ -73,6 +73,8 @@ def format_album_info(report, state) -> dict:
 
 class EditInputMenu(ModalScreen[dict]):
 
+    CSS_PATH = "../css/editInput.tcss"
+
     def __init__(self, metadata: dict, metadata_type: str):
 
         self.metadata = metadata
@@ -300,6 +302,9 @@ class EditInputMenu(ModalScreen[dict]):
 
 
 class EditSelectionMenu(ModalScreen):
+
+    CSS_PATH = "../css/editSelection.tcss"
+
     BINDINGS = [
         ("q", "quit_menu", "Quit Menu"),
         ("escape", "quit_menu", "Quit Menu"),
@@ -383,7 +388,7 @@ class ctl_tui(App):
         # ("ctrl+r", "retry_download", "Retry Download Process"),
         # ("p", "pick_and_choose", "Pick Elements To Pick From Both Before And After")
     ]
-    CSS_PATH = "../ctl-dl.tcss"
+    CSS_PATH = "../css/main.tcss"
 
     # Refresh Footer/Bindings and recompose on change
     current_report_key = reactive(None, recompose=True, bindings=True)
