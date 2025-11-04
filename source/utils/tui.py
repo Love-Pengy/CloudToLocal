@@ -52,18 +52,7 @@ def format_album_info(report, state) -> dict:
             output["title"] = closest["title"]
             output["artists"] = closest["artists"]
             output["album"] = closest["album"]
-
-            # FIXME: duration seconds exists in closest match, so may not need to do this ~ BEF
-            if (not type(closest["duration"]) is int):
-                try:
-                    ptime = strptime(closest["duration"], "%H:%M:%S")
-                except ValueError:
-                    ptime = strptime(closest["duration"], "%M:%S")
-                finally:
-                    output["duration"] = int(timedelta(hours=ptime.tm_hour, minutes=ptime.tm_min,
-                                                       seconds=ptime.tm_sec).total_seconds())
-            else:
-                output["duration"] = closest["duration"]
+            output["duration"] = closest["duration"]
 
             return ({"closest_match": output})
         case _:

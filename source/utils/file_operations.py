@@ -237,7 +237,7 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                         "closest_match": closest_match,
                         "provider": provider,
                         "ext": extension,
-                        "duration": duration,
+                        "duration": closest_match["duration_seconds"],
                         "uploader": uploader,
                         "filepath": filepath
                     }, report, url, ReportStatus.DOWNLOAD_NO_UPDATE)
