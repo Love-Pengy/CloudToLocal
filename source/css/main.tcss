@@ -47,7 +47,13 @@ Screen {
 #before_info,
 #after_info {
     width: 50vw;
-    height: 100vh;
+    height: 18.1vh;
+    border: none;
+}
+
+#divider {
+    border: none;
+    margin: 0 0;
 }
 
 #full_img {
@@ -57,16 +63,19 @@ Screen {
 
 #album_info {
     width: 100vw;
-    height: 25vh;
+    height: 22vh;
+    border: none;
 }
 
 #status {
     width: 100%;
     text-align: center;
+    border: none;
 }
 
 #album_art {
     width: 100%;
     height: 75vh;
     align: center middle;
+    border: none;
 }

@@ -17,8 +17,14 @@ from utils.playlist_handler import PlaylistHandler
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
 from textual.containers import Horizontal, Vertical, Grid
-from utils.common import list_to_comma_str, comma_str_to_list, get_img_size_url
 from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input, Checkbox
+
+from utils.common import (
+    list_to_comma_str,
+    comma_str_to_list,
+    get_img_size_url,
+    url_from_youtube_id
+)
 
 
 def format_album_info(report, state) -> dict:
@@ -53,6 +59,7 @@ def format_album_info(report, state) -> dict:
             output["artists"] = closest["artists"]
             output["album"] = closest["album"]
             output["duration"] = closest["duration"]
+            output["url"] = url_from_youtube_id(closest["videoId"])
 
             return ({"closest_match": output})
         case _:
@@ -462,10 +469,10 @@ class ctl_tui(App):
                         Image(image2_data, id="img2"), id="album_art"
                     )
                     title = current_report["after"]["closest_match"]["title"]
-                    after_width = current_report["after"]["closest_match"]["thumbnail_info"]
-                    ["width"]
-                    after_height = current_report["after"]["closest_match"]["thumbnail_info"]
-                    ["height"]
+                    after_width = current_report["after"]["closest_match"]["thumbnail_info"][
+                        "width"]
+                    after_height = current_report["after"]["closest_match"]["thumbnail_info"][
+                        "height"]
                     after_source = "closest"
                     self.right_info = current_report["after"]["closest_match"]
                     self.right_type = "closest"
@@ -504,7 +511,7 @@ class ctl_tui(App):
         after_str = "(X,X)" if not after_width else f"({after_width}px, {after_height}px)"
         self.title = f"({before_width}px,{before_height}px) {title} {after_str}"
         yield Header()
-        yield Rule(line_style="ascii")
+        yield Rule(line_style="ascii", id="divider")
 
         with Vertical(id="album_info"):
             for content in info_content:

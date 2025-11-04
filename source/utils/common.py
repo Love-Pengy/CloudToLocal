@@ -130,3 +130,7 @@ def list_to_comma_str(input: list):
 
 def comma_str_to_list(input: str):
     return (input.split(','))
+
+
+def url_from_youtube_id(id: str):
+    return (f"https://www.youtube.com/watch?v={id}")
