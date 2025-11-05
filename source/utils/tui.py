@@ -16,7 +16,7 @@ from textual.validation import Function, Number
 from utils.playlist_handler import PlaylistHandler
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
-from textual.containers import Horizontal, Vertical, Grid
+from textual.containers import Horizontal, Vertical, Grid, Container
 from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input, Checkbox
 
 from utils.common import (
@@ -513,7 +513,7 @@ class ctl_tui(App):
         yield Header()
         yield Rule(line_style="ascii", id="divider")
 
-        with Vertical(id="album_info"):
+        with Container(id="album_info"):
             for content in info_content:
                 yield content
 

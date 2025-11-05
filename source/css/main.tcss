@@ -47,8 +47,11 @@ Screen {
 #before_info,
 #after_info {
     width: 50vw;
-    height: 18.1vh;
+    height: 18vh;
     border: none;
+    align: center middle;
+    /* HACK: should really be centered within container to force pretty object to be pretty */
+    padding: 0 12 0 12;
 }
 
 #divider {
@@ -62,6 +65,8 @@ Screen {
 }
 
 #album_info {
+    grid-size: 2 1;
+    align: center middle;
     width: 100vw;
     height: 22vh;
     border: none;
