@@ -481,11 +481,12 @@ class ctl_tui(App):
                     Static(get_report_status_str(
                         current_report["status"]), id="status"),
                     Horizontal(
-                        Pretty(format_album_info(
-                            current_report["before"], "before"), id="before_info"),
-                        Pretty(format_album_info(
-                            current_report["after"], after_source), id="after_info"),
-                        id="album_info"
+                            Pretty(format_album_info(
+                                current_report["before"], "before"), id="before_info"),
+                            Container(id="spacer"),
+                            Pretty(format_album_info(
+                                current_report["after"], after_source), id="after_info"),
+                        id="album_content"
                     )
                 ]
 
