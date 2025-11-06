@@ -40,8 +40,8 @@ Screen {
 
 #img1,
 #img2 {
-    width: 50vw;
-    height: auto;
+    width: 1fr;
+    height: 1fr;
 }
 
 #before_info,
@@ -77,9 +77,11 @@ Screen {
 
 #album_art {
     width: 100%;
+    layout: grid;
     height: 75vh;
+    grid-columns: 50% 50%;
+    grid-size: 2;
     align: center middle;
-    border: none;
 }
 
 #spacer {
