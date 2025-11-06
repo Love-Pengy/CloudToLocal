@@ -1,5 +1,6 @@
 import io
 import json
+import textwrap
 import traceback
 import urllib.request
 from time import strptime
@@ -67,9 +68,44 @@ def format_album_info(report, state) -> dict:
             return (None)
 
 
+class HelpMenu(ModalScreen):
+
+    BINDINGS = [
+        ("q", "quit_menu", "Quit Menu"),
+    ]
+
+    CSS_PATH = "../css/editInputHelpMenu.tcss"
+
+    def compose(self) -> ComposeResult:
+        yield Static(
+            textwrap.dedent("""
+                This Is The Menu That You Will Use To Edit Metadata. Just Input Your Data Into The
+                Text Boxes And Then Check Which Playlists It Should Go Into. Once Done Hit The All
+                Done! Button. Below Is A Specification List For The Metadata Fields:
+
+                Title: Title Of Song
+                Artists: Comma Delimited List Of Artists
+                Duration: Duration In Seconds
+                Album Date: Date Of Album Release. Can Be In MMDDYYYY | YYYYMMDD | DDMMYYYY | YYYY
+                Album Length: Amount Of Tracks In Album
+                Track Number: Number Of Current Track
+                Thumbnail Link: Link Of Thumbnail
+
+
+                Press Q To Exit This Help Menu
+                """), id="EditHelpStatic")
+
+    def action_quit_menu(self):
+        self.dismiss()
+
+
 class EditInputMenu(ModalScreen[dict]):
 
     CSS_PATH = "../css/editInput.tcss"
+
+    BINDINGS = [
+        ("ctrl+h", "help_menu", "Help Menu"),
+    ]
 
     def __init__(self, metadata: dict, metadata_type: str):
 
@@ -88,77 +124,97 @@ class EditInputMenu(ModalScreen[dict]):
 
         super().__init__()
 
+    def action_help_menu(self):
+        self.app.push_screen(HelpMenu(), None)
+
     def yield_before(self, metadata):
 
+        yield Label("Title", classes="EditPageLabel")
         yield Input(placeholder="title", value=metadata["title"], type="text", id="title",
                     validators=self.default_validator, classes="EditPageInput")
-        yield Label("Enter Comma Delimited List Of Artists", classes="EditPageLabel")
+        yield Label("Artists", classes="EditPageLabel")
         yield Input(placeholder="artists", value=metadata["uploader"],
                     type="text", id="artists", validators=self.default_validator,
                     classes="EditPageInput")
-        yield Label("Enter Duration In Seconds", classes="EditPageLabel")
+        yield Label("Duration", classes="EditPageLabel")
         yield Input(placeholder="duration", value=str(metadata["duration"]), type="integer",
                     id="duration", validators=self.default_validator, classes="EditPageInput")
 
-        # TO-DO: In help page add that this can be a year or MMDDYYYY | YYYYMMDD | DDMMYYYY
+        yield Label("Album Date", classes="EditPageLabel")
         yield Input(placeholder="Album Date", type="text", id="album_date",
                     validators=self.default_validator, classes="EditPageInput")
+        yield Label("Album", classes="EditPageLabel")
         yield Input(placeholder="album", type="text", id="album",
                     validators=self.default_validator, classes="EditPageInput")
+        yield Label("Album Length", classes="EditPageLabel")
         yield Input(placeholder="Album Length", type="integer", id="album_len",
                     validators=self.album_len_validator, classes="EditPageInput")
+        yield Label("Track Number", classes="EditPageLabel")
         yield Input(placeholder="Track Number", type="integer", id="track_num",
                     validators=self.track_num_validator, classes="EditPageInput")
+        yield Label("Thumbnail Link", classes="EditPageLabel")
         yield Input(placeholder="Thumbnail Link", value=metadata["thumbnail_url"], type="text",
                     id="thumb_link", validators=self.image_validator, classes="EditPageInput")
         yield self.render_image(metadata["thumbnail_url"])
 
     def yield_after(self, metadata):
+        yield Label("Title", classes="EditPageLabel")
         yield Input(placeholder="title", value=metadata["title"], type="text", id="title",
                     validators=self.default_validator, classes="EditPageInput")
-        yield Label("Enter Comma Delimited List Of Artists", classes="EditPageLabel")
+        yield Label("Artists", classes="EditPageLabel")
         yield Input(placeholder="artists", value=list_to_comma_str(metadata["artists"]),
                     type="text", id="artists", validators=self.default_validator,
                     classes="EditPageInput")
-        yield Label("Enter Duration In Seconds", classes="EditPageLabel")
+        yield Label("Duration", classes="EditPageLabel")
         yield Input(placeholder="duration", value=str(metadata["duration"]), type="integer",
                     id="duration", validators=self.default_validator, classes="EditPageInput")
+        yield Label("Album Date", classes="EditPageLabel")
         yield Input(placeholder="Album Date", type="text", id="album_date",
                     validators=self.default_validator, classes="EditPageInput")
+        yield Label("Album", classes="EditPageLabel")
         yield Input(placeholder="album", value=metadata["album"], type="text", id="album",
                     validators=self.default_validator, classes="EditPageInput")
+        yield Label("Album Length", classes="EditPageLabel")
         yield Input(placeholder="Album Length", type="integer",
                     value=str(metadata["total_tracks"]), id="album_len",
                     validators=self.album_len_validator, classes="EditPageInput")
+        yield Label("Track Number", classes="EditPageLabel")
         yield Input(placeholder="Track Number", value=str(metadata["track_num"]),
                     type="integer", id="track_num", validators=self.track_num_validator,
                     classes="EditPageInput")
+        yield Label("Thumbnail Link", classes="EditPageLabel")
         yield Input(placeholder="Thumbnail Link", value=metadata["thumbnail_info"]["url"],
                     type="text", id="thumb_link", validators=self.image_validator,
                     classes="EditPageInput")
         yield self.render_image(metadata["thumbnail_info"]["url"])
 
     def yield_closest(self, metadata):
+        yield Label("Title", classes="EditPageLabel")
         yield Input(placeholder="title", value=metadata["title"], type="text", id="title",
                     validators=self.default_validator, classes="EditPageInput")
-        yield Label("Enter a comma delimited list of artists", classes="EditPageInput")
+        yield Label("Artists", classes="EditPageLabel")
         yield Input(placeholder="artists", value=list_to_comma_str(metadata["artists"]),
                     type="text", id="artists", validators=self.default_validator,
                     classes="EditPageInput")
-        yield Label("Enter Duration In Seconds", classes="EditPageInput")
+        yield Label("Duration", classes="EditPageLabel")
         yield Input(placeholder="duration", value=str(metadata["duration_seconds"]),
                     type="integer", id="duration", validators=self.default_validator,
                     classes="EditPageInput")
+        yield Label("Album Date", classes="EditPageLabel")
         yield Input(placeholder="Album Date", type="text", id="album_date",
                     validators=self.default_validator, classes="EditPageInput")
+        yield Label("Album", classes="EditPageLabel")
         yield Input(placeholder="album", value=metadata["album"], type="text", id="album",
                     validators=self.default_validator, classes="EditPageInput")
+        yield Label("Album Length", classes="EditPageLabel")
         yield Input(placeholder="Album Length", type="integer",
                     value=str(metadata["album_len"]), id="album_len",
                     validators=self.album_len_validator, classes="EditPageInput")
+        yield Label("Track Number", classes="EditPageLabel")
         yield Input(placeholder="Track Number", value=str(metadata["trackNumber"]),
                     type="integer", id="track_num", validators=self.track_num_validator,
                     classes="EditPageInput")
+        yield Label("Thumbnail Link", classes="EditPageLabel")
         yield Input(placeholder="Thumbnail Link", value=metadata["thumbnail_info"]["url"],
                     type="text", id="thumb_link", validators=self.image_validator,
                     classes="EditPageInput")
@@ -178,6 +234,7 @@ class EditInputMenu(ModalScreen[dict]):
 
         yield Button("All Done!", variant="primary", id="completion_button")
         yield Static("", disabled=True, id="EditInputErr")
+        yield Footer()
 
     def render_image(self, url: str):
         try:
@@ -481,11 +538,11 @@ class ctl_tui(App):
                     Static(get_report_status_str(
                         current_report["status"]), id="status"),
                     Horizontal(
-                            Pretty(format_album_info(
-                                current_report["before"], "before"), id="before_info"),
-                            Container(id="spacer"),
-                            Pretty(format_album_info(
-                                current_report["after"], after_source), id="after_info"),
+                        Pretty(format_album_info(
+                            current_report["before"], "before"), id="before_info"),
+                        Container(id="spacer"),
+                        Pretty(format_album_info(
+                            current_report["after"], after_source), id="after_info"),
                         id="album_content"
                     )
                 ]
