@@ -197,8 +197,8 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                 if ("album" in search[0] and search[0]["album"] is not None):
                     for i in range(0, 5):
                         try:
-                            album = ytmusic.get_album(
-                                search[0]["album"]["id"])["tracks"]
+                            album = ytmusic.get_album(search[0]["album"]["id"])
+                            album_tracks = album["tracks"]
                             break
                         except YTMusicServerError:
                             info(
@@ -208,10 +208,10 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                             print(traceback.format_exc())
                             error(f"Unexpected error for '{title}': {e}")
 
-                    if (album is not None):
+                    if (album_tracks is not None):
                         # See if track is in the album we found
                         matching_album = [
-                            track for track in album
+                            track for track in album_tracks
                             if track["title"].lower() == title.lower()
                             and track["artists"][0]["name"].lower() == artist.lower()
                         ]
@@ -221,13 +221,13 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                         and search[0]["album"] is not None):
                     closest_match_miss_count = 99999
                     closest_match = None
-                    for album_entry in album:
+                    for album_entry in album_tracks:
                         diff_num = get_diff_count(title, album_entry["title"])
                         if (diff_num < closest_match_miss_count):
                             closest_match = album_entry
                             closest_match_miss_count = diff_num
 
-                    closest_match["album_len"] = len(album)
+                    closest_match["album_len"] = len(album_tracks)
                     thumbs = search[0]["thumbnails"]
                     closest_match["thumbnail_info"] = increase_img_req_res(thumbs[len(thumbs)-1])
 
@@ -262,11 +262,11 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                         else:
                             thumbs = search[0]["thumbnails"]
 
-                    if (("year" in search[0])
-                       and (search[0]["year"] is not None)):
-                        year = search[0]["year"]
-                    else:
-                        year = None
+                        if (("year" in album)
+                                and (album["year"] is not None)):
+                            year = album["year"]
+                        else:
+                            year = None
 
                     artists = [sanitize_string(artist["name"])
                                for artist in search[0]["artists"]]
@@ -285,7 +285,7 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                         "filepath": filepath,
                         "album": matching_album[0]["album"],
                         "track_num": track_num,
-                        "total_tracks": len(album),
+                        "total_tracks": len(album_tracks),
                         "year": year
                     }, report, url, status)
 
