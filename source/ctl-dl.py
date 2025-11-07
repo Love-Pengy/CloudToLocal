@@ -153,8 +153,8 @@ class CloudToLocal:
                                     curr_duration = int(
                                         round(float(video_info["duration"]), 0))
                                 else:
-                                    self.retries == attempts-1
-                                    continue
+                                    # NOTE: This is true when video is present in the archive
+                                    break
                             break
                         except DownloadError:
                             info(
