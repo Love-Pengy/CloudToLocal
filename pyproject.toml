@@ -19,7 +19,7 @@ dependencies = [
   "PyYAML",
   "requests",
   "urllib3",
-  "yt-dlp==2025.10.22",
+  "yt-dlp==2025.11.12",
   "ytmusicapi",
   "selenium",
   "beautifulsoup4",

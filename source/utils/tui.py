@@ -3,8 +3,6 @@ import json
 import textwrap
 import traceback
 import urllib.request
-from time import strptime
-from datetime import timedelta
 
 from utils.printing import warning
 from textual.content import Content
@@ -17,7 +15,7 @@ from textual.validation import Function, Number
 from utils.playlist_handler import PlaylistHandler
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
-from textual.containers import Horizontal, Vertical, Grid, Container
+from textual.containers import Horizontal, Grid, Container
 from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input, Checkbox
 
 from utils.common import (
@@ -285,7 +283,7 @@ class EditInputMenu(ModalScreen[dict]):
             return (False)
         except NoMatches:
             # NOTE: Ordering matters here. Album length is loaded after track number therefore it
-            #       doesn't exist the first time around.
+            #       doesn't exist the first time around. ~ BEF
             return (True)
 
     def validate_all(self):
@@ -335,7 +333,6 @@ class EditInputMenu(ModalScreen[dict]):
                 blurred_widget.value)
 
     def on_checkbox_changed(self, changed_checkbox):
-        # NOTE: might need to append playlists to closest album metadata ~ BEF
 
         playlist = self.app.playlist_handler.get_playlist_tuple(changed_checkbox.checkbox.name)
 
@@ -427,15 +424,12 @@ class EditSelectionMenu(ModalScreen):
 
 class ctl_tui(App):
 
-    # TODO: should make this a menu or something
     BINDINGS = [
         ("n", "accept_new", "Accept New Metadata"),
         ("c", "accept_closest", "Accept Closest Match"),
-        # NOTE: this is a little silly, should have user input album.
         ("o", "accept_original", "Accept Original"),
         ("e", "edit_metadata", "Manually Edit Metadata"),
         # ("s", "search_again", "Search Again"),
-        # ("i", "input_scratch", "Input From Scratch"),
         # ("r", "replace_entry", "Retry Download Process With New URL"),
         ("ctrl+s", "skip_entry", "Skip Entry"),
         # ("ctrl+r", "retry_download", "Retry Download Process"),
@@ -694,12 +688,6 @@ class ctl_tui(App):
         self.pop_and_increment_report_key()
 
     # TODO: create new screen for this
-    def action_input_scratch(self):
-        pass
-        self.playlist_handler.write_to_playlists()
-        self.pop_and_increment_report_key()
-
-    # TODO: create new screen for this
     def action_replace_entry(self):
         pass
         self.playlist_handler.write_to_playlists()
@@ -747,6 +735,3 @@ class ctl_tui(App):
         with open(self.report_path, "w") as f:
             json.dump(self.report_dict, f, indent=2)
         self.exit()
-
-    # def on_mount(self) -> None:
-    #     self.title = "Test Application For CloudtoLocal TUI"

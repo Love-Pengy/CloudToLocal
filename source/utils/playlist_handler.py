@@ -48,7 +48,6 @@ class PlaylistHandler:
                     warning(f"FAILED TO FIND PLAYLIST {url}")
                     continue
 
-                # NOTE: this should probably construct info for the return
                 self.playlists[(url, playlist_name)] = [a['href']
                                                         for a in url_div.find_all("a", href=True)]
 

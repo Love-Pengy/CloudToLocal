@@ -6,6 +6,7 @@ import shutil
 import atexit
 import traceback
 from time import sleep
+from pprint import pprint
 
 import globals
 import configargparse
@@ -59,12 +60,12 @@ class CloudToLocal:
                     title = entry['title']
                     uploader = entry["uploader"]
                     thumbnail_url = entry["thumbnails"][len(entry["thumbnails"])-1]["url"]
-                    # NOTE: youtube doesn't provide genres so ignore this field for Youtube
+                    # NOTE: youtube doesn't provide genres so ignore this field for Youtube ~ BEF
                     genres = None
                 else:
                     # NOTE: Soundcloud's API Gives References To Song Instead
                     #       Of Song Information For Top Level Entry So We Must
-                    #       Query Further
+                    #       Query Further ~ BEF
                     provider = "Soundcloud"
                     sc_info = YoutubeDL({'simulate': True,
                                          'quiet': globals.QUIET,
@@ -80,7 +81,6 @@ class CloudToLocal:
                     genres = sc_info["genres"] if "genres" in sc_info else None
 
                 ydl_opts_download = {
-                    # Download Best audio format and fallback to best video
                     'format': 'bestaudio/best',
                     'postprocessors': [
                         # In the case of a video format extract audio with best
@@ -126,7 +126,6 @@ class CloudToLocal:
                     'skip_unavailable_fragments': False,
                     # Write Thumbnail To Disc For Usage With FFMPEG
                     'writethumbnail': True,
-                    # By Default Use The Song Thumbnail
                     'embedthumbnail': True,
                     'sleep_interval': 0,
                     'max_sleep_interval': self.download_delay,
@@ -153,7 +152,7 @@ class CloudToLocal:
                                     curr_duration = int(
                                         round(float(video_info["duration"]), 0))
                                 else:
-                                    # NOTE: This is true when video is present in the archive
+                                    # NOTE: This is true when video is present in the archive ~ BEF
                                     break
                             break
                         except DownloadError:

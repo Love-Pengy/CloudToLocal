@@ -30,7 +30,6 @@ from utils.common import (
     increase_img_req_res)
 
 
-# Add entry to record
 def add_to_record_pre_search(context, record, url, status):
     record[url] = {}
     record[url]["before"] = context
@@ -253,7 +252,6 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
                         try:
                             track_num = matching_album[0]["trackNumber"]
                         except KeyError:
-                            # FIXME: Still tracking this down
                             error(f"UNKNOWN FAILURE: {
                                   matching_album=}, {search[0]=}")
                         if (("thumbnails" in matching_album[0])
@@ -297,8 +295,8 @@ def fill_tentative_metadata(title, uploader, filepath, extension, provider, url,
             info(f"ARTIST AND SONG NOT FOUND: {title}")
 
 
-# TODO: should probably also take in objects instead of all elements
-# TODO: should also rename this to actually match the function
+# TODO: should probably also take in objects instead of all elements ~ BEF
+# TODO: should also rename this to actually match the function ~ BEF
 def user_replace_filename(title, artists, filepath, extension,
                           matching_album, duration, track_number, album_len,
                           album_date, thumbnail_obj):

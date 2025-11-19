@@ -7,7 +7,11 @@ Automated online backup tool for local backups with YouTube, Soundcloud, and Mus
 Install dependencies with setup.py
 > `pip install .`
 
-> [!IMPORTANT] 
+> [!TIP]
+> An external Javascript dependency is now required for yt-dlp to operate properly for Youtube. You
+> can find more about this change [here](https://github.com/yt-dlp/yt-dlp/issues/15012)
+
+> [!IMPORTANT]
 > It is crucial that you keep the dependencies up to date. If download failures start
 > to occur it is most likely that yt-dlp needs an update. If you find that this
 > is the case submit an issue and or update the yt-dlp package
