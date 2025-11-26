@@ -1,0 +1,50 @@
+###
+#  @file    Dockerfile.py
+#  @author  Brandon Elias Frazier
+#  @date    Nov 25, 2025
+#
+#  @brief   Dockerfile For CTL
+#
+#
+#  @copyright (c) 2025 Brandon Elias Frazier
+#
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in all
+#  copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#  SOFTWARE.
+#
+#
+#################################################################################
+
+FROM python:3.13
+
+RUN adduser --disabled-password -u 1000 ctldl
+USER ctldl
+WORKDIR /home/ctldl
+# NOTE: Add bin dir to path for pip ~ BEF
+ENV PATH="$PATH:/home/ctldl/.local/bin"
+
+
+COPY . /home/ctldl
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+
+RUN ls -l .
+# RUN cd source
+# ENTRYPOINT ["python3", "ctl-dl.py", "-c", "/ctdl/conf.yaml"]
+CMD ["python3", "/home/ctldl/source/ctl-dl.py", "-c", "/home/ctldl/ctldl_conf.yaml"]
