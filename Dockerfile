@@ -32,19 +32,27 @@
 
 FROM python:3.13
 
+# Root Deps
+RUN apt update
+RUN apt install ffmpeg -y
+
+# Env Setup
 RUN adduser --disabled-password -u 1000 ctldl
 USER ctldl
 WORKDIR /home/ctldl
 # NOTE: Add bin dir to path for pip ~ BEF
 ENV PATH="$PATH:/home/ctldl/.local/bin"
-
-
-COPY . /home/ctldl
+ENV PATH="/home/ctldl/.deno/bin:$PATH"
 RUN pip install --upgrade pip
+
+
+COPY . .
+
+# Install Deps
 RUN pip install -r requirements.txt
+RUN curl -fsSL https://deno.land/install.sh | sh
 
 
-RUN ls -l .
 # RUN cd source
 # ENTRYPOINT ["python3", "ctl-dl.py", "-c", "/ctdl/conf.yaml"]
 CMD ["python3", "/home/ctldl/source/ctl-dl.py", "-c", "/home/ctldl/ctldl_conf.yaml"]
