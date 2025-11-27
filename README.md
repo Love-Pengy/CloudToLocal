@@ -1,9 +1,18 @@
 # CloudToLocal
 
+<!--toc:start-->
+- [CloudToLocal](#cloudtolocal)
+  - [Installation](#installation)
+      - [Local](#local)
+      - [Docker](#docker)
+  - [Usage](#usage)
+<!--toc:end-->
+
 Automated online backup tool for local backups with YouTube, Soundcloud, and Musi
 
 ## Installation 
  
+#### Local
 Install dependencies with setup.py
 > `pip install .`
 
@@ -16,7 +25,13 @@ Install dependencies with setup.py
 > to occur it is most likely that yt-dlp needs an update. If you find that this
 > is the case submit an issue and or update the yt-dlp package
 
-## Usage
+#### Docker
+
+1. build the docker image `docker build -t ctldl:latest .`
+2. run image `docker compose up`
+
+
+## Local Usage
 
 ```
 usage: ctl-dl.py [-h] [--config CONFIG] [--playlists PLAYLISTS [PLAYLISTS ...]] --outdir OUTDIR [--retry_amt RETRY_AMT] [--start_tui] [--fail_on_warning]
@@ -48,3 +63,12 @@ options:
 Args that start with '--' can also be set in a config file (specified via --config). The config file uses YAML syntax and must represent a YAML 'mapping'
 (for details, see http://learn.getgrav.org/advanced/yaml). In general, command-line values override config file values which override defaults.
 ```
+
+
+## Configuration
+
+Change `example_conf.yaml` to match what you want. All Settings are there and documented
+
+> [!IMPORTANT]
+> When using the docker image you must create your output directory **before** running the image.
+> this is to prevent docker from creating the directory for you which will create it as root.
