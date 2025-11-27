@@ -23,36 +23,9 @@ class PlaylistHandler:
             (playlist url, playlist name) and the values are lists of song urls
         """
 
-        # Musi
-        opts = webdriver.ChromeOptions()
-        opts.add_argument("--headless")
-        driver = webdriver.Chrome(options=opts)
         for index, url in enumerate(urls):
-            if (url.startswith("https://feelthemusic.com/")):
-                driver.get(url)
-                soup = BeautifulSoup(driver.page_source, "html.parser")
-                driver.quit()
-
-                url_div = soup.find("div", id="playlist_content")
-                name_div = soup.find("div", id="playlist_header")
-
-                for retry in range(0, retry_cnt-1):
-                    playlist_name = name_div.find("div",
-                                                  id="playlist_header_title").text
-                    if (not (playlist_name == '')):
-                        break
-                    sleep(retry_cnt*10)
-                    info(f"Failed to obtain playlist info retrying "
-                         f"({retry}): {url}")
-                else:
-                    warning(f"FAILED TO FIND PLAYLIST {url}")
-                    continue
-
-                self.playlists[(url, playlist_name)] = [a['href']
-                                                        for a in url_div.find_all("a", href=True)]
-
             # Soundcloud Long Link
-            elif (url.startswith("https://soundcloud.com/")):
+            if (url.startswith("https://soundcloud.com/")):
                 ydl_opts_extract = {
                     'extract_flat': True,
                     'skip_download': True,
@@ -75,6 +48,8 @@ class PlaylistHandler:
                         warning(f"{url} Does Not Seem To Be A "
                                 f"Playlist")
 
+            # NOTE: Must be handled separately as these links redirect to the soundcloud.com
+            #       ones ~ BEF
             elif (url.startswith("https://on.soundcloud.com/")):
                 redirect = YoutubeDL({'extract_flat': True,
                                      'skip_download': True,
@@ -105,7 +80,7 @@ class PlaylistHandler:
                         warning(f"{url} Does Not Seem To Be A "
                                 f"Playlist")
 
-            # Youtube
+            # YouTube
             elif (url.startswith("https://youtube.com/")):
                 ydl_opts_extract = {
                     'extract_flat': True,
