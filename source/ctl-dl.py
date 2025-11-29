@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import os
+import sys
+import time
 import json
 import shutil
 import signal
@@ -46,7 +48,11 @@ class CloudToLocal:
                                                 self.request_delay)
         self.report = {}
         self.report_fpath = self.output_dir+"ctl_report"
-        atexit.register(self.dump_report)
+        self.original_sigint_handler = signal.getsignal(signal.SIGINT)
+        self.original_sigterm_handler = signal.getsignal(signal.SIGTERM)
+
+        signal.signal(signal.SIGINT, self.dump_and_exit)
+        signal.signal(signal.SIGTERM, self.dump_and_exit)
 
     def download(self):
         for curr_playlist_info in self.playlists_info:
@@ -195,6 +201,8 @@ class CloudToLocal:
                                             entry["ie_key"], url, curr_duration,
                                             self.output_dir, self.report)
         clean_ytdlp_artifacts(self.output_dir)
+        self.dump_report()
+        self.reset_signal_handlers()
         success("Download Completed")
 
     def dump_report(self):
@@ -202,7 +210,13 @@ class CloudToLocal:
         with open(self.report_fpath, "w") as f:
             json.dump(self.report, f, indent=2)
 
+    def dump_and_exit(self, sig_number, frame):
+        self.dump_report()
+        sys.exit(0)
 
+    def reset_signal_handlers(self):
+        signal.signal(signal.SIGINT, self.original_sigint_handler)
+        signal.signal(signal.SIGTERM, self.original_sigterm_handler)
 
 
 def download(arguments):
