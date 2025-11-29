@@ -1,5 +1,8 @@
 import io
+import os
+import glob
 import urllib
+import shutil
 import requests
 
 import globals
@@ -134,3 +137,14 @@ def comma_str_to_list(input: str):
 
 def url_from_youtube_id(id: str):
     return (f"https://www.youtube.com/watch?v={id}")
+
+
+def delete_folder_contents(path: str):
+    """ Delete entire contents of a directory """
+    glob_spec = glob.glob(path+"/*") if not path[-1] == '/' else glob.glob(path+'*')
+
+    for file in glob_spec:
+        if (not os.path.isdir(file)):
+            os.remove(file)
+        else:
+            shutil.rmtree(file)
