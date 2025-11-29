@@ -39,6 +39,5 @@ services:
       # NOTE: these **MUST** be created with the proper permissions **BEFORE** running the
       #       image ~ BEF
       - ${PWD}/ctldl_conf.yaml:/ctldl/conf.yaml
-      - ${PWD}/Music:/home/ctldl/Music
-    environment:
-      - TZ=America/New_York
+      - ~/Music:/home/ctldl/Music
+    command: ["/ctldl/conf.yaml"]

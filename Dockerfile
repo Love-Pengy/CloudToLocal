@@ -51,6 +51,6 @@ COPY . .
 RUN pip install -r requirements.txt
 RUN curl -fsSL https://deno.land/install.sh | sh
 
-ENV TZ="America/New_York"
-RUN echo TZ IS ${TZ}
-CMD exec python3 /home/ctldl/source/ctl-dl.py -c /home/ctldl/ctldl_conf.yaml -tz ${TZ}
+ENTRYPOINT ["/home/ctldl/source/ctl-dl.py"]
+# Default args for CTLDL. Can be changed in docker compose using command
+CMD [ "/ctldl/conf.yaml" ]

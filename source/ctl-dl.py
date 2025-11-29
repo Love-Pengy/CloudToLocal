@@ -258,7 +258,7 @@ if __name__ == "__main__":
         config_file_parser_class=configargparse.YAMLConfigFileParser
     )
 
-    parser.add_argument("--config", "-c", type=str,
+    parser.add_argument("config", type=str,
                         is_config_file=True, default="ctlConfig.yaml",
                         help="Configuration File Path")
 
