@@ -3,11 +3,14 @@
 import os
 import json
 import shutil
-import atexit
+import signal
 import traceback
 from time import sleep
-from pprint import pprint
+# from pprint import pprint
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
+import pycron
 import globals
 import configargparse
 from yt_dlp import YoutubeDL
@@ -200,7 +203,9 @@ class CloudToLocal:
             json.dump(self.report, f, indent=2)
 
 
-def main(arguments):
+
+
+def download(arguments):
     if (not connectivity_check()):
         error("Internet Connection Could Not Be Established! Please Check Your Connection")
     info("INTERNET CONNECTION VERIFIED")
@@ -220,7 +225,20 @@ def main(arguments):
     ctl.download()
 
 
+def main(arguments):
+    # Always Run On Container Start
+    download(arguments)
+    if (arguments.cron_spec):
+        while (True):
+            dt_spec = datetime.now() if not arguments.timezone else datetime.now(
+                tz=ZoneInfo(arguments.timezone))
+            if (pycron.is_now(arguments.cron_spec, dt=dt_spec)):
+                download(arguments)
+            time.sleep(60)
+
+
 if __name__ == "__main__":
+
     parser = configargparse.ArgParser(
         description="Automated Youtube and Soundcloud Downloader",
         config_file_parser_class=configargparse.YAMLConfigFileParser
@@ -261,6 +279,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--fresh", "-f", action="store_true",
                         help="Delete Directory Before Downloading (Mainly For Testing)")
+
+    parser.add_argument("--timezone", "-tz", type=str, help="Timezone to use for cron")
+    parser.add_argument("--cron_spec", "-cn", type=str, help="Cron specifier")
 
     args = parser.parse_args()
     globals.VERBOSE = bool(args.verbose)
