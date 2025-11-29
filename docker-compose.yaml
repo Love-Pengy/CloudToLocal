@@ -36,10 +36,9 @@ services:
     # Specify we build the image locally (leave room for this as well need the entire repo)
     build: .
     volumes:
-      # NOTE: these **MUST** be created with the proper permissions **BEFORE** running the 
+      # NOTE: these **MUST** be created with the proper permissions **BEFORE** running the
       #       image ~ BEF
-      - ${PWD}/ctl_dl_conf.yaml:/ctldl/conf.yaml
+      - ${PWD}/ctldl_conf.yaml:/ctldl/conf.yaml
       - ${PWD}/Music:/home/ctldl/Music
-    # NOTE: Might need later for timestamp purposes ~ BEF
-    # environment:
-    #   - TZ=America/New_York
+    environment:
+      - TZ=America/New_York
