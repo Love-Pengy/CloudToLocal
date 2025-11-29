@@ -8,7 +8,6 @@ import shutil
 import signal
 import traceback
 from time import sleep
-# from pprint import pprint
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -20,8 +19,8 @@ from utils.tui import ctl_tui
 from globals import ReportStatus
 from yt_dlp.utils import DownloadError
 from utils.playlist_handler import PlaylistHandler
-from utils.printing import warning, error, success, info
-from utils.common import check_ytdlp_update, connectivity_check
+from utils.printing import warning, error, success, info, pretty_print
+from utils.common import check_ytdlp_update, connectivity_check, delete_folder_contents
 
 from utils.file_operations import (
     add_to_record_err,
@@ -46,8 +45,15 @@ class CloudToLocal:
                                                 self.dl_playlists,
                                                 self.playlists_info,
                                                 self.request_delay)
-        self.report = {}
         self.report_fpath = self.output_dir+"ctl_report"
+
+        if (os.path.exists(self.report_fpath)):
+            with open(self.report_fpath, 'r') as fptr:
+                self.report = json.load(fptr)
+        else:
+            info("No Existing Report, Creating New One")
+            self.report = {}
+
         self.original_sigint_handler = signal.getsignal(signal.SIGINT)
         self.original_sigterm_handler = signal.getsignal(signal.SIGTERM)
 
@@ -224,14 +230,6 @@ def download(arguments):
         error("Internet Connection Could Not Be Established! Please Check Your Connection")
     info("INTERNET CONNECTION VERIFIED")
 
-    arguments.outdir = os.path.expanduser(arguments.outdir)
-    if (arguments.start_tui):
-        ctl_tui(arguments).run()
-        exit()
-    elif (arguments.fresh
-          and os.path.exists(arguments.outdir)):
-        shutil.rmtree(arguments.outdir)
-
     ctl = CloudToLocal(arguments)
 
     check_ytdlp_update()
@@ -240,6 +238,19 @@ def download(arguments):
 
 
 def main(arguments):
+
+    arguments.outdir = os.path.expanduser(arguments.outdir)
+    if (arguments.start_tui):
+        ctl_tui(arguments).run()
+        exit()
+    if (arguments.fresh
+            and os.path.exists(arguments.outdir)):
+        info("Cleaning Existing Directory")
+        delete_folder_contents(arguments.outdir)
+
+    if (arguments.verbose):
+        pretty_print(vars(arguments))
+
     # Always Run On Container Start
     download(arguments)
     if (arguments.cron_spec):
