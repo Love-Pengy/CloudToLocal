@@ -25,6 +25,8 @@ class PlaylistHandler:
 
         for index, url in enumerate(urls):
             # Soundcloud Long Link
+            # TODO: check extractor_key instead of the url so that this if statement can just
+            #       one case ~ BEF
             if (url.startswith("https://soundcloud.com/")):
                 ydl_opts_extract = {
                     'extract_flat': True,
@@ -122,7 +124,6 @@ class PlaylistHandler:
             if spec[1] not in output:
                 output.append(spec[1])
         return (output)
-
 
     def get_playlist_tuple(self, input):
         """ Get Playlist Tuple From String Name """

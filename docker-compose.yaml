@@ -35,6 +35,7 @@ services:
   downloader:
     # Specify we build the image locally (leave room for this as well need the entire repo)
     build: .
+    container_name: ctldl
     volumes:
       # NOTE: these **MUST** be created with the proper permissions **BEFORE** running the
       #       image ~ BEF
