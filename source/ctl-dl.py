@@ -4,7 +4,7 @@ import os
 import sys
 import time
 import json
-import shutil
+import atexit
 import signal
 import traceback
 from time import sleep
@@ -57,6 +57,7 @@ class CloudToLocal:
         self.original_sigint_handler = signal.getsignal(signal.SIGINT)
         self.original_sigterm_handler = signal.getsignal(signal.SIGTERM)
 
+        atexit.register(self.dump_and_exit, None, None)
         signal.signal(signal.SIGINT, self.dump_and_exit)
         signal.signal(signal.SIGTERM, self.dump_and_exit)
 
@@ -208,7 +209,7 @@ class CloudToLocal:
                                             self.output_dir, self.report)
         clean_ytdlp_artifacts(self.output_dir)
         self.dump_report()
-        self.reset_signal_handlers()
+        self.reset_exit_handlers()
         success("Download Completed")
 
     def dump_report(self):
@@ -220,7 +221,8 @@ class CloudToLocal:
         self.dump_report()
         sys.exit(0)
 
-    def reset_signal_handlers(self):
+    def reset_exit_handlers(self):
+        atexit.unregister(self.dump_and_exit)
         signal.signal(signal.SIGINT, self.original_sigint_handler)
         signal.signal(signal.SIGTERM, self.original_sigterm_handler)
 
