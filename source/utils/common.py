@@ -11,6 +11,11 @@ from utils.printing import warning, info
 from yt_dlp import version as yt_dlp_version
 
 
+class Providers:
+    YT = "Youtube"
+    SC = "Soundcloud"
+
+
 def get_diff_count(in1, in2):
     """
         Get Amount Of Characters That Differ Between Two Strings
@@ -148,3 +153,26 @@ def delete_folder_contents(path: str):
             os.remove(file)
         else:
             shutil.rmtree(file)
+
+
+def clean_ytdlp_artifacts(path):
+    """Delete .ytdl And .part Files From Download Director."""
+
+    if path[-1] == '/':
+        fixed_path = path
+    else:
+        fixed_path = path + '/'
+
+    for f in (glob.glob(fixed_path+"*.part") + glob.glob(path+"*.ytdl") +
+              glob.glob(fixed_path+"*.webp")):
+        os.remove(f)
+
+
+def validate_args(args: dict, possible_keys: list[str], required_keys: list[str] = None):
+
+    if (not (len(args) == len(set(args).intersection(possible_keys)))):
+        raise KeyError(f"Invalid Key in {args}. \n Possible Keys: {possible_keys}")
+
+    if (required_keys):
+        if (not (len(required_keys) == len(set(args).intersection(required_keys)))):
+            raise KeyError(f"Required Keys: {required_keys}\n Passed Keys: {args}")

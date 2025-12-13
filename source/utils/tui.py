@@ -6,13 +6,13 @@ import urllib.request
 
 from utils.printing import warning
 from textual.content import Content
+from playlists import PlaylistHandler
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual_image.widget import Image
 from textual.css.query import NoMatches
 from textual.app import App, ComposeResult
 from textual.validation import Function, Number
-from utils.playlist_handler import PlaylistHandler
 from globals import get_report_status_str, ReportStatus
 from utils.file_operations import user_replace_filename
 from textual.containers import Horizontal, Grid, Container
