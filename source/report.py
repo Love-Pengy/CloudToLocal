@@ -30,9 +30,26 @@
 #################################################################################
 
 
+from utils.printing import info
+
+
+class ReportStatus:
+    DOWNLOAD_FAILURE = 0
+    DOWNLOAD_SUCCESS = 1
+    METADATA_NOT_FOUND = 2
+    SINGLE = 3
+    ALBUM_FOUND = 4
+
+
+def get_report_status_str(val):
+    rstat_dict = ReportStatus.__dict__
+    return (list(rstat_dict.keys())[list(rstat_dict.values()).index(val)])
+
+
 VALID_SEARCH_KEYS = ["title", "uploader", "provider", "ext", "duration", "uploader",
                      "thumbnail_url", "thumbnail_width", "thumbnail_height", "genres", "path",
-                     "url", "playlists"]
+                     "url", "playlists", "artist", "artists", "album", "single", "release_date",
+                     "track_num", "total_tracks", "mbid"]
 
 
 def verify_search_report_keys(context: dict, verify_list: list):
@@ -52,8 +69,3 @@ def add_to_report_post_search(context, record, url, status):
     verify_search_report_keys(context, VALID_SEARCH_KEYS)
     record[url]["after"] = context
     record[url]["status"] = status
-
-
-def add_to_report_err(context, record, url, status):
-    record[url] = context
-    record[url] = status
