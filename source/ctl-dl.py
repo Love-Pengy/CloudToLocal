@@ -15,8 +15,16 @@ import configargparse
 from utils.tui import ctl_tui
 from playlists import PlaylistHandler
 from downloader import DownloadManager
-from utils.printing import error, success, info, pretty_print
-from utils.common import check_ytdlp_update, connectivity_check, delete_folder_contents
+from metadata import fill_report_metadata
+from music_brainz import construct_user_agent
+from utils.printing import error, success, info
+
+from utils.common import (
+    check_ytdlp_update,
+    connectivity_check,
+    delete_folder_contents,
+    clean_ytdlp_artifacts
+)
 
 
 class CloudToLocal:
@@ -24,6 +32,7 @@ class CloudToLocal:
         self.playlists_info = []
         self.output_dir = arguments.outdir
         self.retries = arguments.retry_amt
+        self.user_agent = construct_user_agent(arguments.email)
         self.playlist_handler = PlaylistHandler(self.retries,
                                                 arguments.playlists,
                                                 self.playlists_info,
@@ -34,7 +43,7 @@ class CloudToLocal:
             with open(self.report_fpath, 'r') as fptr:
                 self.report = json.load(fptr)
         else:
-            info("No Existing Report, Creating New One")
+            info("No Existing Report, Creating New One...")
             self.report = {}
 
         self.downloader = DownloadManager({
@@ -52,12 +61,13 @@ class CloudToLocal:
     def run_download_sequence(self):
 
         for download_info in self.downloader.download_generator():
-            # TO-DO: Add separate metadata handler class. This should make it easier to handle
-            #       metadata within the TUI ~ BEF
-            fill_tentative_metadata(title, uploader,
-                                    curr_filepath, curr_ext,
-                                    entry["ie_key"], url, curr_duration,
-                                    self.output_dir, self.report)
+            fill_report_metadata(self.user_agent,
+                                 download_info.title,
+                                 download_info.uploader,
+                                 download_info.provider,
+                                 download_info.url,
+                                 self.report)
+
         clean_ytdlp_artifacts(self.output_dir)
         self.dump_report()
         self.reset_exit_handlers()
@@ -173,6 +183,11 @@ if __name__ == "__main__":
     parser.add_argument("--timezone", "-tz", type=str, default="ETC/UTC",
                         help="Timezone to use for cron")
     parser.add_argument("--cron_spec", "-cn", type=str, help="Cron specifier")
+
+    parser.add_argument("--email",
+                        type=str,
+                        required=True,
+                        help="Email to be used for MusicBrainz api queries")
 
     args = parser.parse_args()
     globals.QUIET = args.quiet

@@ -44,7 +44,7 @@ import globals
 from PIL import Image
 from mutagen import File
 from mutagen.mp3 import MP3
-from globals import ReportStatus
+from report import ReportStatus
 from utils.printing import tui_log
 from mutagen.oggopus import OggOpus
 from mutagen.mp4 import MP4, MP4Cover
@@ -52,9 +52,9 @@ from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
 from utils.common import sanitize_string
 from music_brainz import musicbrainz_search
+from report import add_to_report_post_search
 from youtube_title_parse import get_artist_title
 from utils.common import warning, validate_args, Providers
-from utils.file_operations import add_to_record_err, add_to_record_post_search
 
 from mutagen.id3 import (
     TIT2, TOPE, TALB, TRCK,
@@ -190,40 +190,39 @@ def parse_youtube_title(title: str, artist: str):
     return (get_artist_title(title, {"defaultArtist": artist, "defaultTitle": title}))
 
 
-# TO-DO: we're going to just add to report and tag at confirmation time ~ BEF
-def fill_report_metadata(in_title, in_uploader, filepath, extension, provider, url, duration,
-                         output_dir, report):
+def fill_report_metadata(user_agent: str,
+                         title: str,
+                         uploader: str,
+                         provider: str,
+                         url: str,
+                         report: dict):
     """
-        Args:
-            title (str)
-            uploader (str)
-            filepath (str)
-            extension (str)
-            provider (str)
-            url (str)
-            duration (int)
-            output_dir (str)
-            handler (PlaylistHandler)
-            report (dict): dictionary of download status reports
+        Arguments:
+            user_agent: Musicbrainz user agent
+            title:      Title of song
+            uploader:   Uploader of song
+            provider:   Provider or download
+            url:        Url of song
+            report:     Dictionary of download status reports
 
 
     """
 
-    title = in_title
-    artist = in_uploader
+    title = title
+    artist = uploader
     if (Providers.YT == provider):
         artist, title = parse_youtube_title(title, artist)
         if (not (artist and title)):
-            title = in_title
-            artist = in_uploader
+            title = title
+            artist = uploader
 
-    meta = musicbrainz_search(..., title, artist)
+    meta = musicbrainz_search(user_agent, title, artist)
 
     if (not meta):
-        add_to_record_err({"url": url}, report, url, ReportStatus.SEARCH_FOUND_NOTHING)
+        add_to_report_post_search({"url": url}, report, url, ReportStatus.METADATA_NOT_FOUND)
         return
 
-    add_to_record_post_search({
+    add_to_report_post_search({
         "title": meta.title,
         "artist": meta.artist,
         "artists": meta.artists,
@@ -237,6 +236,7 @@ def fill_report_metadata(in_title, in_uploader, filepath, extension, provider, u
         report,
         url,
         ReportStatus.SINGLE if meta.is_single else ReportStatus.ALBUM_FOUND)
+
 
 # TO-DO: should probably also take in objects instead of all elements ~ BEF
 # TO-DO: should also rename this to actually match the function ~ BEF
