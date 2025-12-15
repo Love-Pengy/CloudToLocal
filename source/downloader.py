@@ -32,22 +32,15 @@
 
 import traceback
 from time import sleep
-from pprint import pprint
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 
 import globals
 from yt_dlp import YoutubeDL
-from globals import ReportStatus
+from report import ReportStatus
 from yt_dlp.utils import DownloadError
+from report import add_to_report_pre_search
+from metadata import get_embedded_thumbnail_res
 from utils.printing import info, warning, error
-
-from utils.file_operations import (
-    add_to_record_err,
-    fill_tentative_metadata,
-    add_to_record_pre_search,
-    get_embedded_thumbnail_res,
-    clean_ytdlp_artifacts
-)
 
 
 @dataclass
@@ -55,20 +48,12 @@ class DownloadInfo:
     title: str = None
     uploader: str = None
     provider: str = None
-    ext: str = None
-    duration: int = None
-    uploader: str = None
-    thumbnail_url: str = None
-    thumbnail_width: str = None
-    thumbnail_height: str = None
-    genres: str = None
-    path: str = None
     url: str = None
-    playlists: list[str] = field(default_factory=list)
 
 
 class DownloadManager:
 
+    # TO-DO: Look into adding the option "use_ad_playback_context" ~ BEF
     YDL_OPTS_DOWNLOAD = {
         "format": "bestaudio/best",
         "postprocessors": [
@@ -147,12 +132,11 @@ class DownloadManager:
                     continue
 
                 download_info.provider = entry["ie_key"]
-                if (download_info.provider == "Youtube"):
-                    download_info.genres = None
+                if ("Youtube" == download_info.provider):
+                    genres = None
                     download_info.title = entry['title']
                     download_info.uploader = entry["uploader"]
-                    download_info.thumbnail_url = entry["thumbnails"][
-                        len(entry["thumbnails"])-1]["url"]
+                    thumbnail_url = entry["thumbnails"][len(entry["thumbnails"])-1]["url"]
                 else:
                     # NOTE: Soundcloud API Gives References To Song Instead
                     #       Of Song Information For Top Level Entry So We Must
@@ -163,14 +147,15 @@ class DownloadManager:
                                         ).extract_info(download_info.url)
 
                     download_info.title = sc_info["title"]
-                    download_info.genres = sc_info["genres"] or None
-                    download_info.thumbnail_url = sc_info["thumbnail"]
+                    genres = sc_info["genres"] or None
+                    thumbnail_url = sc_info["thumbnail"]
                     download_info.uploader = sc_info[
                         "artist"] if "artist" in sc_info else sc_info["uploader"]
 
                 info(f"[{index+1}/{len(curr_playlist_info['entries'])}] Attempting: {
                     download_info.title}")
 
+                path = None
                 attempts = 0
                 while (True):
                     if (not (self.retry_amt == attempts-1)):
@@ -179,12 +164,10 @@ class DownloadManager:
                                 video_info = ydl.extract_info(download_info.url, download=True)
                                 if ((video_info) and ("requested_downloads" in video_info)):
                                     video_dl_info = video_info["requested_downloads"][0]
-                                    download_info.ext = video_dl_info["ext"]
-                                    download_info.path = video_dl_info["filepath"]
-                                    download_info.duration = int(round(
-                                        float(video_info["duration"]), 0))
+                                    path = video_dl_info["filepath"]
+                                    duration = int(round(float(video_info["duration"]), 0))
                                 else:
-                                    # NOTE: This is true when video is present in the archive ~ BEF
+                                    # NOTE: Video is present in the archive ~ BEF
                                     break
                             break
                         except DownloadError:
@@ -194,19 +177,29 @@ class DownloadManager:
                             print(traceback.format_exc())
                             error(f"Unexpected error for '{download_info.title}': {e}")
                     else:
-                        add_to_record_err({"url": download_info.url},
-                                          self.report, download_info.url,
-                                          ReportStatus.DOWNLOAD_FAILURE)
+                        add_to_report_pre_search({"url": download_info.url},
+                                                 self.report,
+                                                 download_info.url,
+                                                 ReportStatus.DOWNLOAD_FAILURE)
                         break
                     attempts += 1
 
-                if (download_info.path):
-                    thumb_dimensions = get_embedded_thumbnail_res(download_info.path)
-                    download_info.thumbnail_width = thumb_dimensions[0]
-                    download_info.thumbnail_height = thumb_dimensions[1]
-                    add_to_record_pre_search(
-                        asdict(download_info) | {
-                            "playlists": self.playlist_handler.check_playlists(download_info.url)},
-                        self.report, download_info.url, ReportStatus.DOWNLOAD_SUCCESS)
+                if (path):
+                    thumb_dimensions = get_embedded_thumbnail_res(path)
+                    thumbnail_width = thumb_dimensions[0]
+                    thumbnail_height = thumb_dimensions[1]
+                    add_to_report_pre_search(
+                        asdict(download_info) |
+                        {
+                            "playlists": self.playlist_handler.check_playlists(download_info.url),
+                            "genres": genres,
+                            "duration": duration,
+                            "thumbnail_url": thumbnail_url,
+                            "thumbnail_width": thumbnail_width,
+                            "thumbnail_height": thumbnail_height
+                        },
+                        self.report,
+                        download_info.url,
+                        ReportStatus.DOWNLOAD_SUCCESS)
                     yield (download_info)
         return
