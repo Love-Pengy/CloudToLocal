@@ -34,6 +34,7 @@ import os
 
 import globals
 from yt_dlp import YoutubeDL
+from metadata import MetadataCtx
 from utils.printing import warning
 
 
@@ -130,45 +131,38 @@ class PlaylistHandler:
 
         return (out_list[0])
 
-    def write_to_playlists(self, playlists: dict, song_url: str, filepath: str, output_dir: str,
-                           title: str, artist: str, duration: int):
+    def write_to_playlists(self, metadata: MetadataCtx, outdir: str, url):
         """ Write song to all playlist files it belongs to
 
-            Arguments:
-                playlists:      Dictionary of playlists containing url for playlist and name of
-                                    playlist. Specify this if you want to manually give playlists
-                song_url:       Url of song. Specify this if you want to search through matching
-                                    playlists using class's context
-                filepath:       Path to song
-                output_dir:     Path to folder in which playlists will exist
-                title:          Song Title
-                album:          Album name
-                duration:       Duration of song in seconds
         """
-        if (filepath.startswith("#")):
-            sanitized_path = "./" + os.path.basename(filepath)
+        if (metadata.path.startswith("#")):
+            sanitized_path = "./" + os.path.basename(metadata.path)
         else:
-            sanitized_path = os.path.basename(filepath)
+            sanitized_path = os.path.basename(metadata.path)
 
-        if (song_url):
-            for playlist_spec in self.check_playlists(song_url):
-                if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.m3u")):
-                    with open(f"{output_dir}{playlist_spec[1]}.m3u", "w") as f:
+        if (url):
+            for playlist_spec in self.check_playlists(url):
+                if (not os.path.exists(f"{outdir}{playlist_spec[1]}.m3u")):
+                    with open(f"{outdir}{playlist_spec[1]}.m3u", "w") as f:
                         f.write("#EXTM3U\n")
-                        f.write(f"#EXTINF:{duration},{artist} - {title}\n")
+                        f.write(f"#EXTINF:{metadata.duration},{
+                                metadata.artist} - {metadata.title}\n")
                         f.write(sanitized_path + "\n")
                 else:
-                    with open(f"{output_dir}{playlist_spec[1]}.m3u", "a") as f:
-                        f.write(f"#EXTINF:{duration},{artist} - {title}\n")
+                    with open(f"{outdir}{playlist_spec[1]}.m3u", "a") as f:
+                        f.write(f"#EXTINF:{metadata.duration},{
+                                metadata.artist} - {metadata.title}\n")
                         f.write(sanitized_path + "\n")
         else:
-            for playlist_spec in playlists:
-                if (not os.path.exists(f"{output_dir}{playlist_spec[1]}.m3u")):
-                    with open(f"{output_dir}{playlist_spec[1]}.m3u", "w") as f:
+            for playlist_spec in metadata.playlists:
+                if (not os.path.exists(f"{outdir}{playlist_spec[1]}.m3u")):
+                    with open(f"{outdir}{playlist_spec[1]}.m3u", "w") as f:
                         f.write("#EXTM3U\n")
-                        f.write(f"#EXTINF:{duration},{artist} - {title}\n")
+                        f.write(f"#EXTINF:{metadata.duration},{
+                                metadata.artist} - {metadata.title}\n")
                         f.write(sanitized_path + "\n")
                 else:
-                    with open(f"{output_dir}{playlist_spec[1]}.m3u", "a") as f:
-                        f.write(f"#EXTINF:{duration},{artist} - {title}\n")
+                    with open(f"{outdir}{playlist_spec[1]}.m3u", "a") as f:
+                        f.write(f"#EXTINF:{metadata.duration},{
+                                metadata.artist} - {metadata.title}\n")
                         f.write(sanitized_path + "\n")
