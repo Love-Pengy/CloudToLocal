@@ -56,7 +56,7 @@ EditSelectionMenu {
     content-align: center middle;
 }
 
-#EditSelectionButtonOrig,
-#EditSelectionButtonNew {
+#EditSelectionButtonPre,
+#EditSelectionButtonPost {
     width: 100%;
 }

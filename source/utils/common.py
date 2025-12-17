@@ -21,7 +21,7 @@ def get_diff_count(in1, in2):
         Get Amount Of Characters That Differ Between Two Strings
             Taking Into Account Position
 
-        Args:
+        Arguments:
             in1 (str)
             in2 (str)
 
@@ -126,7 +126,7 @@ def connectivity_check():
 
 
 def list_to_comma_str(input: list):
-    if (not len(input)):
+    if (not input):
         return (None)
 
     output = str(input[0]) + ','
