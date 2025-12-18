@@ -434,9 +434,7 @@ MUSICBRAINZ_GENRES = [
 
 class HelpMenu(ModalScreen):
 
-    BINDINGS = [
-        ("q", "quit_menu", "Quit Menu"),
-    ]
+    BINDINGS = [("q", "quit_menu", "Quit Menu")]
 
     CSS_PATH = "css/editInputHelpMenu.tcss"
 
@@ -450,8 +448,7 @@ class HelpMenu(ModalScreen):
                 Title: Title Of Song
                 Artists: Comma Delimited List Of Artists
                 Duration: Duration In Seconds
-                YYYYMMDD
-                Album Date: Date Of Album Release. Can Be In MMDDYYYY | YYYYMMDD | DDMMYYYY | YYYY
+                Album Date: Date Of Album Release. Must be in the form YYYY-MM-DD
                 Album Length: Amount Of Tracks In Album
                 Track Number: Number Of Current Track
                 Thumbnail Link: Link Of Thumbnail
@@ -497,8 +494,9 @@ class EditInputMenu(ModalScreen[dict]):
         with VerticalScroll(id="InputMenuScrollContainer"):
             # TO-DO: Add loading here for the image ~ BEF
             yield Label("Title", classes="EditPageLabel")
-            yield Input(placeholder="title", value=self.metadata["title"], type="text", id="title",
-                        validators=self.default_validator, classes="EditPageInput")
+            yield Input(placeholder="Name of Song", value=self.metadata["title"],
+                        type="text", id="title", validators=self.default_validator,
+                        classes="EditPageInput")
 
             yield Label("Artist", classes="EditPageLabel")
             yield Input(placeholder="Main Artist", value=self.metadata.get("artist", None),
@@ -506,34 +504,36 @@ class EditInputMenu(ModalScreen[dict]):
                         classes="EditPageInput")
 
             yield Label("Artists", classes="EditPageLabel")
-            yield Input(placeholder="artists", value=list_to_comma_str(
-                self.metadata.get("artists", None)
-            ),
-                type="text", id="artists", validators=self.default_validator,
-                classes="EditPageInput")
+            yield Input(placeholder="Comma Delimited List Of All Artists Involved **Including**"
+                        "The Main Artist",
+                        value=list_to_comma_str(self.metadata.get("artists", None)),
+                        type="text", id="artists", validators=self.default_validator,
+                        classes="EditPageInput")
 
             yield Label("Duration", classes="EditPageLabel")
-            yield Input(placeholder="duration", value=str(self.metadata["duration"]),
-                        type="integer", id="duration", validators=self.default_validator,
+            yield Input(placeholder="Duration Of Song In Seconds",
+                        value=str(self.metadata["duration"]), type="integer", id="duration",
+                        validators=self.default_validator,
                         classes="EditPageInput")
 
             yield Label("Album Date", classes="EditPageLabel")
-            yield Input(placeholder="Album Date", type="text", id="album_date",
+            yield Input(placeholder="YYYY-MM-DD", type="text", id="album_date",
                         validators=self.date_validator, classes="EditPageInput")
 
             yield Label("Album", classes="EditPageLabel")
-            yield Input(placeholder="album", value=self.metadata.get("album", None), type="text",
-                        id="album", validators=self.default_validator, classes="EditPageInput")
+            yield Input(placeholder="Album Name Or Song Name If Single",
+                        value=self.metadata.get("album", None), type="text", id="album",
+                        validators=self.default_validator, classes="EditPageInput")
 
             yield Label("Album Length", classes="EditPageLabel")
-            yield Input(placeholder="Album Length", type="integer",
+            yield Input(placeholder="Amount Of Tracks In Album", type="integer",
                         value=self.metadata.get("total_tracks", None), id="album_len",
                         validators=self.album_len_validator, classes="EditPageInput")
 
             yield Label("Track Number", classes="EditPageLabel")
-            yield Input(placeholder="Track Number", value=self.metadata.get("track_num", None),
-                        type="integer", id="track_num", validators=self.track_num_validator,
-                        classes="EditPageInput")
+            yield Input(placeholder="This Song's Track Number Within Album",
+                        value=self.metadata.get("track_num", None), type="integer", id="track_num",
+                        validators=self.track_num_validator, classes="EditPageInput")
 
             yield Label("Genres", classes="EditPageLabel")
             # TO-DO: yeahhh...lets fix this please ~ BEF
@@ -554,7 +554,7 @@ class EditInputMenu(ModalScreen[dict]):
                              classes="EditPageListItem", prompt=f"Genre {i+1}")
 
             yield Label("Thumbnail Link", classes="EditPageLabel")
-            yield Input(placeholder="Thumbnail Link",
+            yield Input(placeholder="Link To Thumbnail",
                         value=self.metadata.get("thumbnail_url", None), type="text",
                         id="thumb_link", validators=self.image_validator, classes="EditPageInput")
             thumb_data = get_thumbnail_from_url(self.metadata.get("thumbnail_url", None))
