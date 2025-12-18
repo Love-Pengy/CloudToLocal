@@ -6,10 +6,7 @@ import time
 import json
 import atexit
 import signal
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
-import pycron
 import globals
 import configargparse
 from tui import ctl_tui
@@ -17,13 +14,13 @@ from playlists import PlaylistHandler
 from downloader import DownloadManager
 from metadata import fill_report_metadata
 from music_brainz import construct_user_agent
-from utils.printing import error, success, info
+from utils.printing import success, info, warning
 
 from utils.common import (
     check_ytdlp_update,
     connectivity_check,
+    clean_ytdlp_artifacts,
     delete_folder_contents,
-    clean_ytdlp_artifacts
 )
 
 
@@ -98,7 +95,9 @@ class CloudToLocal:
 
 def download(arguments):
     if (not connectivity_check()):
-        error("Internet Connection Could Not Be Established! Please Check Your Connection")
+        warning("Internet Connection Could Not Be Established! Please Check Your Connection")
+        return
+
     info("INTERNET CONNECTION VERIFIED")
 
     ctl = CloudToLocal(arguments)
@@ -114,7 +113,7 @@ def main(arguments):
     if (not (arguments.outdir[-1] == '/')):
         arguments.outdir += '/'
 
-    # TO-DO: Add Option To Server Over Localhost ~ BEF
+    # TO-DO: Add Option To Serve Locally ~ BEF
     if (arguments.start_tui):
         ctl_tui(arguments).run()
         exit()
@@ -126,15 +125,15 @@ def main(arguments):
     if (arguments.verbose):
         info(vars(arguments))
 
-    # Always Run Once On Container Start
+    download_loop(arguments)
+
+
+def download_loop(arguments):
     download(arguments)
-    if (arguments.cron_spec):
-        while (True):
-            dt_spec = datetime.now() if not arguments.timezone else datetime.now(
-                tz=ZoneInfo(arguments.timezone))
-            if (pycron.is_now(arguments.cron_spec, dt=dt_spec)):
-                download(arguments)
-            time.sleep(60)
+    if (arguments.interval):
+        # LMAO
+        time.sleep(arguments.interval*3600)
+        download(arguments)
 
 
 if __name__ == "__main__":
@@ -180,9 +179,8 @@ if __name__ == "__main__":
     parser.add_argument("--fresh", "-f", action="store_true",
                         help="Delete Directory Before Downloading (Mainly For Testing)")
 
-    parser.add_argument("--timezone", "-tz", type=str, default="ETC/UTC",
-                        help="Timezone to use for cron")
-    parser.add_argument("--cron_spec", "-cn", type=str, help="Cron specifier")
+    parser.add_argument("--interval", type=float,
+                        help="Amount of time between ctldl runs in hours")
 
     parser.add_argument("--email",
                         type=str,
