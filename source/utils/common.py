@@ -1,5 +1,6 @@
 import io
 import os
+import time
 import glob
 import urllib
 import shutil
@@ -9,6 +10,8 @@ import globals
 from PIL import Image
 from utils.printing import warning, info
 from yt_dlp import version as yt_dlp_version
+
+CONNECTIVITY_CHECK_RETRIES = 5
 
 
 class Providers:
@@ -118,10 +121,24 @@ def check_ytdlp_update():
 
 
 def connectivity_check():
-    """ Request The Source For CloudToLocal To Check For An Internet Connection! """
-    request = requests.get("https://www.github.com/Love-Pengy/CloudToLocal")
-    if (request.status_code == 200):
-        return True
+    """ Request all used services to ensure a proper connection both locally and server side. """
+    for i in range(0, CONNECTIVITY_CHECK_RETRIES):
+        try:
+            sc_req = requests.get("https://soundcloud.com/")
+            yt_req = requests.get("https://www.youtube.com/")
+            mb_req = requests.get("https://musicbrainz.org/ws/2/")
+
+            if ((200 == yt_req.status_code)
+                and (200 == mb_req.status_code)
+                    and (200 == sc_req.status_code)):
+                return True
+
+        except requests.exceptions.ConnectionError:
+            pass
+
+        info(f"Failed to connect. Retrying in: {(i+2)**2} seconds....")
+        time.sleep((i+2)**2)
+        continue
     return False
 
 
