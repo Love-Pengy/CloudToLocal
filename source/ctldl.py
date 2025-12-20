@@ -38,6 +38,8 @@ import time
 import json
 import atexit
 import signal
+import shelve
+import datetime
 
 import globals
 import configargparse
@@ -139,6 +141,12 @@ def download(arguments):
     ctl.run_download_sequence()
 
 
+def clear_shelf():
+    info("Clearing shelf...")
+    with shelve.open(globals.SHELF_NAME) as db:
+        db.clear()
+
+
 def main(arguments):
 
     arguments.outdir = os.path.expanduser(arguments.outdir)
@@ -153,6 +161,7 @@ def main(arguments):
             and os.path.exists(arguments.outdir)):
         info("Cleaning Existing Directory")
         delete_folder_contents(arguments.outdir)
+        clear_shelf()
 
     if (arguments.verbose):
         info(vars(arguments))
@@ -160,12 +169,43 @@ def main(arguments):
     download_loop(arguments)
 
 
+def set_wakeup_time(interval):
+    """ Add wakeup time to ctldl shelf. """
+    dt_now = datetime.datetime.now()
+    dt_future = dt_now + datetime.timedelta(hours=interval)
+
+    with shelve.open(globals.SHELF_NAME) as db:
+        db["wakeup_time"] = dt_future
+
+    return ((dt_future - dt_now).total_seconds())
+
+
+def remove_wakeup_time():
+    """ Remove wakeup time from ctldl shelf. """
+    with shelve.open(globals.SHELF_NAME) as db:
+        db.pop("wakeup_time")
+
+
 def download_loop(arguments):
+    with shelve.open(globals.SHELF_NAME) as db:
+        dl_wakeup_time = db.get("wakeup_time", None)
+
+    if (dl_wakeup_time):
+        sleep_time = (dl_wakeup_time - datetime.datetime.now()).total_seconds()
+        if (0 < sleep_time):
+            info(f"Previous instance was set to sleep. Continuing to sleep for: {
+                 sleep_time/3600:.2f} hours")
+            time.sleep(sleep_time)
+        remove_wakeup_time()
+
     download(arguments)
+
     if (arguments.interval):
         while (True):
-            # LMAO
-            time.sleep(arguments.interval*3600)
+            sleep_time = set_wakeup_time(arguments.interval)
+            info(f"Sleeping for {sleep_time/3600} hours...")
+            time.sleep(sleep_time)
+            remove_wakeup_time()
             download(arguments)
 
 
@@ -210,9 +250,9 @@ if __name__ == "__main__":
                         help="Amount Of Seconds To Sleep Between Requests")
 
     parser.add_argument("--fresh", "-f", action="store_true",
-                        help="Delete Directory Before Downloading (Mainly For Testing)")
+                        help="Bypass previous sleep records and Delete Directory Before Downloading (Mainly For Testing)")
 
-    parser.add_argument("--interval", type=float,
+    parser.add_argument("--interval", type=int, default=None,
                         help="Amount of time between ctldl runs in hours")
 
     parser.add_argument("--email",
