@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S python3 -u
 
 ###
 #  @file    ctldl.py
@@ -47,7 +47,7 @@ from tui import ctl_tui
 from playlists import PlaylistHandler
 from downloader import DownloadManager
 from metadata import fill_report_metadata
-from music_brainz import construct_user_agent
+from music_brainz import musicbrainz_construct_user_agent
 from utils.printing import success, info, warning
 
 from utils.common import (
@@ -63,7 +63,7 @@ class CloudToLocal:
         self.playlists_info = []
         self.output_dir = arguments.outdir
         self.retries = arguments.retry_amt
-        self.user_agent = construct_user_agent(arguments.email)
+        self.user_agent = musicbrainz_construct_user_agent(arguments.email)
         self.playlist_handler = PlaylistHandler(self.retries,
                                                 arguments.playlists,
                                                 self.playlists_info,
