@@ -201,6 +201,7 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
             output.album = release.get("release-group", {}).get("title", None)
         else:
             output.is_single = True
+            output.album = output.title
 
         if (output.is_single):
             output.track_count = 1
