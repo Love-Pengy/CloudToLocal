@@ -743,12 +743,15 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
     def on_checkbox_changed(self, changed_checkbox):
 
+        tui_log("Checkbox changed")
         playlist = self.app.playlist_handler.get_playlist_tuple(changed_checkbox.checkbox.name)
 
         if (changed_checkbox.value and
                 (not (playlist in self.output.playlists))):
+            tui_log(f"Adding playlist: {playlist}")
             self.output.playlists.append(playlist)
         elif ((not changed_checkbox.value) and (playlist in self.output.playlists)):
+            tui_log(f"Removing playlist: {playlist}")
             self.output.playlists.remove(playlist)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

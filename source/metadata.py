@@ -251,7 +251,8 @@ def fill_report_metadata(user_agent: str,
 
 
 def replace_metadata(metadata: MetadataCtx):
-    """ Replaces metadata and renames filename to new name provided """
+    """ Replaces metadata and renames filename to new name provided. Metadata path will also be
+        updated with the new filepath. """
 
     delete_file_tags(metadata.path)
 
@@ -265,5 +266,7 @@ def replace_metadata(metadata: MetadataCtx):
         metadata.artist}_{metadata.album}_{metadata.track_num:02d}_{metadata.title}{ext}"
 
     shutil.move(metadata.path, new_filepath)
+
+    metadata.path = new_filepath
 
     return (new_filepath)
