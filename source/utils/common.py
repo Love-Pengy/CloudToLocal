@@ -36,14 +36,16 @@ import time
 import glob
 import urllib
 import shutil
+import logging
 import requests
 
 import globals
 from PIL import Image
-from utils.printing import warning, info
 from yt_dlp import version as yt_dlp_version
 
 CONNECTIVITY_CHECK_RETRIES = 5
+
+logger = logging.getLogger(__name__)
 
 
 class Providers:
@@ -99,6 +101,7 @@ def get_img_size_url(url):
             Tuple of dimensions (width, height)
     """
 
+    # TODO: this should catch failures ~ BEF
     with urllib.request.urlopen(url) as response:
         image_data = response.read()
     image_size = Image.open(
@@ -145,11 +148,11 @@ def check_ytdlp_update():
         "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
     latest_release = release_page.json()["tag_name"]
     if (not (local_version == latest_release)):
-        warning(f"Newer yt_dlp Version Available, Please Update "
-                f"If You Experience Download Issues"
-                f"({local_version} -> {latest_release})")
+        logger.warning(f"Newer yt_dlp Version Available, Please Update "
+                       f"If You Experience Download Issues"
+                       f"({local_version} -> {latest_release})")
     else:
-        info(f"yt_dlp Is Up To Date (Version {latest_release})")
+        logger.info(f"yt_dlp Is Up To Date (Version {latest_release})")
 
 
 def connectivity_check():
@@ -168,7 +171,7 @@ def connectivity_check():
         except requests.exceptions.ConnectionError:
             pass
 
-        info(f"Failed to connect. Retrying in: {(i+2)**2} seconds....")
+        logging.info(f"Failed to connect. Retrying in: {(i+2)**2} seconds....")
         time.sleep((i+2)**2)
         continue
     return False
@@ -196,6 +199,8 @@ def url_from_youtube_id(id: str):
 def delete_folder_contents(path: str):
     """ Delete entire contents of a directory """
     glob_spec = glob.glob(path+"/*") if not path[-1] == '/' else glob.glob(path+'*')
+
+    logging.info(f"Deleting {path}")
 
     for file in glob_spec:
         if (not os.path.isdir(file)):
