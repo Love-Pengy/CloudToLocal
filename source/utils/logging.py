@@ -1,9 +1,9 @@
 ###
-#  @file    printing.py
+#  @file    logging.py
 #  @author  Brandon Elias Frazier
 #  @date    Dec 18, 2025
 #
-#  @brief   Printing Functions
+#  @brief   Logging Functions
 #
 #
 #  @copyright (c) 2025 Brandon Elias Frazier
@@ -30,10 +30,31 @@
 #
 #################################################################################
 
+import json
+import pathlib
+import logging
+import logging.config
 from pprint import pformat
 
-import globals
 from textual import log
+from textual.logging import TextualHandler
+
+
+class TextualLoggerNoStdOut(TextualHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, stderr=False, stdout=False)
+
+
+def setup_logging(in_path: str):
+    config_path = pathlib.Path(in_path)
+    with open(config_path) as fptr:
+        config = json.load(fptr)
+
+    logging.config.dictConfig(config)
+
+
+def get_log_level() -> int:
+    return (logging.root.level)
 
 
 def pretty_print(*args, **kwargs):
@@ -43,39 +64,5 @@ def pretty_print(*args, **kwargs):
         print(pformat(*args, **kwargs, width=100), flush=True)
 
 
-def info(*args, **kwargs):
-    if (not globals.QUIET):
-        print("\033[94m", flush=True)
-        print("ⓘ  ", end="", flush=True)
-        pretty_print(*args, **kwargs)
-        print("\033[0m", flush=True)
-
-
-def warning(*args, **kwargs):
-    print("\033[93m", flush=True)
-    print("⚠️", end="", flush=True)
-    pretty_print(*args, **kwargs)
-    print("\033[0m", flush=True)
-    if (globals.FAIL_ON_WARNING):
-        exit()
-
-
-def success(*args, **kwargs):
-    if (not globals.QUIET):
-        print("\033[92m", flush=True)
-        print("✅", end="", flush=True)
-        pretty_print(*args, **kwargs)
-        print("\033[0m", flush=True)
-
-
-def error(*args, **kwargs):
-    print("\033[91m", flush=True)
-    print("❌", end="", flush=True)
-    pretty_print(*args, **kwargs)
-    print("\033[0m", flush=True)
-    exit()
-
-
 def tui_log(*args, **kwargs):
-    if (not globals.QUIET):
-        log(*args, **kwargs)
+    log(*args, **kwargs)

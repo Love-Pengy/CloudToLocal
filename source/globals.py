@@ -30,9 +30,7 @@
 #
 #################################################################################
 
-QUIET = False
 VERBOSE = False
 CTLDL_VERSION = "0.1.0"
-FAIL_ON_WARNING = False
-REQUEST_RESOLUTION = 4000
+REQUEST_RESOLUTION = 1200
 SHELF_NAME = "ctldl_shelf"

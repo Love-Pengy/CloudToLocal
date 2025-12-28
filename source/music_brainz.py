@@ -36,14 +36,15 @@
 
 import json
 import time
+import logging
 from dataclasses import dataclass, field
 
 import globals
 from mbzero import mbzerror
 from mbzero import caarequest
-from utils.printing import info
 from mbzero import mbzrequest as mbr
 
+logger = logging.getLogger(__name__)
 
 MAX_THUMBNAIL_RETRIES = 10
 THUMBNAIL_SIZE_PRIO_LIST = ["1200", "500", "250"]
@@ -78,17 +79,17 @@ class MusicbrainzMetadata:
 def musicbrainz_obtain_caa_image_data(user_agent: str, release_mbid: str) -> (str, int):
 
     if (not release_mbid):
-        info("Release mbid is none...Can't obtain user_agent.")
+        logger.warning("Release mbid is none...Can't obtain user_agent.")
         return (None, None)
 
-    info(f"Searching for {release_mbid} in CAA.")
+    logger.info(f"Searching for {release_mbid} in CAA.")
     for i in range(1, MAX_THUMBNAIL_RETRIES+1):
         try:
             request_content = caarequest.CaaRequest(user_agent, "release", release_mbid).send()
             content_json = json.loads(request_content.decode("utf-8"))
             images = content_json.get("images", [])
             if (not images):
-                info("No images found in CAA query.")
+                logger.debug("No images found in CAA query.")
                 return ((None, None))
 
             # TO-DO: Potentially add front and back? ~ BEF
@@ -96,28 +97,27 @@ def musicbrainz_obtain_caa_image_data(user_agent: str, release_mbid: str) -> (st
                 (element for element in images if "Front" in element.get("types", [])), None)
 
             if (not thumbnail_spec):
-                info("No front images found in musicbrainz query.")
+                logger.debug("No front images found in musicbrainz query.")
                 return ((None, None))
 
             thumbnails = thumbnail_spec.get("thumbnails", {})
             for size in THUMBNAIL_SIZE_PRIO_LIST:
                 desired_thumbnail_url = thumbnails.get(size, None)
                 if (desired_thumbnail_url):
-                    info(f"Thumbnail found from CAA: {desired_thumbnail_url} {int(size)}")
+                    logger.info(f"Thumbnail found from CAA: {desired_thumbnail_url} {int(size)}")
                     return (desired_thumbnail_url, int(size))
             else:
                 break
 
         except mbzerror.MbzWebServiceError:
-            #  TO-DO: Some sort of service error, should debug/verbose log the specifics ~ BEF
             delay = i ** 2
-            info(f"Musicbrainz service error, retrying in {delay}s...")
+            logger.exception(f"Musicbrainz service error, retrying in {delay}s...")
             time.sleep(delay)
             continue
         except mbzerror.MbzNotFoundError:
             break
 
-    info("Failed to request image from CAA.")
+    logger.info("Failed to request image from CAA.")
     return ((None, None))
 
 
@@ -145,26 +145,23 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
             search = mbr.MbzRequestSearch(user_agent, "recording",
                                           f'artist:"{artist}" AND recording:"{title}"')
             content = search.send()
-            info(f"url: {search.url}/{search.entity_type}?query={search.query}&fmt=json")
+            logger.debug(f"music brainz search url: {
+                         search.url}/{search.entity_type}?query={search.query}&fmt=json")
             break
         except mbzerror.MbzWebServiceError:
             #  TO-DO: Some sort of service error, should debug/verbose log the specifics ~ BEF
             delay = i ** 2
-            info(f"Musicbrainz service error, retrying in {delay}...")
+            logger.exception(f"Musicbrainz service error, retrying in {delay}...")
             time.sleep(delay)
             continue
         except mbzerror.MbzNotFoundError:
             break
 
-    # if (not content):
-    #     info(f"Failed to retrieve metadata for {title} - {artist}")
-    #     return None
-
     content_json = json.loads(content.decode("utf-8"))
 
     recordings = content_json.get("recordings", None)
     if (not recordings):
-        info(f"{title} - {artist} has no musicbrainz entry. Consider contributing!")
+        logger.info(f"{title} - {artist} has no musicbrainz entry. Consider contributing!")
         return None
 
     for recording in recordings:
@@ -174,10 +171,6 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
         for search_status in MUSICBRAINZ_STATUS_PRIO_LIST:
             release = next((curr_release for curr_release in recording.get(
                 "releases", []) if search_status == curr_release.get("status", None)), None)
-            # for curr_release in recording.get("releases", []):
-            #     if search_status == curr_release.get("status", None):
-            #         release = curr_release
-            #         break
             if (release):
                 break
 
@@ -191,7 +184,8 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
         output.artist = output.artists[0]
 
         if ((not output.artist) or (not output.title)):
-            info("Artist or title not found in musicbrainz response... Trying next recording")
+            logger.debug(
+                "Artist or title not found in musicbrainz response... Trying next recording")
             continue
 
         output.release_date = release.get("date", None) or recording.get("first-release-date", None)
@@ -214,8 +208,8 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
                 None)
 
             if (not accepted_media):
-                info(f"Supported media format not found for {
-                     title} - {artist}... Trying next recording")
+                logger.debug(f"Supported media format not found for {
+                    title} - {artist}... Trying next recording")
                 continue
 
             output.total_tracks = accepted_media.get("track-count", 1)
@@ -229,8 +223,8 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
                 user_agent,
                 output.release_mbid)
 
-        info(f"Metadata obtained: {title} ~ {artist} -> {output.title} ~ {output.artist}")
+        logger.info(f"Metadata obtained: {title} ~ {artist} -> {output.title} ~ {output.artist}")
         return output
 
-    info(f"Metadata not found for {title} - {artist}")
+    logger.info(f"Metadata not found for {title} - {artist}")
     return None

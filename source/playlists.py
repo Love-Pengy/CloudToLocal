@@ -31,11 +31,15 @@
 #################################################################################
 
 import os
+import logging
 
 import globals
 from yt_dlp import YoutubeDL
 from metadata import MetadataCtx
-from utils.printing import warning, tui_log
+from utils.logging import tui_log
+
+
+logger = logging.getLogger(__name__)
 
 
 class PlaylistHandler:
@@ -56,11 +60,12 @@ class PlaylistHandler:
         ydl_opts = {
             "extract_flat": True,
             "skip_download": True,
-            "quiet": globals.QUIET,
+            "quiet": not globals.VERBOSE,
             "verbose": globals.VERBOSE,
             "sleep_interval_requests": self.request_sleep
         }
 
+        logger.debug("Adding URLS to playlist handler")
         for index, url in enumerate(urls):
             extraction_info = YoutubeDL(ydl_opts).extract_info(url, download=False)
 
@@ -73,7 +78,7 @@ class PlaylistHandler:
                         entry["url"] for entry in
                         extraction_info["entries"]]
                 else:
-                    warning(f"{url} Does Not Seem To Be A Playlist")
+                    logger.warning(f"{url} Does Not Seem To Be A Playlist")
 
             # Soundcloud short link
             # NOTE: Shortened links on Soundcloud return info of the longer link instead of
@@ -89,7 +94,7 @@ class PlaylistHandler:
                         self.playlists[(url, extraction_info["album"])] = [
                             entry["url"] for entry in extraction_info["entries"]]
                     else:
-                        warning(f"{url} Does Not Seem To Be A Playlist")
+                        logger.warning(f"{url} Does Not Seem To Be A Playlist")
 
             # YouTube
             elif ("YoutubeTab" == extraction_info["extractor_key"]):
@@ -99,18 +104,20 @@ class PlaylistHandler:
                     self.playlists[(url, extraction_info["title"])] = [
                         entry["url"] for entry in extraction_info["entries"]]
                 else:
-                    warning(f"{url} Does Not Seem To Be A Playlist")
+                    logger.warning(f"{url} Does Not Seem To Be A Playlist")
             else:
-                warning(f"Unexpected Extraction Key/Domain: {extraction_info["extraction_key"]=}",
-                        f"{url=}")
+                logger.warning(
+                    f"Unexpected Extraction Key/Domain: {extraction_info["extraction_key"]=}",
+                    f"{url=}")
 
         self.urls_populated = True
+        logging.debug("Urls added to playlist handler")
 
     def check_playlists(self, url):
         """ Returns a list of playlists that 'url' is in (playlist url, playlist name) form. """
 
         if (not self.urls_populated):
-            warning("Urls Have Not Yet Been Populated")
+            logger.warning("Urls Have Not Yet Been Populated")
         return (
             [spec for spec in self.playlists if url in self.playlists[spec]])
 
@@ -154,10 +161,7 @@ class PlaylistHandler:
                                 metadata.artist} - {metadata.title}\n")
                         f.write(sanitized_path + "\n")
         else:
-            tui_log("Adding to playlists")
-            tui_log(f"Listed playlists: {metadata.playlists}")
             for playlist_spec in metadata.playlists:
-                tui_log(playlist_spec)
                 if (not os.path.exists(f"{outdir}{playlist_spec[1]}.m3u")):
                     tui_log("Creating new playlist file")
                     with open(f"{outdir}{playlist_spec[1]}.m3u", "w") as f:
