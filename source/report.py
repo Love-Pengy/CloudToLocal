@@ -30,9 +30,6 @@
 #################################################################################
 
 
-from utils.printing import info
-
-
 class ReportStatus:
     DOWNLOAD_FAILURE = 0
     DOWNLOAD_SUCCESS = 1

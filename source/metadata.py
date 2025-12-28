@@ -34,24 +34,24 @@ import os
 import shutil
 import urllib
 import base64
+import logging
 import pathlib
 import mimetypes
 from io import BytesIO
 from pathlib import Path
 
 
-import globals
 from PIL import Image
 from mutagen import File
 from mutagen.mp3 import MP3
-from utils.printing import tui_log
+from utils.logging import tui_log
+from utils.common import Providers
 from mutagen.oggopus import OggOpus
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
 from utils.common import sanitize_string
 from dataclasses import dataclass, field
-from utils.common import warning, Providers
 from music_brainz import musicbrainz_search
 from youtube_title_parse import get_artist_title
 from report import ReportStatus, update_report_status, add_to_report_post_search
@@ -61,6 +61,9 @@ from mutagen.id3 import (
     TDAT, APIC, ID3, TCON, TXXX,
     PictureType, Encoding
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -80,6 +83,7 @@ class MetadataCtx:
     genres: list[str] = field(default_factory=list)
     artists: list[str] = field(default_factory=list)
     playlists: list[str] = field(default_factory=list)
+
 
 def get_embedded_thumbnail_res(path: str) -> tuple:
     """ Get resolution of a thumbnail from its embedded metadata. """
@@ -259,8 +263,8 @@ def replace_metadata(metadata: MetadataCtx):
     tag_file(metadata, True)
 
     ext = pathlib.Path(metadata.path).suffix
-    tui_log(f"{os.path.basename(metadata.path)} -> {metadata.artist}_"
-            f"{sanitize_string(metadata.title)}_{metadata.track_num:02d}_{metadata.title}{ext}")
+    logger.info(f"{os.path.basename(metadata.path)} -> {metadata.artist}_"
+                f"{sanitize_string(metadata.title)}_{metadata.track_num:02d}_{metadata.title}{ext}")
 
     new_filepath = f"{os.path.dirname(metadata.path)}/{
         metadata.artist}_{metadata.album}_{metadata.track_num:02d}_{metadata.title}{ext}"

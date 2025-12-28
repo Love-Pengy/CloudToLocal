@@ -31,13 +31,13 @@
 
 import io
 import json
+import logging
 import textwrap
 import urllib.request
 from datetime import datetime
-from dataclasses import dataclass
 
 from textual import work
-from utils.printing import tui_log
+from utils.logging import tui_log
 from textual.content import Content
 from playlists import PlaylistHandler
 from textual.reactive import reactive
@@ -106,6 +106,7 @@ async def obtain_image_from_url(url: str, in_image: Image):
 #       or differently formatted than musicbrainz. To keep consistency mappings will be created
 #       for all found genres ~ BEF
 # TO-DO: can def find a better way of doing this, butttt do I care atm? Prolly not... ~ BEF
+# TO-DO: I lied to do care... ~ BEF
 SOUNDCLOUD_GENRES = [
     ("Drum & Bass", "drum and bass"),
     ("Jungle ", "jungle"),
@@ -531,7 +532,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         ]
 
         super().__init__()
-        tui_log(f"metadata: {self.metadata}")
+        tui_log(f"Edit input menu metadata: {self.metadata}")
 
     @work
     async def action_help_menu(self):
@@ -551,7 +552,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         pre = self.app.report_dict[self.app.current_report_key]["pre"]
 
         with VerticalScroll(id="InputMenuScrollContainer", can_focus=True):
-            # TO-DO: Add loading here for the image ~ BEF
             yield Label("Title", classes="EditPageLabel")
             yield Input(placeholder="Name of Song", value=self.metadata["title"],
                         type="text", id="title", validators=self.default_validator,
@@ -562,6 +562,8 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                         type="text", id="artist", validators=self.default_validator,
                         classes="EditPageInput")
 
+            # TODO: the contents of this will always have the artist content in the beginning so 
+            #       fill this in for the user ~ BEF
             yield Label("Artists", classes="EditPageLabel")
             yield Input(placeholder="Comma Delimited List Of All Artists Involved **Including** "
                         "The Main Artist",
@@ -658,9 +660,9 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                 if response.status == 200:
                     type = response.headers.get("Content-Type")
                     if type and type.startswith("image"):
-                        return (True)
+                        return True
         except (urllib.error.URLError, ValueError):
-            return (False)
+            return False
 
     def validator_is_valid_track(self, value) -> bool:
         try:
@@ -669,14 +671,14 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
             if (album_len and value and
                     (int(value) > 0) and
                     (int(album_len.value) >= int(value))):
-                return (True)
+                return True
 
         except ValueError:
-            return (False)
+            return False
         except NoMatches:
             # NOTE: Ordering matters here. Album length is loaded after track number therefore it
             #       doesn't exist the first time around. ~ BEF
-            return (True)
+            return True
 
     def validator_is_valid_date(self, value) -> bool:
         output = False
@@ -685,10 +687,10 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         except ValueError:
             pass
 
-        return (output)
+        return output
 
     def validate_all(self, container):
-        tui_log("Validating all elements")
+        tui_log("Validating all children")
         for widget in container.children:
             if hasattr(widget, "validate") and callable(widget.validate):
                 tui_log(widget.validate(widget.value))
@@ -743,7 +745,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
     def on_checkbox_changed(self, changed_checkbox):
 
-        tui_log("Checkbox changed")
         playlist = self.app.playlist_handler.get_playlist_tuple(changed_checkbox.checkbox.name)
 
         if (changed_checkbox.value and
@@ -757,23 +758,16 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if (not self.check_input_validity()):
             return
-        tui_log("EXITING INPUT MENU")
+        tui_log("Exiting input menu")
         self.dismiss(self.output)
 
     @work
     async def _obtain_image(self, url: str, image: Image):
-        tui_log("attempting to obtain image")
         await obtain_image_from_url(url, image)
-        tui_log("Image obtained")
 
     def on_mount(self) -> None:
-        tui_log("Mounting input menu")
         container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
         self.validate_all(container)
-        # self.set_focus(self.query_one("#InputMenuScrollContainer", VerticalScroll))
-        # self.screen.query_one("#InputMenuScrollContainer").trap_focus()
-        # tui_log("FOCUS PRIO:")
-        # tui_log([node.id for node in self.app.screen.focus_chain])
 
 
 class EditSelectionMenu(ModalScreen):
@@ -850,6 +844,7 @@ class ctl_tui(App):
             self.report_dict.pop(self.current_report_key)
             self.current_report_key = next(self.current_report_key_iter)
         except StopIteration:
+            tui_log("All songs in report exhausted")
             with open(self.report_path, "w") as f:
                 json.dump(self.report_dict, f, indent=2)
             self.exit()
@@ -858,6 +853,7 @@ class ctl_tui(App):
         try:
             self.current_report_key = next(self.current_report_key_iter)
         except StopIteration:
+            tui_log("All songs in report exhausted")
             with open(self.report_path, "w") as f:
                 json.dump(self.report_dict, f, indent=2)
             self.exit()
@@ -869,6 +865,7 @@ class ctl_tui(App):
 
         title = None
         pre_height = None
+        post_width = None
         post_height = None
         current_report = self._get_current_report()
 
@@ -920,6 +917,8 @@ class ctl_tui(App):
                         current_report["status"]), id="status"),
                     Pretty(current_report["pre"], id="pre_info")
                 ]
+            # TODO: you can cut a download off to end up at download failure for the report status
+            #       which will cause this to fail. Allow user to redownload in this case ~ BEF
 
         post_dimension_str = "(X,X)" if not post_width else f"({post_width}px, {post_height}px)"
         pre_dimension_str = "(X,X)" if not pre_width else f"({pre_width}px, {pre_height}px)"
@@ -935,7 +934,7 @@ class ctl_tui(App):
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
 
         disabled_action_list = ["command_palette"]
-        match (self.report_dict[self.current_report_key]["status"]):
+        match (self._get_current_report()["status"]):
             case ReportStatus.DOWNLOAD_FAILURE:
                 disabled_action_list += ["accept_new", "accept_original", "edit_metadata"]
             case ReportStatus.DOWNLOAD_SUCCESS:
@@ -954,14 +953,14 @@ class ctl_tui(App):
     @work
     async def action_accept_original(self):
 
-        await self.push_screen(EditInputMenu(self.report_dict[self.current_report_key], "pre"),
+        await self.push_screen(EditInputMenu(self._get_current_report(), "pre"),
                                self.complete_edit_of_metadata,
                                wait_for_dismiss=True)
 
     @work
     async def action_edit_metadata(self) -> None:
-        if (not ("post" in self.report_dict[self.current_report_key])):
-            await self.push_screen(EditInputMenu(self.report_dict[self.current_report_key], "pre"),
+        if (not ("post" in self._get_current_report())):
+            await self.push_screen(EditInputMenu(self._get_current_report(), "pre"),
                                    self.complete_edit_of_metadata,
                                    wait_for_dismiss=True)
         else:
@@ -969,7 +968,7 @@ class ctl_tui(App):
                                                    wait_for_dismiss=True)
 
             if (selected_type):
-                await self.push_screen(EditInputMenu(self.report_dict[self.current_report_key],
+                await self.push_screen(EditInputMenu(self._get_current_report(),
                                                      selected_type),
                                        self.complete_edit_of_metadata,
                                        wait_for_dismiss=True)
@@ -1004,17 +1003,17 @@ class ctl_tui(App):
             @note currently metadata is written when new album is found with confidence, so this
             doesn't need to do anything"""
 
-        current_report = self.report_dict[self.current_report_key]
         # TO-DO: put this in global ~ BEF
         required_post_search_keys = ["title", "artist", "artists", "track_num", "total_tracks",
                                      "release_date", "thumbnail_url", "thumbnail_width",
                                      "thumbnail_height"]
 
+        current_report = self._get_current_report()
+
         if (not all(
                 ((key in current_report["post"]) and current_report["post"][key] is not None)
                 for key in required_post_search_keys)):
-            await self.push_screen(EditInputMenu(self.report_dict[self.current_report_key],
-                                                 "post"),
+            await self.push_screen(EditInputMenu(current_report, "post"),
                                    self.complete_edit_of_metadata,
                                    wait_for_dismiss=True)
 
@@ -1049,10 +1048,12 @@ class ctl_tui(App):
         self.pop_and_increment_report_key()
 
     def action_quit(self):
+        tui_log("Exiting TUI")
         with open(self.report_path, "w") as f:
             json.dump(self.report_dict, f, indent=2)
         self.exit()
 
     @work
     async def _obtain_image(self, url: str, image: Image):
+
         await obtain_image_from_url(url, image)
