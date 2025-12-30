@@ -101,11 +101,14 @@ def get_img_size_url(url):
             Tuple of dimensions (width, height)
     """
 
-    # TODO: this should catch failures ~ BEF
-    with urllib.request.urlopen(url) as response:
-        image_data = response.read()
-    image_size = Image.open(
-        io.BytesIO(image_data)).size
+    for _ in range(0, 5):
+        try:
+            with urllib.request.urlopen(url) as response:
+                image_data = response.read()
+            image_size = Image.open(
+                io.BytesIO(image_data)).size
+        except Exception:
+            continue
     return (image_size)
 
 

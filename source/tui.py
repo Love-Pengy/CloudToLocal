@@ -94,7 +94,7 @@ async def obtain_image_from_url(url: str, in_image: Image):
                 in_image.image = io.BytesIO(request_response)
                 break
         except Exception:
-            # TO-DO: verbose debug here ~ BEF
+            tui_log(f"{i}: Image obtain failed...retrying")
             continue
     else:
         tui_log("Setting failure image...")
@@ -562,7 +562,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                         type="text", id="artist", validators=self.default_validator,
                         classes="EditPageInput")
 
-            # TODO: the contents of this will always have the artist content in the beginning so 
+            # TODO: the contents of this will always have the artist content in the beginning so
             #       fill this in for the user ~ BEF
             yield Label("Artists", classes="EditPageLabel")
             yield Input(placeholder="Comma Delimited List Of All Artists Involved **Including** "
@@ -806,6 +806,9 @@ class EditSelectionMenu(ModalScreen):
 
 class ctl_tui(App):
 
+    REQUIRED_POST_SEARCH_KEYS = ["title", "artist", "artists", "track_num", "total_tracks",
+                                 "release_date", "thumbnail_url", "thumbnail_width",
+                                 "thumbnail_height"]
     BINDINGS = [
         ("n", "accept_new", "Accept New Metadata"),
         ("o", "accept_original", "Accept Original"),
@@ -1003,16 +1006,11 @@ class ctl_tui(App):
             @note currently metadata is written when new album is found with confidence, so this
             doesn't need to do anything"""
 
-        # TO-DO: put this in global ~ BEF
-        required_post_search_keys = ["title", "artist", "artists", "track_num", "total_tracks",
-                                     "release_date", "thumbnail_url", "thumbnail_width",
-                                     "thumbnail_height"]
-
         current_report = self._get_current_report()
 
         if (not all(
                 ((key in current_report["post"]) and current_report["post"][key] is not None)
-                for key in required_post_search_keys)):
+                for key in self.REQUIRED_POST_SEARCH_KEYS)):
             await self.push_screen(EditInputMenu(current_report, "post"),
                                    self.complete_edit_of_metadata,
                                    wait_for_dismiss=True)
