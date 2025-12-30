@@ -31,14 +31,12 @@
 
 import io
 import json
-import logging
 import textwrap
 import urllib.request
 from datetime import datetime
 
 from textual import work
 from utils.logging import tui_log
-from textual.content import Content
 from playlists import PlaylistHandler
 from textual.reactive import reactive
 from textual.screen import ModalScreen
@@ -634,8 +632,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                     yield Checkbox(playlist, False, name=playlist, classes="EditPageCheckbox")
 
         yield Button("All Done!", variant="primary", id="completion_button")
-        # TO-DO: change this to self.app.notify ~ BEF
-        yield Static("", disabled=True, id="EditInputErr")
 
         yield Footer()
         tui_log("Compose completed")
@@ -700,15 +696,13 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         # NOTE: Even though not needed we validate all to update borders ~ BEF
         container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
         self.validate_all(container)
-        err_static = self.query_one("#EditInputErr", Static)
         input_widgets = [widget for widget in container.children if isinstance(widget, Input)]
         for widget in input_widgets:
             if (not widget.is_valid):
-                err_static.disabled = False
                 for validator in widget.validators:
                     if (validator.failure_description):
-                        err_static.update(Content(f'"{widget.id}" {
-                            validator.failure_description}'))
+                        self.notify(f'"{widget.id}" field {validator.failure_description}',
+                                    severity="error")
                 return False
         return True
 
