@@ -170,7 +170,7 @@ class DownloadManager:
                                     download_info.path = video_dl_info["filepath"]
                                     duration = int(round(float(video_info["duration"]), 0))
                                 else:
-                                    # NOTE: Video is present in the archive ~ BEF
+                                    # Video is present in the archive ~ BEF
                                     break
                             break
                         except DownloadError:
