@@ -40,9 +40,8 @@ import logging
 from dataclasses import dataclass, field
 
 import globals
-from mbzero import mbzerror
-from mbzero import caarequest
 from mbzero import mbzrequest as mbr
+from mbzero import mbzerror, caarequest
 
 logger = logging.getLogger(__name__)
 
