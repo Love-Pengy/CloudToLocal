@@ -31,6 +31,7 @@
 
 import io
 import json
+import http
 import textwrap
 import urllib.request
 from datetime import datetime
@@ -657,7 +658,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                     type = response.headers.get("Content-Type")
                     if type and type.startswith("image"):
                         return True
-        except (urllib.error.URLError, ValueError):
+        except Exception:
             return False
 
     def validator_is_valid_track(self, value) -> bool:
