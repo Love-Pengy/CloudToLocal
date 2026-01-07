@@ -31,6 +31,7 @@
 
 import io
 import json
+import time
 import http
 import textwrap
 import urllib.request
@@ -46,6 +47,7 @@ from textual.css.query import NoMatches
 from textual.app import App, ComposeResult
 from textual.validation import Function, Number
 from metadata import replace_metadata, MetadataCtx
+from textual.worker import Worker, get_current_worker
 from report import ReportStatus, get_report_status_str
 from textual.containers import Horizontal, Grid, Container, VerticalScroll
 
@@ -75,31 +77,37 @@ def initialize_image(in_id: str) -> Image:
     return (output_image)
 
 
-async def obtain_image_from_url(url: str, in_image: Image):
-    if (not in_image):
-        tui_log("Image passed to obtain image is None")
-        return
+@work(thread=True)
+async def obtain_image_from_url(screen, url: str, in_image_id: str):
+    tui_log(f"WORKER STARTED WITH ID: {in_image_id}")
+    worker = get_current_worker()
 
-    elif (not url):
-        tui_log("Setting failure image...")
-        in_image.image = FAILURE_IMAGE_PATH
-        in_image.loading = False
+    if (not url):
+        screen.app.call_from_thread("Url not provided")
         return
 
     for i in range(0, MAX_THUMBNAIL_RETRIES):
+        if (worker.is_cancelled):
+            return
+
+        retrieved_bytes = None
         try:
             with urllib.request.urlopen(url) as response:
                 request_response = response.read()
-                in_image.image = io.BytesIO(request_response)
+                retrieved_bytes = io.BytesIO(request_response)
                 break
         except Exception:
-            tui_log(f"{i}: Image obtain failed...retrying")
-            continue
-    else:
-        tui_log("Setting failure image...")
-        in_image.image = FAILURE_IMAGE_PATH
+            screen.app.call_from_thread(tui_log, f"{i}: Image obtain failed...retrying")
+            delay = time.time() + i**2
+            while ((time.time() < delay) and (not worker.is_cancelled)):
+                pass
 
-    in_image.loading = False
+            continue
+
+    if (not worker.is_cancelled):
+        image_widget = screen.query_one(f"#{in_image_id}", Image)
+        image_widget.loading = False
+        image_widget.image = retrieved_bytes or FAILURE_IMAGE_PATH
 
 # NOTE: It seems as though genres are user inputted into soundcloud and can therefore be malformed
 #       or differently formatted than musicbrainz. To keep consistency mappings will be created
@@ -624,7 +632,9 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
             preview_image = initialize_image("EditInputUrlPreview")
             yield preview_image
-            self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
+            obtain_image_from_url(self,
+                                  self.metadata.get("thumbnail_url", None),
+                                  "EditInputUrlPreview")
 
             for playlist in self.app.playlist_handler.list_playlists_str():
                 if (playlist in [play[1] for play in pre["playlists"]]):
@@ -725,7 +735,9 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                 self.output.thumbnail_height = dimensions[1]
 
                 preview_image.loading = True
-                self._obtain_image(blurred_widget.value, preview_image)
+                obtain_image_from_url(self,
+                                      blurred_widget.value,
+                                      "EditInputUrlPreview")
             else:
                 preview_image.image = FAILURE_IMAGE_PATH
 
@@ -755,10 +767,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
             return
         tui_log("Exiting input menu")
         self.dismiss(self.output)
-
-    @work
-    async def _obtain_image(self, url: str, image: Image):
-        await obtain_image_from_url(url, image)
 
     def on_mount(self) -> None:
         container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
@@ -834,21 +842,18 @@ class ctl_tui(App):
 
         with open(self.report_path, "r") as fptr:
             self.report_dict = json.load(fptr)
+
         self.current_report_key_iter = iter(list(self.report_dict))
         self.current_report_key = next(self.current_report_key_iter)
 
     def pop_and_increment_report_key(self):
-        try:
-            self.report_dict.pop(self.current_report_key)
-            self.current_report_key = next(self.current_report_key_iter)
-        except StopIteration:
-            tui_log("All songs in report exhausted")
-            with open(self.report_path, "w") as f:
-                json.dump(self.report_dict, f, indent=2)
-            self.exit()
+        self.report_dict.pop(self.current_report_key)
+        self.increment_report_key()
 
     def increment_report_key(self):
         try:
+            # Cancel thumbnail workers
+            self.workers.cancel_all()
             self.current_report_key = next(self.current_report_key_iter)
         except StopIteration:
             tui_log("All songs in report exhausted")
@@ -885,8 +890,8 @@ class ctl_tui(App):
 
                 yield Horizontal(pre_image, post_image, id="album_art")
 
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
-                self._obtain_image(current_report["post"]["thumbnail_url"], post_image)
+                obtain_image_from_url(self, current_report["pre"]["thumbnail_url"], "pre_image")
+                obtain_image_from_url(self, current_report["post"]["thumbnail_url"], "post_image")
 
                 title = current_report["post"]["title"]
                 post_width = current_report["post"]["thumbnail_width"]
@@ -906,7 +911,7 @@ class ctl_tui(App):
             elif (current_report["status"] == ReportStatus.METADATA_NOT_FOUND):
                 pre_image = initialize_image("full_img")
                 yield Horizontal(pre_image, id="album_art")
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
+                obtain_image_from_url(self, current_report["pre"]["thumbnail_url"], "full_img")
 
                 title = current_report["pre"]["title"]
                 post_width = None
@@ -1045,8 +1050,3 @@ class ctl_tui(App):
         with open(self.report_path, "w") as f:
             json.dump(self.report_dict, f, indent=2)
         self.exit()
-
-    @work
-    async def _obtain_image(self, url: str, image: Image):
-
-        await obtain_image_from_url(url, image)
