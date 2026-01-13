@@ -108,13 +108,14 @@ def musicbrainz_obtain_caa_image_data(user_agent: str, release_mbid: str) -> (st
             else:
                 break
 
-        except mbzerror.MbzWebServiceError:
-            delay = i ** 2
-            logger.error(f"Musicbrainz service error, retrying in {delay}s...", exc_info=True)
-            time.sleep(delay)
-            continue
         except mbzerror.MbzNotFoundError:
             break
+        except mbzerror.MbzWebServiceError as e:
+            delay = i ** 2
+            logger.info(type(e).__name__)
+            logger.info(f"Musicbrainz service error, retrying in {delay}s...")
+            time.sleep(delay)
+            continue
 
     logger.info("Failed to request image from CAA.")
     return ((None, None))
