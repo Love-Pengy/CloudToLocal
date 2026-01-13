@@ -47,7 +47,7 @@ import configargparse
 from tui import ctl_tui
 from playlists import PlaylistHandler
 from downloader import DownloadManager
-from metadata import fill_report_metadata
+from metadata import fill_report_metadata, LyricHandler
 from utils.logging import setup_logging, get_log_level
 from music_brainz import musicbrainz_construct_user_agent
 
@@ -71,6 +71,8 @@ class CloudToLocal:
                                                 arguments.playlists,
                                                 self.playlists_info,
                                                 arguments.request_sleep)
+        self.lyric_handler = LyricHandler(arguments.genius_api_key,
+                                          verbosity=(True if logger.getEffectiveLevel() < logging.INFO else False))
         self.report_fpath = self.output_dir+"ctl_report"
 
         if (os.path.exists(self.report_fpath)):
@@ -100,7 +102,8 @@ class CloudToLocal:
                                  download_info.uploader,
                                  download_info.provider,
                                  download_info.url,
-                                 self.report)
+                                 self.report,
+                                 self.lyric_handler)
 
         clean_ytdlp_artifacts(self.output_dir)
         self.dump_report()
@@ -264,6 +267,9 @@ if __name__ == "__main__":
     parser.add_argument("--log_config", type=str,
                         default="configs/ctl_log_config.json",
                         help="Path to logging config")
+
+    parser.add_argument("--genius_api_key", type=str, required=True,
+                        help="Genius api key for lyric retrieval")
 
     args = parser.parse_args()
 
