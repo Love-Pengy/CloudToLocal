@@ -49,6 +49,7 @@ from textual.validation import Function, Number
 from metadata import replace_metadata, MetadataCtx
 from textual.worker import Worker, get_current_worker
 from report import ReportStatus, get_report_status_str
+from metadata import replace_metadata, MetadataCtx, LyricHandler
 from textual.containers import Horizontal, Grid, Container, VerticalScroll
 
 from utils.common import (
@@ -61,7 +62,7 @@ from textual.widgets import (
     Footer, Header, Pretty,
     Rule, Static, Button,
     Label, Input, Checkbox,
-    Select
+    Select, Collapsible
 )
 
 MAX_THUMBNAIL_RETRIES = 5
@@ -639,8 +640,10 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                 else:
                     yield Checkbox(playlist, False, name=playlist, classes="EditPageCheckbox")
 
-        yield Button("All Done!", variant="primary", id="completion_button")
+            with Collapsible(title="Lyrics", collapsed=True, id="lyrics_collapsible"):
+                yield Static(self.metadata.get("lyrics", ""))
 
+        yield Button("All Done!", variant="primary", id="completion_button")
         yield Footer()
         self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
         tui_log("Compose completed")
@@ -842,6 +845,7 @@ class ctl_tui(App):
                                                 arguments.playlists,
                                                 self.playlists_info,
                                                 arguments.request_sleep)
+        self.lyric_handler = LyricHandler(arguments.genius_api_key, verbosity=False)
 
         with open(self.report_path, "r") as fptr:
             self.report_dict = json.load(fptr)
