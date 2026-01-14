@@ -110,7 +110,7 @@ def musicbrainz_obtain_caa_image_data(user_agent: str, release_mbid: str) -> (st
 
         except mbzerror.MbzWebServiceError:
             delay = i ** 2
-            logger.exception(f"Musicbrainz service error, retrying in {delay}s...")
+            logger.error(f"Musicbrainz service error, retrying in {delay}s...", exc_info=True)
             time.sleep(delay)
             continue
         except mbzerror.MbzNotFoundError:
@@ -149,7 +149,7 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
             break
         except mbzerror.MbzWebServiceError:
             delay = i ** 2
-            logger.exception(f"Musicbrainz service error, retrying in {delay}...")
+            logger.error(f"Musicbrainz service error, retrying in {delay}...", exc_info=True)
             time.sleep(delay)
             continue
         except mbzerror.MbzNotFoundError:
