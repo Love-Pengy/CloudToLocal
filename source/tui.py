@@ -83,7 +83,7 @@ async def obtain_image_from_url(screen, url: str, in_image_id: str):
     worker = get_current_worker()
 
     if (not url):
-        screen.app.call_from_thread("Url not provided")
+        screen.app.call_from_thread(tui_log, "Url not provided")
         return
 
     for i in range(0, MAX_THUMBNAIL_RETRIES):
@@ -956,28 +956,44 @@ class ctl_tui(App):
     @work
     async def action_accept_original(self):
 
-        await self.push_screen(EditInputMenu(self._get_current_report(), "pre"),
-                               self.complete_edit_of_metadata,
-                               wait_for_dismiss=True)
+        ok = False
+        while not ok:
+            # TO-DO: Make this fill in the data that was already there ~ BEF
+            meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(), "pre"))
+            ok = replace_metadata(meta)
+
+            if (ok):
+                self.playlist_handler.write_to_playlists(meta, self.outdir, None)
+                self.pop_and_increment_report_key()
+            else:
+                self.notify("Failed to replace metadata... Returning to metadata screen",
+                            severity="error")
 
     @work
     async def action_edit_metadata(self) -> None:
-        if (not ("post" in self._get_current_report())):
-            await self.push_screen(EditInputMenu(self._get_current_report(), "pre"),
-                                   self.complete_edit_of_metadata,
-                                   wait_for_dismiss=True)
+
+        if ("post" not in self._get_current_report()):
+            selected_type = "pre"
         else:
             selected_type = await self.push_screen(EditSelectionMenu(),
                                                    wait_for_dismiss=True)
+        if (not selected_type):
+            return
 
-            if (selected_type):
-                await self.push_screen(EditInputMenu(self._get_current_report(),
-                                                     selected_type),
-                                       self.complete_edit_of_metadata,
-                                       wait_for_dismiss=True)
+        ok = False
+        while not ok:
+            meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(),
+                                                             selected_type))
+            ok = replace_metadata(meta)
+
+            if (ok):
+                self.playlist_handler.write_to_playlists(meta, self.outdir, None)
+                self.pop_and_increment_report_key()
+            else:
+                self.notify("Failed to replace metadata... Returning to metadata screen",
+                            severity="error")
 
     # TO-DO: create new screen for this
-
     def action_search_again(self):
         pass
         self.playlist_handler.write_to_playlists()
@@ -992,14 +1008,6 @@ class ctl_tui(App):
     def action_skip_entry(self):
         self.increment_report_key()
 
-    def complete_edit_of_metadata(self, meta_ctx: MetadataCtx):
-
-        replace_metadata(meta_ctx)
-
-        self.playlist_handler.write_to_playlists(meta_ctx, self.outdir, None)
-
-        self.pop_and_increment_report_key()
-
     @work
     async def action_accept_new(self):
         """ Accept newly written metadata
@@ -1011,9 +1019,7 @@ class ctl_tui(App):
         if (not all(
                 ((key in current_report["post"]) and current_report["post"][key] is not None)
                 for key in self.REQUIRED_POST_SEARCH_KEYS)):
-            await self.push_screen(EditInputMenu(current_report, "post"),
-                                   self.complete_edit_of_metadata,
-                                   wait_for_dismiss=True)
+            meta = await self.push_screen_wait(EditInputMenu(current_report, "post"))
 
         else:
 
@@ -1034,9 +1040,22 @@ class ctl_tui(App):
                                playlists=pre["playlists"]
                                )
 
-            self.complete_edit_of_metadata(meta)
+        ok = False
+        while not ok:
+            ok = replace_metadata(meta)
+
+            self.playlist_handler.write_to_playlists(meta, self.outdir, None)
+
+            if (ok):
+                self.pop_and_increment_report_key()
+            else:
+                self.notify("Failed to replace metadata... Returning to metadata screen",
+                            severity="error")
+                # TO-DO: Make this fill in the data that was already there ~ BEF
+                await self.push_screen_wait(EditInputMenu(current_report, "post"))
 
     # TO-DO: create new screen for this
+
     def action_retry_download(self):
         pass
         self.pop_and_increment_report_key()
