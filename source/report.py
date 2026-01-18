@@ -58,18 +58,14 @@ def verify_search_report_keys(context: dict, verify_list: list):
             raise ValueError(f"Invalid Search Key: {key}")
 
 
-def add_to_report_pre_search(context, report, url, status):
+def add_to_report_pre_search(context, record, url, status):
     verify_search_report_keys(context, VALID_REPORT_KEYS)
-    report[url] = {}
-    report[url]["pre"] = context
-    report[url]["status"] = status
+    record[url] = {}
+    record[url]["pre"] = context
+    record[url]["status"] = status
 
 
-def add_to_report_post_search(context, report, url, status):
+def add_to_report_post_search(context, record, url, status):
     verify_search_report_keys(context, VALID_REPORT_KEYS)
-    report[url]["post"] = context
-    report[url]["status"] = status
-
-
-def update_report_status(report, url, status):
-    report[url]["status"] = status
+    record[url]["post"] = context
+    record[url]["status"] = status

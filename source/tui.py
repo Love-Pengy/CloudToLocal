@@ -1,42 +1,9 @@
-###
-#  @file    tui.py
-#  @author  Brandon Elias Frazier
-#  @date    Dec 18, 2025
-#
-#  @brief   TUI For Ctldl
-#
-#  @copyright (c) 2025 Brandon Elias Frazier
-#
-#
-#  Permission is hereby granted, free of charge, to any person obtaining a copy
-#  of this software and associated documentation files (the "Software"), to deal
-#  in the Software without restriction, including without limitation the rights
-#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#  copies of the Software, and to permit persons to whom the Software is
-#  furnished to do so, subject to the following conditions:
-#
-#  The above copyright notice and this permission notice shall be included in all
-#  copies or substantial portions of the Software.
-#
-#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#  SOFTWARE.
-#
-#
-#################################################################################
-
 import io
 import json
 import textwrap
 import urllib.request
 from datetime import datetime
 
-from textual import work
-from utils.printing import tui_log
 from textual.content import Content
 from playlists import PlaylistHandler
 from textual.reactive import reactive
@@ -59,38 +26,36 @@ from textual.widgets import (
     Footer, Header, Pretty,
     Rule, Static, Button,
     Label, Input, Checkbox,
-    Select
+    Select, ListItem, ListView
 )
 
 
-MAX_THUMBNAIL_RETRIES = 5
-DEFAULT_IMAGE_SIZE = (500, 500)
+def get_thumbnail_from_url(thumbnail: str) -> io.BytesIO:
+
+    if (not thumbnail):
+        return (None)
+    try:
+        with urllib.request.urlopen(thumbnail) as response:
+            request_response = response.read()
+            return (io.BytesIO(request_response))
+    except Exception:
+        # TO-DO: verbose debug here ~ BEF
+        return (None)
 
 
-def initialize_image(in_id: str) -> Image:
-    output_image = Image(id=in_id)
-    output_image.loading = True
-    output_image._image_width, output_image._image_height = DEFAULT_IMAGE_SIZE
+def get_failure_image(id: str) -> Image:
+    output = Image(id="full_img")
+    output.image = "../assets/failure_white.png"
+    return (output)
+
+
+def construct_image(image_data, in_id: str):
+    if (not image_data):
+        output_image = get_failure_image(in_id)
+    else:
+        output_image = Image(image_data, id=in_id)
     return (output_image)
 
-
-async def obtain_image(url: str, in_image: Image):
-    if ((not url) or (not in_image)):
-        return
-
-    for i in range(0, MAX_THUMBNAIL_RETRIES):
-        try:
-            with urllib.request.urlopen(url) as response:
-                request_response = response.read()
-                in_image.image = io.BytesIO(request_response)
-                break
-        except Exception:
-            # TO-DO: verbose debug here ~ BEF
-            continue
-    else:
-        in_image.image = "assets/failure_white.png"
-
-    in_image.loading = False
 
 # NOTE: It seems as though genres are user inputted into soundcloud and can therefore be malformed
 #       or differently formatted than musicbrainz. To keep consistency mappings will be created
@@ -539,7 +504,7 @@ class EditInputMenu(ModalScreen[dict]):
                         classes="EditPageInput")
 
             yield Label("Artists", classes="EditPageLabel")
-            yield Input(placeholder="Comma Delimited List Of All Artists Involved **Including** "
+            yield Input(placeholder="Comma Delimited List Of All Artists Involved **Including**"
                         "The Main Artist",
                         value=list_to_comma_str(self.metadata.get("artists", None)),
                         type="text", id="artists", validators=self.default_validator,
@@ -592,10 +557,9 @@ class EditInputMenu(ModalScreen[dict]):
             yield Input(placeholder="Link To Thumbnail",
                         value=self.metadata.get("thumbnail_url", None), type="text",
                         id="thumb_link", validators=self.image_validator, classes="EditPageInput")
+            thumb_data = get_thumbnail_from_url(self.metadata.get("thumbnail_url", None))
 
-            preview_image = initialize_image("EditInputUrlPreview")
-            yield preview_image
-            self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
+            yield construct_image(thumb_data, "EditInputUrlPreview")
 
             pre = self.app.report_dict[self.app.current_report_key]["pre"]
             for playlist in self.app.playlist_handler.list_playlists_str():
@@ -621,10 +585,10 @@ class EditInputMenu(ModalScreen[dict]):
         else:
             return (False)
 
-    def validator_is_valid_image(self, image_url: str) -> bool:
+    def validator_is_valid_image(self, image: str) -> bool:
 
         try:
-            with urllib.request.urlopen(image_url) as response:
+            with urllib.request.urlopen(image) as response:
                 if response.status == 200:
                     type = response.headers.get("Content-Type")
                     if type and type.startswith("image"):
@@ -657,19 +621,17 @@ class EditInputMenu(ModalScreen[dict]):
 
         return (output)
 
-    def validate_all(self, container):
-        tui_log(container.children)
-        for widget in container.children:
+    def validate_all(self):
+        for widget in self.children:
             if hasattr(widget, "validate") and callable(widget.validate):
                 widget.validate(widget.value)
 
     def check_input_validity(self) -> bool:
 
         # NOTE: Even though not needed we validate all to update borders ~ BEF
-        container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
-        self.validate_all(container)
+        self.validate_all()
         err_static = self.query_one("#EditInputErr", Static)
-        input_widgets = [widget for widget in container.children if isinstance(widget, Input)]
+        input_widgets = [widget for widget in self.children if isinstance(widget, Input)]
         for widget in input_widgets:
             if (not widget.is_valid):
                 err_static.disabled = False
@@ -689,18 +651,15 @@ class EditInputMenu(ModalScreen[dict]):
 
     def on_input_blurred(self, blurred_widget):
 
-        if (blurred_widget.input.id == "thumb_link"):
-            preview_image = self.query_one("#EditInputUrlPreview", Image)
-            if (blurred_widget.input.is_valid):
-                dimensions = get_img_size_url(blurred_widget.value)
-                self.output.thumbnail_url = blurred_widget.value
-                self.output.thumbnail_width = dimensions[0]
-                self.output.thumbnail_height = dimensions[1]
+        if ((blurred_widget.input.id == "thumb_link") and
+                (blurred_widget.input.is_valid)):
+            dimensions = get_img_size_url(blurred_widget.value)
+            self.output.thumbnail_url = blurred_widget.value
+            self.output.thumbnail_width = dimensions[0]
+            self.output.thumbnail_height = dimensions[1]
 
-                preview_image.loading = True
-                self._obtain_image(blurred_widget.value, preview_image)
-            else:
-                preview_image.image = "assets/failure_white.png"
+            self.query_one("#EditInputUrlPreview", Image).image = get_thumbnail_from_url(
+                blurred_widget.value)
 
         elif (not (blurred_widget.input.id == "artists")):
             if (not blurred_widget.input.type == "integer"):
@@ -725,10 +684,6 @@ class EditInputMenu(ModalScreen[dict]):
         if (not self.check_input_validity()):
             return
         self.dismiss(self.output)
-
-    @work
-    async def _obtain_image(self, url: str, image: Image):
-        await obtain_image(url, image)
 
 
 class EditSelectionMenu(ModalScreen):
@@ -834,7 +789,8 @@ class ctl_tui(App):
 
         if (ReportStatus.DOWNLOAD_FAILURE == current_report["status"]):
             title = "Download Failed"
-            yield Horizontal(Image("assets/failure_white.png", id="full_img"), id="album_art")
+            failure_image = self._get_failure_image("full_img")
+            yield Horizontal(failure_image, id="album_art")
             info_content = [
                 Static(get_report_status_str(
                     current_report["status"]), id="status"),
@@ -842,16 +798,14 @@ class ctl_tui(App):
         else:
             pre_width = current_report["pre"]["thumbnail_width"]
             pre_height = current_report["pre"]["thumbnail_height"]
+            pre_image_data = get_thumbnail_from_url(current_report["pre"]["thumbnail_url"])
 
             if (current_report["status"] in [ReportStatus.SINGLE, ReportStatus.ALBUM_FOUND]):
-
-                pre_image = initialize_image("pre_image")
-                post_image = initialize_image("post_image")
+                post_image_data = get_thumbnail_from_url(current_report["post"]["thumbnail_url"])
+                post_image = construct_image(post_image_data, "post_image")
+                pre_image = construct_image(pre_image_data, "pre_image")
 
                 yield Horizontal(pre_image, post_image, id="album_art")
-
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
-                self._obtain_image(current_report["post"]["thumbnail_url"], post_image)
 
                 title = current_report["post"]["title"]
                 post_width = current_report["post"]["thumbnail_info"]["width"]
@@ -869,10 +823,7 @@ class ctl_tui(App):
                 ]
 
             elif (current_report["status"] == ReportStatus.METADATA_NOT_FOUND):
-                pre_image = initialize_image("full_img")
-                yield Horizontal(pre_image, id="album_art")
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
-
+                yield Horizontal(construct_image(pre_image_data, "full_img"), id="album_art")
                 title = current_report["pre"]["title"]
                 post_width = None
                 info_content = [
@@ -883,7 +834,7 @@ class ctl_tui(App):
 
         post_dimension_str = "(X,X)" if not post_width else f"({post_width}px, {post_height}px)"
         pre_dimension_str = "(X,X)" if not pre_width else f"({pre_width}px, {pre_height}px)"
-        self.title = f"{pre_dimension_str} {title} {post_dimension_str}"
+        self.title = f"({pre_dimension_str}) {title} {post_dimension_str}"
 
         yield Header()
         yield Rule(line_style="ascii", id="divider")
@@ -903,7 +854,8 @@ class ctl_tui(App):
             case ReportStatus.METADATA_NOT_FOUND:
                 disabled_action_list += ["accept_new"]
             case ReportStatus.SINGLE:
-                disabled_action_list += []
+                # disabled_action_list += []
+                pass
             case ReportStatus.ALBUM_FOUND:
                 disabled_action_list += []
 
@@ -936,16 +888,11 @@ class ctl_tui(App):
         def pass_selection_menu_output(selected_type: str) -> None:
             if (selected_type):
                 self.push_screen(EditInputMenu(self.report_dict[self.current_report_key],
-                                               selected_type), complete_edit_of_metadata)
+                                               selected_type),
+                                 complete_edit_of_metadata)
 
-        current_report = self.report_dict[self.current_report_key]
-
-        if (not ("post" in current_report)):
-            self.push_screen(EditInputMenu(self.report_dict[self.current_report_key], "pre"),
-                             complete_edit_of_metadata)
-        else:
-            self.push_screen(EditSelectionMenu(),
-                             pass_selection_menu_output)
+        self.push_screen(EditSelectionMenu(),
+                         pass_selection_menu_output)
 
     # TO-DO: create new screen for this
     def action_search_again(self):
@@ -1003,7 +950,3 @@ class ctl_tui(App):
         with open(self.report_path, "w") as f:
             json.dump(self.report_dict, f, indent=2)
         self.exit()
-
-    @work
-    async def _obtain_image(self, url: str, image: Image):
-        await obtain_image(url, image)

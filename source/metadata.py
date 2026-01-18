@@ -44,6 +44,7 @@ import globals
 from PIL import Image
 from mutagen import File
 from mutagen.mp3 import MP3
+from report import ReportStatus
 from utils.printing import tui_log
 from mutagen.oggopus import OggOpus
 from mutagen.mp4 import MP4, MP4Cover
@@ -53,8 +54,8 @@ from utils.common import sanitize_string
 from dataclasses import dataclass, field
 from utils.common import warning, Providers
 from music_brainz import musicbrainz_search
+from report import add_to_report_post_search
 from youtube_title_parse import get_artist_title
-from report import ReportStatus, update_report_status, add_to_report_post_search
 
 from mutagen.id3 import (
     TIT2, TOPE, TALB, TRCK,
@@ -230,7 +231,7 @@ def fill_report_metadata(user_agent: str,
     meta = musicbrainz_search(user_agent, title, artist)
 
     if (not meta):
-        update_report_status(report, url, ReportStatus.METADATA_NOT_FOUND)
+        add_to_report_post_search({"url": url}, report, url, ReportStatus.METADATA_NOT_FOUND)
         return
 
     add_to_report_post_search({
