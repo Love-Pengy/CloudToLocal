@@ -31,6 +31,7 @@
 
 import io
 import json
+import time
 import http
 import textwrap
 import urllib.request
@@ -46,7 +47,9 @@ from textual.css.query import NoMatches
 from textual.app import App, ComposeResult
 from textual.validation import Function, Number
 from metadata import replace_metadata, MetadataCtx
+from textual.worker import Worker, get_current_worker
 from report import ReportStatus, get_report_status_str
+from metadata import replace_metadata, MetadataCtx, LyricHandler
 from textual.containers import Horizontal, Grid, Container, VerticalScroll
 
 from utils.common import (
@@ -59,7 +62,7 @@ from textual.widgets import (
     Footer, Header, Pretty,
     Rule, Static, Button,
     Label, Input, Checkbox,
-    Select
+    Select, Collapsible
 )
 
 MAX_THUMBNAIL_RETRIES = 5
@@ -75,31 +78,37 @@ def initialize_image(in_id: str) -> Image:
     return (output_image)
 
 
-async def obtain_image_from_url(url: str, in_image: Image):
-    if (not in_image):
-        tui_log("Image passed to obtain image is None")
-        return
+@work(thread=True)
+async def obtain_image_from_url(screen, url: str, in_image_id: str):
+    tui_log(f"WORKER STARTED WITH ID: {in_image_id}")
+    worker = get_current_worker()
 
-    elif (not url):
-        tui_log("Setting failure image...")
-        in_image.image = FAILURE_IMAGE_PATH
-        in_image.loading = False
+    if (not url):
+        screen.app.call_from_thread(tui_log, "Url not provided")
         return
 
     for i in range(0, MAX_THUMBNAIL_RETRIES):
+        if (worker.is_cancelled):
+            return
+
+        retrieved_bytes = None
         try:
             with urllib.request.urlopen(url) as response:
                 request_response = response.read()
-                in_image.image = io.BytesIO(request_response)
+                retrieved_bytes = io.BytesIO(request_response)
                 break
         except Exception:
-            tui_log(f"{i}: Image obtain failed...retrying")
-            continue
-    else:
-        tui_log("Setting failure image...")
-        in_image.image = FAILURE_IMAGE_PATH
+            screen.app.call_from_thread(tui_log, f"{i}: Image obtain failed...retrying")
+            delay = time.time() + i**2
+            while ((time.time() < delay) and (not worker.is_cancelled)):
+                pass
 
-    in_image.loading = False
+            continue
+
+    if (not worker.is_cancelled):
+        image_widget = screen.query_one(f"#{in_image_id}", Image)
+        image_widget.loading = False
+        image_widget.image = retrieved_bytes or FAILURE_IMAGE_PATH
 
 # NOTE: It seems as though genres are user inputted into soundcloud and can therefore be malformed
 #       or differently formatted than musicbrainz. To keep consistency mappings will be created
@@ -624,7 +633,9 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
             preview_image = initialize_image("EditInputUrlPreview")
             yield preview_image
-            self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
+            obtain_image_from_url(self,
+                                  self.metadata.get("thumbnail_url", None),
+                                  "EditInputUrlPreview")
 
             for playlist in self.app.playlist_handler.list_playlists_str():
                 if (playlist in [play[1] for play in pre["playlists"]]):
@@ -632,9 +643,12 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                 else:
                     yield Checkbox(playlist, False, name=playlist, classes="EditPageCheckbox")
 
-        yield Button("All Done!", variant="primary", id="completion_button")
+            with Collapsible(title="Lyrics", collapsed=True, id="lyrics_collapsible"):
+                yield Static(self.metadata.get("lyrics", ""))
 
+        yield Button("All Done!", variant="primary", id="completion_button")
         yield Footer()
+        self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
         tui_log("Compose completed")
 
     def get_musicbrainz_mapping(self, input: str):
@@ -725,7 +739,9 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                 self.output.thumbnail_height = dimensions[1]
 
                 preview_image.loading = True
-                self._obtain_image(blurred_widget.value, preview_image)
+                obtain_image_from_url(self,
+                                      blurred_widget.value,
+                                      "EditInputUrlPreview")
             else:
                 preview_image.image = FAILURE_IMAGE_PATH
 
@@ -755,10 +771,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
             return
         tui_log("Exiting input menu")
         self.dismiss(self.output)
-
-    @work
-    async def _obtain_image(self, url: str, image: Image):
-        await obtain_image_from_url(url, image)
 
     def on_mount(self) -> None:
         container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
@@ -831,24 +843,22 @@ class ctl_tui(App):
                                                 arguments.playlists,
                                                 self.playlists_info,
                                                 arguments.request_sleep)
+        self.lyric_handler = LyricHandler(arguments.genius_api_key, verbosity=False)
 
         with open(self.report_path, "r") as fptr:
             self.report_dict = json.load(fptr)
+
         self.current_report_key_iter = iter(list(self.report_dict))
         self.current_report_key = next(self.current_report_key_iter)
 
     def pop_and_increment_report_key(self):
-        try:
-            self.report_dict.pop(self.current_report_key)
-            self.current_report_key = next(self.current_report_key_iter)
-        except StopIteration:
-            tui_log("All songs in report exhausted")
-            with open(self.report_path, "w") as f:
-                json.dump(self.report_dict, f, indent=2)
-            self.exit()
+        self.report_dict.pop(self.current_report_key)
+        self.increment_report_key()
 
     def increment_report_key(self):
         try:
+            # Cancel thumbnail workers
+            self.workers.cancel_all()
             self.current_report_key = next(self.current_report_key_iter)
         except StopIteration:
             tui_log("All songs in report exhausted")
@@ -885,8 +895,8 @@ class ctl_tui(App):
 
                 yield Horizontal(pre_image, post_image, id="album_art")
 
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
-                self._obtain_image(current_report["post"]["thumbnail_url"], post_image)
+                obtain_image_from_url(self, current_report["pre"]["thumbnail_url"], "pre_image")
+                obtain_image_from_url(self, current_report["post"]["thumbnail_url"], "post_image")
 
                 title = current_report["post"]["title"]
                 post_width = current_report["post"]["thumbnail_width"]
@@ -903,10 +913,13 @@ class ctl_tui(App):
                     )
                 ]
 
+                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
+                self._obtain_image(current_report["post"]["thumbnail_url"], post_image)
+
             elif (current_report["status"] == ReportStatus.METADATA_NOT_FOUND):
                 pre_image = initialize_image("full_img")
                 yield Horizontal(pre_image, id="album_art")
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
+                obtain_image_from_url(self, current_report["pre"]["thumbnail_url"], "full_img")
 
                 title = current_report["pre"]["title"]
                 post_width = None
@@ -915,6 +928,8 @@ class ctl_tui(App):
                         current_report["status"]), id="status"),
                     Pretty(current_report["pre"], id="pre_info")
                 ]
+
+                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
             # TODO: you can cut a download off to end up at download failure for the report status
             #       which will cause this to fail. Allow user to redownload in this case ~ BEF
 
@@ -951,28 +966,44 @@ class ctl_tui(App):
     @work
     async def action_accept_original(self):
 
-        await self.push_screen(EditInputMenu(self._get_current_report(), "pre"),
-                               self.complete_edit_of_metadata,
-                               wait_for_dismiss=True)
+        ok = False
+        while not ok:
+            # TO-DO: Make this fill in the data that was already there ~ BEF
+            meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(), "pre"))
+            ok = replace_metadata(meta)
+
+            if (ok):
+                self.playlist_handler.write_to_playlists(meta, self.outdir, None)
+                self.pop_and_increment_report_key()
+            else:
+                self.notify("Failed to replace metadata... Returning to metadata screen",
+                            severity="error")
 
     @work
     async def action_edit_metadata(self) -> None:
-        if (not ("post" in self._get_current_report())):
-            await self.push_screen(EditInputMenu(self._get_current_report(), "pre"),
-                                   self.complete_edit_of_metadata,
-                                   wait_for_dismiss=True)
+
+        if ("post" not in self._get_current_report()):
+            selected_type = "pre"
         else:
             selected_type = await self.push_screen(EditSelectionMenu(),
                                                    wait_for_dismiss=True)
+        if (not selected_type):
+            return
 
-            if (selected_type):
-                await self.push_screen(EditInputMenu(self._get_current_report(),
-                                                     selected_type),
-                                       self.complete_edit_of_metadata,
-                                       wait_for_dismiss=True)
+        ok = False
+        while not ok:
+            meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(),
+                                                             selected_type))
+            ok = replace_metadata(meta)
+
+            if (ok):
+                self.playlist_handler.write_to_playlists(meta, self.outdir, None)
+                self.pop_and_increment_report_key()
+            else:
+                self.notify("Failed to replace metadata... Returning to metadata screen",
+                            severity="error")
 
     # TO-DO: create new screen for this
-
     def action_search_again(self):
         pass
         self.playlist_handler.write_to_playlists()
@@ -987,14 +1018,6 @@ class ctl_tui(App):
     def action_skip_entry(self):
         self.increment_report_key()
 
-    def complete_edit_of_metadata(self, meta_ctx: MetadataCtx):
-
-        replace_metadata(meta_ctx)
-
-        self.playlist_handler.write_to_playlists(meta_ctx, self.outdir, None)
-
-        self.pop_and_increment_report_key()
-
     @work
     async def action_accept_new(self):
         """ Accept newly written metadata
@@ -1006,9 +1029,7 @@ class ctl_tui(App):
         if (not all(
                 ((key in current_report["post"]) and current_report["post"][key] is not None)
                 for key in self.REQUIRED_POST_SEARCH_KEYS)):
-            await self.push_screen(EditInputMenu(current_report, "post"),
-                                   self.complete_edit_of_metadata,
-                                   wait_for_dismiss=True)
+            meta = await self.push_screen_wait(EditInputMenu(current_report, "post"))
 
         else:
 
@@ -1029,9 +1050,22 @@ class ctl_tui(App):
                                playlists=pre["playlists"]
                                )
 
-            self.complete_edit_of_metadata(meta)
+        ok = False
+        while not ok:
+            ok = replace_metadata(meta)
+
+            self.playlist_handler.write_to_playlists(meta, self.outdir, None)
+
+            if (ok):
+                self.pop_and_increment_report_key()
+            else:
+                self.notify("Failed to replace metadata... Returning to metadata screen",
+                            severity="error")
+                # TO-DO: Make this fill in the data that was already there ~ BEF
+                await self.push_screen_wait(EditInputMenu(current_report, "post"))
 
     # TO-DO: create new screen for this
+
     def action_retry_download(self):
         pass
         self.pop_and_increment_report_key()
@@ -1045,8 +1079,3 @@ class ctl_tui(App):
         with open(self.report_path, "w") as f:
             json.dump(self.report_dict, f, indent=2)
         self.exit()
-
-    @work
-    async def _obtain_image(self, url: str, image: Image):
-
-        await obtain_image_from_url(url, image)
