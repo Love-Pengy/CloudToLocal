@@ -31,7 +31,6 @@
 #################################################################################
 
 import os
-import time
 import shutil
 import urllib
 import base64
@@ -65,8 +64,6 @@ from mutagen.id3 import (
 
 
 logger = logging.getLogger(__name__)
-
-META_MAX_THUMBNAIL_RETRIES = 5
 
 
 @dataclass
@@ -115,7 +112,7 @@ def get_embedded_thumbnail_res(path: str) -> tuple:
             height = pic.height
             return (width, height)
         case _:
-            logger.warning(f"Unsupported Filetype: {ext[1:]}")
+            warning(f"Unsupported Filetype: {ext[1:]}")
 
 
 def delete_file_tags(filepath: str):
@@ -123,25 +120,6 @@ def delete_file_tags(filepath: str):
     audio = File(filepath)
     audio.delete()
     audio.save()
-
-
-def obtain_thumbnail(url: str):
-    if (not url):
-        logger.warning("Url passed is none")
-        return
-
-    for i in range(0, META_MAX_THUMBNAIL_RETRIES):
-        try:
-            with urllib.request.urlopen(url) as response:
-                request_response = response.read()
-                return (BytesIO(request_response))
-        except Exception:
-            logger.warning(f"{i}: Image obtain failed...retrying")
-            time.sleep(i+1**3)
-            continue
-
-        logger.warning("Setting failure image...")
-        return None
 
 
 def tag_file(in_metadata: MetadataCtx, clear: bool):
@@ -168,7 +146,8 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
             desc="Cover",
             mime=mimetype,
             type=PictureType.COVER_FRONT,
-            data=obtain_thumbnail(in_metadata.thumbnail_url)
+            # TO-DO: this should handle retries ~ BEF
+            data=urllib.request.urlopen(in_metadata.thumbnail_url).read()
         )])
         file_metadata.save()
     elif (extension in [".m4a", ".mp4"]):
@@ -179,9 +158,11 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         file_metadata["\xa9day"] = getattr(in_metadata, "date", "")
         file_metadata["\xa9alb"] = getattr(in_metadata, "album", "")
         file_metadata["\xa9gen"] = getattr(in_metadata, "genres", "")
+        # TO-DO: this should handle retries ~ BEF
+        header = urllib.request.urlopen(in_metadata.thumbnail_url)
         image_format = MP4Cover.FORMAT_JPEG if mimetype == "image/jpeg" else MP4Cover.FORMAT_PNG
-        file_metadata["covr"] = [MP4Cover(obtain_thumbnail(
-            in_metadata.thumbnail_url), imageformat=image_format)]
+        file_metadata["covr"] = [MP4Cover(header.read(), imageformat=image_format)]
+        header.close()
         file_metadata.save()
 
     elif (extension in [".ogg", ".opus", ".flac"]):
@@ -202,7 +183,8 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         picture.type = PictureType.COVER_FRONT
         picture.width = in_metadata.thumbnail_width
         picture.height = in_metadata.thumbnail_height
-        picture.data = obtain_thumbnail(in_metadata.thumbnail_url)
+        # TO-DO: this should handle retries ~ BEF
+        picture.data = urllib.request.urlopen(in_metadata.thumbnail_url).read()
 
         if (".flac" == extension):
             file_metadata.add_picture(picture)
