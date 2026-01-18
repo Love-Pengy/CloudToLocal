@@ -5,8 +5,7 @@
   - [Installation](#installation)
       - [Local](#local)
       - [Docker](#docker)
-  - [Local Usage](#local-usage)
-  - [Configuration](#configuration)
+  - [Usage](#usage)
 <!--toc:end-->
 
 Automated online backup tool for local backups with YouTube, Soundcloud, and Musi
@@ -14,8 +13,8 @@ Automated online backup tool for local backups with YouTube, Soundcloud, and Mus
 ## Installation 
  
 #### Local
-> `pip install .`
 Install dependencies with setup.py
+> `pip install .`
 
 > [!TIP]
 > An external Javascript dependency is now required for yt-dlp to operate properly for Youtube. You
@@ -28,8 +27,8 @@ Install dependencies with setup.py
 
 #### Docker
 
-1. build the image `podman compose build`
-2. run image `podman compose up`
+1. build the docker image `docker build -t ctldl:latest .`
+2. run image `docker compose up`
 
 
 ## Local Usage

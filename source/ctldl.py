@@ -265,7 +265,7 @@ if __name__ == "__main__":
                         help="Email to be used for MusicBrainz api queries")
 
     parser.add_argument("--log_config", type=str,
-                        default="source/configs/ctl_log_config.json",
+                        default="configs/ctl_log_config.json",
                         help="Path to logging config")
 
     parser.add_argument("--genius_api_key", type=str, required=True,

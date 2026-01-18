@@ -36,17 +36,21 @@ FROM python:3.13
 RUN apt update
 RUN apt install ffmpeg tzdata -y
 
-WORKDIR /app
-
-RUN pip install --root-user-action ignore --upgrade pip 
+# Env Setup
+RUN adduser --disabled-password -u 1000 ctldl
+USER ctldl
+WORKDIR /home/ctldl
+# Add bin dir to path for pip
+ENV PATH="$PATH:/home/ctldl/.local/bin"
+ENV PATH="/home/ctldl/.deno/bin:$PATH"
+RUN pip install --upgrade pip
 
 COPY . .
 
 # Install Deps
-RUN pip install --root-user-action ignore -r requirements.txt
-RUN curl -fsSL https://deno.land/install.sh | sh -s -- -y
-RUN mv /root/.deno/bin/deno /usr/local/bin/deno
+RUN pip install -r requirements.txt
+RUN curl -fsSL https://deno.land/install.sh | sh
 
-ENTRYPOINT ["/app/source/ctldl.py"]
+ENTRYPOINT ["/home/ctldl/source/ctldl.py"]
 # Default args for CTLDL. Can be changed in docker compose using command
-CMD [ "/app/conf.yaml" ]
+CMD [ "/ctldl/conf.yaml" ]

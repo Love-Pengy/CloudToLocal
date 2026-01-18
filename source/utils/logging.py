@@ -30,7 +30,6 @@
 #
 #################################################################################
 
-import os
 import json
 import pathlib
 import logging
@@ -50,11 +49,6 @@ def setup_logging(in_path: str):
     config_path = pathlib.Path(in_path)
     with open(config_path) as fptr:
         config = json.load(fptr)
-
-    config_filepath = config.get("handlers", {}).get("file", {}).get("filename", None)
-
-    if (config_filepath):
-        os.makedirs(os.path.dirname(config_filepath), exist_ok=True)
 
     logging.config.dictConfig(config)
 
