@@ -12,9 +12,9 @@ from textual.screen import ModalScreen
 from textual_image.widget import Image
 from textual.css.query import NoMatches
 from textual.app import App, ComposeResult
-from metadata import user_replace_filename
 from textual.validation import Function, Number
-from report import ReportStatus, get_report_status_str
+from globals import get_report_status_str, ReportStatus
+from utils.file_operations import user_replace_filename
 from textual.containers import Horizontal, Grid, Container
 from textual.widgets import Footer, Header, Pretty, Rule, Static, Button, Label, Input, Checkbox
 
