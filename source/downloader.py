@@ -45,11 +45,10 @@ from utils.printing import info, warning, error
 
 @dataclass
 class DownloadInfo:
-    url: str = None
-    path: str = None
     title: str = None
     uploader: str = None
     provider: str = None
+    url: str = None
 
 
 class DownloadManager:
@@ -156,7 +155,7 @@ class DownloadManager:
                 info(f"[{index+1}/{len(curr_playlist_info['entries'])}] Attempting: {
                     download_info.title}")
 
-                download_info.path = None
+                path = None
                 attempts = 0
                 while (True):
                     if (not (self.retry_amt == attempts-1)):
@@ -165,7 +164,7 @@ class DownloadManager:
                                 video_info = ydl.extract_info(download_info.url, download=True)
                                 if ((video_info) and ("requested_downloads" in video_info)):
                                     video_dl_info = video_info["requested_downloads"][0]
-                                    download_info.path = video_dl_info["filepath"]
+                                    path = video_dl_info["filepath"]
                                     duration = int(round(float(video_info["duration"]), 0))
                                 else:
                                     # NOTE: Video is present in the archive ~ BEF
@@ -185,8 +184,8 @@ class DownloadManager:
                         break
                     attempts += 1
 
-                if (download_info.path):
-                    thumb_dimensions = get_embedded_thumbnail_res(download_info.path)
+                if (path):
+                    thumb_dimensions = get_embedded_thumbnail_res(path)
                     thumbnail_width = thumb_dimensions[0]
                     thumbnail_height = thumb_dimensions[1]
                     add_to_report_pre_search(

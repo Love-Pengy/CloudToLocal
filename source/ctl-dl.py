@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 import pycron
 import globals
 import configargparse
-from tui import ctl_tui
+from utils.tui import ctl_tui
 from playlists import PlaylistHandler
 from downloader import DownloadManager
 from metadata import fill_report_metadata

@@ -46,7 +46,7 @@ def get_report_status_str(val):
     return (list(rstat_dict.keys())[list(rstat_dict.values()).index(val)])
 
 
-VALID_REPORT_KEYS = ["title", "uploader", "provider", "ext", "duration", "uploader",
+VALID_SEARCH_KEYS = ["title", "uploader", "provider", "ext", "duration", "uploader",
                      "thumbnail_url", "thumbnail_width", "thumbnail_height", "genres", "path",
                      "url", "playlists", "artist", "artists", "album", "single", "release_date",
                      "track_num", "total_tracks", "mbid"]
@@ -59,13 +59,13 @@ def verify_search_report_keys(context: dict, verify_list: list):
 
 
 def add_to_report_pre_search(context, record, url, status):
-    verify_search_report_keys(context, VALID_REPORT_KEYS)
+    verify_search_report_keys(context, VALID_SEARCH_KEYS)
     record[url] = {}
-    record[url]["pre"] = context
+    record[url]["before"] = context
     record[url]["status"] = status
 
 
 def add_to_report_post_search(context, record, url, status):
-    verify_search_report_keys(context, VALID_REPORT_KEYS)
-    record[url]["post"] = context
+    verify_search_report_keys(context, VALID_SEARCH_KEYS)
+    record[url]["after"] = context
     record[url]["status"] = status

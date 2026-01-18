@@ -48,14 +48,6 @@
     margin: 1 1;
 }
 
-.EditPageListItem {
-    margin: 1 1;
-}
-
-#EditPageGenreListContainer {
-    margin: 1 1;
-}
-
 .EditPageLabel {
     margin: 1 2;
 }

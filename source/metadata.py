@@ -51,36 +51,16 @@ from mutagen.mp4 import MP4, MP4Cover
 from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
 from utils.common import sanitize_string
-from dataclasses import dataclass, field
-from utils.common import warning, Providers
 from music_brainz import musicbrainz_search
 from report import add_to_report_post_search
 from youtube_title_parse import get_artist_title
+from utils.common import warning, validate_args, Providers
 
 from mutagen.id3 import (
     TIT2, TOPE, TALB, TRCK,
     TDAT, APIC, ID3, TCON, TXXX,
     PictureType, Encoding
 )
-
-
-@dataclass
-class MetadataCtx:
-    """ All metadata needed for the various metadata operations """
-    title: str = None
-    path: str = None
-    album: str = None
-    artist: str = None
-    duration: int = None
-    track_num: int = None
-    album_len: int = None
-    album_date: str = None
-    thumbnail_url: str = None
-    thumbnail_width: int = None
-    thumbnail_height: int = None
-    genres: list[str] = field(default_factory=list)
-    artists: list[str] = field(default_factory=list)
-    playlists: list[str] = field(default_factory=list)
 
 
 def set_musicbrainz_user_agent(input: str):
@@ -124,75 +104,83 @@ def delete_file_tags(filepath: str):
     audio.save()
 
 
-def tag_file(in_metadata: MetadataCtx, clear: bool):
+POSSIBLE_TAG_FILE_ARGS = ["filepath", "artists", "album", "title", "track_number",
+                          "date", "thumbnail", "clear", "genres"]
+
+REQUIRED_TAG_FILE_ARGS = ["filepath", "artists", "title", "thumbnail"]
+
+
+def tag_file(args: dict):
     """ Tag File With Information Passed. """
 
-    if (clear):
-        delete_file_tags(in_metadata.path)
+    try:
+        validate_args(args, POSSIBLE_TAG_FILE_ARGS, REQUIRED_TAG_FILE_ARGS)
+    except KeyError:
+        warning("Invalid Argument Found When Tagging File")
+        return
 
-    extension = Path(in_metadata.path).suffix
+    if (args.clear):
+        delete_file_tags(args.filepath)
+    extension = Path(args.filepath).suffix
 
-    mimetype, _ = mimetypes.guess_type(in_metadata.thumbnail_url)
+    mimetype = mimetypes.guess_type(args.thumbnail["url"])
 
-    if (".mp3" == extension):
-        file_metadata = MP3(in_metadata.path)
-        file_metadata.setall(TIT2(in_metadata.title, encoding=Encoding.UTF8))
-        file_metadata.setall(TOPE(in_metadata.artist, encoding=Encoding.UTF8))
-        file_metadata.setall(TDAT(getattr(in_metadata, "date", ""), encoding=Encoding.UTF8))
-        file_metadata.setall(TXXX("artists", text=in_metadata.artists, encoding=Encoding.UTF8))
-        file_metadata.setall(TALB(getattr(in_metadata, "album", ""), encoding=Encoding.UTF8))
-        file_metadata.setall(TCON(getattr(in_metadata, "genres", ""), encoding=Encoding.UTF8))
-        file_metadata.setall(
-            TRCK(getattr(in_metadata, "track_number", ""), encoding=Encoding.UTF8))
-        file_metadata.setall("APIC", [APIC(
+    if ("mp3" == extension):
+        metadata = MP3(args.filepath)
+        metadata.setall(TIT2(args.title, encoding=Encoding.UTF8))
+        metadata.setall(TOPE(args.artists[0], encoding=Encoding.UTF8))
+        metadata.setall(TDAT(getattr(args, "date", None), encoding=Encoding.UTF8))
+        metadata.setall(TXXX("artists", text=args.artists, encoding=Encoding.UTF8))
+        metadata.setall(TALB(getattr(args, "album", None), encoding=Encoding.UTF8))
+        metadata.setall(TCON(getattr(args, "genres", None), encoding=Encoding.UTF8))
+        metadata.setall(TRCK(getattr(args, "track_number", None), encoding=Encoding.UTF8))
+        metadata.setall("APIC", [APIC(
             desc="Cover",
             mime=mimetype,
             type=PictureType.COVER_FRONT,
-            data=urllib.request.urlopen(in_metadata.thumbnail_url).read()
+            data=urllib.request.urlopen(args.thumbnail["url"]).read()
         )])
-        file_metadata.save()
-    elif (extension in [".m4a", ".mp4"]):
-        file_metadata = MP4(in_metadata.path)
-        file_metadata["\xa9nam"] = in_metadata.title
-        file_metadata["\xa9ART"] = in_metadata.artist
-        file_metadata["----:TXXX:artists"] = in_metadata.artists
-        file_metadata["\xa9day"] = getattr(in_metadata, "date", "")
-        file_metadata["\xa9alb"] = getattr(in_metadata, "album", "")
-        file_metadata["\xa9gen"] = getattr(in_metadata, "genres", "")
-        header = urllib.request.urlopen(in_metadata.thumbnail_url)
+        metadata.save()
+    elif (extension in ["m4a", "mp4"]):
+        metadata = MP4(args.filepath)
+        metadata["\xa9nam"] = args.title
+        metadata["\xa9ART"] = args.artists[0]
+        metadata["----:TXXX:artists"] = args.artists
+        metadata["\xa9day"] = getattr(args, "date", None)
+        metadata["\xa9alb"] = getattr(args, "album", None)
+        metadata["\xa9gen"] = getattr(args, "genres", None)
+        header = urllib.request.urlopen(args.thumbnail["url"])
         image_format = MP4Cover.FORMAT_JPEG if mimetype == "image/jpeg" else MP4Cover.FORMAT_PNG
-        file_metadata["covr"] = [MP4Cover(header.read(), imageformat=image_format)]
+        metadata["covr"] = [MP4Cover(header.read(), imageformat=image_format)]
         header.close()
-        file_metadata.save()
+        metadata.save()
 
-    elif (extension in [".ogg", ".opus", ".flac"]):
-        file_metadata = {
-            '.opus': OggOpus, '.flac': FLAC, '.ogg': OggVorbis}[extension](in_metadata.path)
+    elif (extension in ["ogg", "opus", "flac"]):
+        metadata = {'opus': OggOpus, 'flac': FLAC, 'ogg': OggVorbis}[extension](args.filepath)
 
-        tui_log(f"PATH: {in_metadata.path}")
-        file_metadata["title"] = in_metadata.title
-        file_metadata["artists"] = in_metadata.artists
-        file_metadata["artist"] = in_metadata.artist
-        file_metadata["date"] = getattr(in_metadata, "date", "")
-        file_metadata["album"] = getattr(in_metadata, "album", "")
-        file_metadata["tracknumber"] = getattr(in_metadata, "track_number", "")
+        metadata["title"] = args.title
+        metadata["artists"] = args.artists
+        metadata["artist"] = args.artists[0]
+        metadata["date"] = getattr(args, "date", None)
+        metadata["album"] = getattr(args, "album", None)
+        metadata["tracknumber"] = getattr(args, "track_number", None)
 
         picture = Picture()
         picture.desc = u"Cover"
         picture.mime = mimetype
         picture.type = PictureType.COVER_FRONT
-        picture.width = in_metadata.thumbnail_width
-        picture.height = in_metadata.thumbnail_height
-        picture.data = urllib.request.urlopen(in_metadata.thumbnail_url).read()
+        picture.width = args.thumbnail["width"]
+        picture.height = args.thumbnail["height"]
+        picture.data = urllib.request.urlopen(args.thumbnail["url"]).read()
 
-        if (".flac" == extension):
-            file_metadata.add_picture(picture)
+        if ("flac" == extension):
+            metadata.add_picture(picture)
         else:
             picture_data = picture.write()
             encoded_data = base64.b64encode(picture_data)
             comment_val = encoded_data.decode("ascii")
-            file_metadata["metadata_block_picture"] = [comment_val]
-        file_metadata.save()
+            metadata["metadata_block_picture"] = [comment_val]
+        metadata.save()
     else:
         raise ValueError("Unsupported FileType Passed To Tag Handler. "
                          "Supported Types Are: flac, opus, ogg, mp3, and mp4")
@@ -250,20 +238,55 @@ def fill_report_metadata(user_agent: str,
         ReportStatus.SINGLE if meta.is_single else ReportStatus.ALBUM_FOUND)
 
 
-def replace_metadata(metadata: MetadataCtx):
-    """ Replaces metadata and renames filename to new name provided """
+# TO-DO: should probably also take in objects instead of all elements ~ BEF
+# TO-DO: should also rename this to actually match the function ~ BEF
+def user_replace_filename(title, artists, filepath, extension,
+                          matching_album, duration, track_number, album_len,
+                          album_date, thumbnail_obj):
+    """
+        User Initiated Filename Replacement Method. Replaces filename, tags
+            file with relevant metadata, and adds to playlist if desired
 
-    delete_file_tags(metadata.path)
+        Args:
+            title (str)
+            artists (str)
+            filepath (str)
+            extension (str)
+            matching_album (str)
+            duration (int)
+            track_number (int)
+            album_len (int)
+            album_date (str)
+            thumbnail_obj (dict)
 
-    tag_file(metadata, True)
+        Returns:
+            new filepath in which song resides
+    """
 
-    ext = pathlib.Path(metadata.path).suffix
-    tui_log(f"{os.path.basename(metadata.path)} -> {metadata.artist}_"
-            f"{sanitize_string(metadata.title)}_{metadata.track_num:02d}_{metadata.title}{ext}")
+    delete_file_tags(filepath)
 
-    new_filepath = f"{os.path.dirname(metadata.path)}/{
-        metadata.artist}_{metadata.album}_{metadata.track_num:02d}_{metadata.title}{ext}"
+    tag_file(filepath,
+             artists,
+             matching_album,
+             title,
+             track_number,
+             album_len,
+             album_date,
+             thumbnail_obj,
+             extension)
 
-    shutil.move(metadata.path, new_filepath)
+    if (not matching_album):
+        matching_album = title
+
+    tui_log(f"{os.path.basename(filepath)} -> {artists[0]}_"
+            f"{sanitize_string(matching_album)}_"
+            f"{track_number:02d}_"
+            f"{title}"
+            f".{extension}")
+
+    new_filepath = f"{os.path.dirname(
+        filepath)}/{artists[0]}_{matching_album}_{track_number:02d}_{title}.{extension}"
+
+    shutil.move(filepath, new_filepath)
 
     return (new_filepath)

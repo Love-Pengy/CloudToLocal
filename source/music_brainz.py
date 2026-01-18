@@ -77,13 +77,10 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
 
     content = None
     output = MusicbrainzMetadata()
-    for i in range(1, MUSICBRAINZ_RETRIES+1):
+    for i in range(0, MUSICBRAINZ_RETRIES):
         try:
-
-            search = mbr.MbzRequestSearch(user_agent, "recording",
-                                          f'artist:"{artist}" AND recording:"{title}"')
-            content = search.send()
-            info(f"url: {search.url + '/' + search.entity_type + '?query=' + search.query}")
+            content = mbr.MbzRequestSearch(user_agent, "recording",
+                                           f'artist:"{artist}" AND recording:"{title}"').send()
             break
         except mbzerror.MbzWebServiceError:
             #  TO-DO: Some sort of service error, should debug/verbose log the specifics ~ BEF

@@ -38,14 +38,14 @@ Screen {
     overflow-y: hidden;
 }
 
-#pre_image,
-#post_image{
+#img1,
+#img2 {
     width: 1fr;
     height: 1fr;
 }
 
-#pre_info,
-#post_info{
+#before_info,
+#after_info {
     width: auto;
     max-width: 35vw;
     height: 18vh;
