@@ -125,27 +125,23 @@ def delete_file_tags(filepath: str):
     audio.save()
 
 
-def request_thumbnail(url):
-    for i in range(0, META_MAX_THUMBNAIL_RETRIES):
-        try:
-            with urllib.request.urlopen(url) as response:
-                return (response.read())
-        except Exception:
-            tui_log(f"{i}: Image obtain failed...retrying")
-            time.sleep(i+1**3)
-            continue
-
-        tui_log(f"{i}: Image obtain failed...retrying")
-        return None
-
-
-def obtain_thumbnail_bytes(url: str):
+def obtain_thumbnail(url: str):
     if (not url):
         logger.warning("Url passed is none")
         return
 
-        response = request_thumbnail(url)
-        return (BytesIO(response))
+    for i in range(0, META_MAX_THUMBNAIL_RETRIES):
+        try:
+            with urllib.request.urlopen(url) as response:
+                request_response = response.read()
+                return (BytesIO(request_response))
+        except Exception:
+            logger.warning(f"{i}: Image obtain failed...retrying")
+            time.sleep(i+1**3)
+            continue
+
+        logger.warning("Setting failure image...")
+        return None
 
 
 def tag_file(in_metadata: MetadataCtx, clear: bool):
@@ -172,7 +168,7 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
             desc="Cover",
             mime=mimetype,
             type=PictureType.COVER_FRONT,
-            data=obtain_thumbnail_bytes(in_metadata.thumbnail_url)
+            data=obtain_thumbnail(in_metadata.thumbnail_url)
         )])
         file_metadata.save()
     elif (extension in [".m4a", ".mp4"]):
@@ -184,7 +180,7 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         file_metadata["\xa9alb"] = getattr(in_metadata, "album", "")
         file_metadata["\xa9gen"] = getattr(in_metadata, "genres", "")
         image_format = MP4Cover.FORMAT_JPEG if mimetype == "image/jpeg" else MP4Cover.FORMAT_PNG
-        file_metadata["covr"] = [MP4Cover(obtain_thumbnail_bytes(
+        file_metadata["covr"] = [MP4Cover(obtain_thumbnail(
             in_metadata.thumbnail_url), imageformat=image_format)]
         file_metadata.save()
 
@@ -206,7 +202,7 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         picture.type = PictureType.COVER_FRONT
         picture.width = in_metadata.thumbnail_width
         picture.height = in_metadata.thumbnail_height
-        picture.data = request_thumbnail(in_metadata.thumbnail_url)
+        picture.data = obtain_thumbnail(in_metadata.thumbnail_url)
 
         if (".flac" == extension):
             file_metadata.add_picture(picture)

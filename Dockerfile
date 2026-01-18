@@ -40,7 +40,7 @@ RUN apt install ffmpeg tzdata -y
 RUN adduser --disabled-password -u 1000 ctldl
 USER ctldl
 WORKDIR /home/ctldl
-# Add bin dir to path for pip
+# NOTE: Add bin dir to path for pip ~ BEF
 ENV PATH="$PATH:/home/ctldl/.local/bin"
 ENV PATH="/home/ctldl/.deno/bin:$PATH"
 RUN pip install --upgrade pip
