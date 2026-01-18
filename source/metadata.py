@@ -42,8 +42,6 @@ from io import BytesIO
 from pathlib import Path
 
 
-import globals
-import lyricsgenius
 from PIL import Image
 from mutagen import File
 from mutagen.mp3 import MP3
@@ -62,7 +60,7 @@ from report import ReportStatus, update_report_status, add_to_report_post_search
 from mutagen.id3 import (
     TIT2, TOPE, TALB, TRCK,
     TDAT, APIC, ID3, TCON, TXXX,
-    USLT, PictureType, Encoding
+    PictureType, Encoding
 )
 
 
@@ -88,15 +86,6 @@ class MetadataCtx:
     genres: list[str] = field(default_factory=list)
     artists: list[str] = field(default_factory=list)
     playlists: list[str] = field(default_factory=list)
-
-
-class LyricHandler:
-    def __init__(self, api_key: str, verbosity: bool = False):
-        self.genius_ctx = lyricsgenius.Genius(api_key, verbose=verbosity)
-
-    def obtain_lyrics(self, title: str, artist: str):
-        song = self.genius_ctx.search_song(title, artist)
-        return (song.lyrics if song else None)
 
 
 def get_embedded_thumbnail_res(path: str) -> tuple:
@@ -159,7 +148,7 @@ def obtain_thumbnail_bytes(url: str):
         return (BytesIO(response))
 
 
-def tag_file(in_metadata: MetadataCtx, clear: bool, lyric_handler: LyricHandler):
+def tag_file(in_metadata: MetadataCtx, clear: bool):
     """ Tag File With Information Passed. """
 
     if (clear):
@@ -168,10 +157,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool, lyric_handler: LyricHandler)
     extension = Path(in_metadata.path).suffix
 
     mimetype, _ = mimetypes.guess_type(in_metadata.thumbnail_url)
-
-    if (lyric_handler):
-        lyrics = lyric_handler.obtain_lyrics(in_metadata.title, in_metadata.artist)
-        tui_log(f"LYRICS: {lyrics}")
 
     if (".mp3" == extension):
         file_metadata = MP3(in_metadata.path)
@@ -183,7 +168,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool, lyric_handler: LyricHandler)
         file_metadata.setall(TCON(getattr(in_metadata, "genres", ""), encoding=Encoding.UTF8))
         file_metadata.setall(
             TRCK(getattr(in_metadata, "track_number", ""), encoding=Encoding.UTF8))
-        file_metadata.setall(USLT(lyrics or "", encoding=Encoding.UTF8))
         thumbnail = obtain_thumbnail_bytes(in_metadata.thumbnail_url)
         if not thumbnail:
             return False
@@ -202,8 +186,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool, lyric_handler: LyricHandler)
         file_metadata["\xa9day"] = getattr(in_metadata, "date", "")
         file_metadata["\xa9alb"] = getattr(in_metadata, "album", "")
         file_metadata["\xa9gen"] = getattr(in_metadata, "genres", "")
-        file_metadata["\xa9lyr"] = lyrics or ""
-        header = urllib.request.urlopen(in_metadata.thumbnail_url)
         image_format = MP4Cover.FORMAT_JPEG if mimetype == "image/jpeg" else MP4Cover.FORMAT_PNG
         thumbnail = obtain_thumbnail_bytes(in_metadata.thumbnail_url)
         if not thumbnail:
@@ -221,7 +203,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool, lyric_handler: LyricHandler)
         file_metadata["date"] = getattr(in_metadata, "date", "")
         file_metadata["album"] = getattr(in_metadata, "album", "")
         file_metadata["tracknumber"] = getattr(in_metadata, "track_number", "")
-        file_metadata["lyrics"] = lyrics or ""
 
         picture = Picture()
         picture.desc = u"Cover"
@@ -256,17 +237,15 @@ def fill_report_metadata(user_agent: str,
                          uploader: str,
                          provider: str,
                          url: str,
-                         report: dict,
-                         lyric_handler: LyricHandler):
+                         report: dict):
     """
         Arguments:
-            user_agent:    Musicbrainz user agent
-            title:         Title of song
-            uploader:      Uploader of song
-            provider:      Provider or download
-            url:           URL of song
-            report:        Dictionary of download status reports
-            lyric_handler: Handler of lyric retrieval
+            user_agent: Musicbrainz user agent
+            title:      Title of song
+            uploader:   Uploader of song
+            provider:   Provider or download
+            url:        Url of song
+            report:     Dictionary of download status reports
 
 
     """
@@ -297,24 +276,21 @@ def fill_report_metadata(user_agent: str,
         "mbid": meta.release_mbid,
         "thumbnail_url": meta.thumbnail_url,
         "thumbnail_width": meta.thumbnail_resolution,
-        "thumbnail_height": meta.thumbnail_resolution,
-        "lyrics": lyric_handler.obtain_lyrics(meta.title, meta.artist)
+        "thumbnail_height": meta.thumbnail_resolution
     },
         report,
         url,
         ReportStatus.SINGLE if meta.is_single else ReportStatus.ALBUM_FOUND)
 
 
-def replace_metadata(metadata: MetadataCtx, lyric_handler: LyricHandler):
+def replace_metadata(metadata: MetadataCtx):
     """ Replaces metadata and renames filename to new name provided. Metadata path will also be
         updated with the new filepath. """
 
-    if (not tag_file(metadata, True, lyric_handler)):
+    if (not tag_file(metadata, True)):
         return None
-    
+
     ext = pathlib.Path(metadata.path).suffix
-    tui_log(f"{os.path.basename(metadata.path)} -> {metadata.artist}_"
-            f"{sanitize_string(metadata.title)}_{metadata.track_num:02d}_{metadata.title}{ext}")
 
     new_filepath = f"{os.path.dirname(metadata.path)}/{
         metadata.artist}_{metadata.album}_{metadata.track_num:02d}_{
