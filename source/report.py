@@ -46,7 +46,7 @@ def get_report_status_str(val):
 VALID_REPORT_KEYS = ["title", "uploader", "provider", "ext", "duration", "uploader",
                      "thumbnail_url", "thumbnail_width", "thumbnail_height", "genres", "path",
                      "url", "playlists", "artist", "artists", "album", "single", "release_date",
-                     "track_num", "total_tracks", "mbid"]
+                     "track_num", "total_tracks", "mbid", "lyrics"]
 
 
 def verify_search_report_keys(context: dict, verify_list: list):
