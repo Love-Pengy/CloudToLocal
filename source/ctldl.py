@@ -94,6 +94,7 @@ class CloudToLocal:
 
     def run_download_sequence(self):
 
+        # TO-DO: continue back from here in moving to logging library. ~ BEF
         for download_info in self.downloader.download_generator():
             fill_report_metadata(self.user_agent,
                                  download_info.title,

@@ -149,6 +149,7 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
                          search.url}/{search.entity_type}?query={search.query}&fmt=json")
             break
         except mbzerror.MbzWebServiceError:
+            #  TO-DO: Some sort of service error, should debug/verbose log the specifics ~ BEF
             delay = i ** 2
             logger.exception(f"Musicbrainz service error, retrying in {delay}...")
             time.sleep(delay)
@@ -166,6 +167,7 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
     for recording in recordings:
         release = None
         output = MusicbrainzMetadata()
+        # TO-DO: make this back into a next call ~ BEF
         for search_status in MUSICBRAINZ_STATUS_PRIO_LIST:
             release = next((curr_release for curr_release in recording.get(
                 "releases", []) if search_status == curr_release.get("status", None)), None)
