@@ -53,4 +53,3 @@ youtube_title_parse @ https://github.com/Love-Pengy/youtube_title_parse/archive/
 yt-dlp==2025.11.12
 yt-dlp-ejs==0.3.1
 ytmusicapi==1.11.0
-mbzero==0.5
