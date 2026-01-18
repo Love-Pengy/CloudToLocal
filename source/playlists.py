@@ -35,7 +35,7 @@ import os
 import globals
 from yt_dlp import YoutubeDL
 from metadata import MetadataCtx
-from utils.printing import warning, tui_log
+from utils.printing import warning
 
 
 class PlaylistHandler:
@@ -154,19 +154,14 @@ class PlaylistHandler:
                                 metadata.artist} - {metadata.title}\n")
                         f.write(sanitized_path + "\n")
         else:
-            tui_log("Adding to playlists")
-            tui_log(f"Listed playlists: {metadata.playlists}")
             for playlist_spec in metadata.playlists:
-                tui_log(playlist_spec)
                 if (not os.path.exists(f"{outdir}{playlist_spec[1]}.m3u")):
-                    tui_log("Creating new playlist file")
                     with open(f"{outdir}{playlist_spec[1]}.m3u", "w") as f:
                         f.write("#EXTM3U\n")
                         f.write(f"#EXTINF:{metadata.duration},{
                                 metadata.artist} - {metadata.title}\n")
                         f.write(sanitized_path + "\n")
                 else:
-                    tui_log("Appending to existing playlist file")
                     with open(f"{outdir}{playlist_spec[1]}.m3u", "a") as f:
                         f.write(f"#EXTINF:{metadata.duration},{
                                 metadata.artist} - {metadata.title}\n")
