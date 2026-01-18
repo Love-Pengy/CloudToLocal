@@ -178,8 +178,7 @@ class DownloadManager:
                             sleep(attempts*10)
                         except Exception:
                             print(traceback.format_exc())
-                            logger.error(f"Unexpected error for '{download_info.title}'",
-                                         exc_info=True)
+                            logger.exception(f"Unexpected error for '{download_info.title}'")
                     else:
                         add_to_report_pre_search({"url": download_info.url},
                                                  self.report,
