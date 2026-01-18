@@ -714,7 +714,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
             if (not (Select.BLANK == select.value)):
                 self.output.genres.append(select.value)
 
-    # TO-DO: should be a worker because of the request ~ BEF
     def on_input_blurred(self, blurred_widget):
 
         if (blurred_widget.input.id == "thumb_link"):
