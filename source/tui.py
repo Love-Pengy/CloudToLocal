@@ -624,6 +624,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
             preview_image = initialize_image("EditInputUrlPreview")
             yield preview_image
+            self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
 
             for playlist in self.app.playlist_handler.list_playlists_str():
                 if (playlist in [play[1] for play in pre["playlists"]]):
@@ -634,7 +635,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         yield Button("All Done!", variant="primary", id="completion_button")
 
         yield Footer()
-        self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
         tui_log("Compose completed")
 
     def get_musicbrainz_mapping(self, input: str):
@@ -756,7 +756,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         tui_log("Exiting input menu")
         self.dismiss(self.output)
 
-    @work(thread=True)
+    @work
     async def _obtain_image(self, url: str, image: Image):
         await obtain_image_from_url(url, image)
 
@@ -885,6 +885,9 @@ class ctl_tui(App):
 
                 yield Horizontal(pre_image, post_image, id="album_art")
 
+                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
+                self._obtain_image(current_report["post"]["thumbnail_url"], post_image)
+
                 title = current_report["post"]["title"]
                 post_width = current_report["post"]["thumbnail_width"]
                 post_height = current_report["post"]["thumbnail_height"]
@@ -900,12 +903,10 @@ class ctl_tui(App):
                     )
                 ]
 
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
-                self._obtain_image(current_report["post"]["thumbnail_url"], post_image)
-
             elif (current_report["status"] == ReportStatus.METADATA_NOT_FOUND):
                 pre_image = initialize_image("full_img")
                 yield Horizontal(pre_image, id="album_art")
+                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
 
                 title = current_report["pre"]["title"]
                 post_width = None
@@ -914,8 +915,6 @@ class ctl_tui(App):
                         current_report["status"]), id="status"),
                     Pretty(current_report["pre"], id="pre_info")
                 ]
-
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
             # TODO: you can cut a download off to end up at download failure for the report status
             #       which will cause this to fail. Allow user to redownload in this case ~ BEF
 
@@ -1047,7 +1046,7 @@ class ctl_tui(App):
             json.dump(self.report_dict, f, indent=2)
         self.exit()
 
-    @work(thread=True)
+    @work
     async def _obtain_image(self, url: str, image: Image):
 
         await obtain_image_from_url(url, image)
