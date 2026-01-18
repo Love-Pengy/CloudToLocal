@@ -142,7 +142,7 @@ def request_thumbnail(url):
 def obtain_thumbnail_bytes(url: str):
     if (not url):
         logger.warning("Url passed is none")
-        return None
+        return
 
         response = request_thumbnail(url)
         return (BytesIO(response))
@@ -168,14 +168,11 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         file_metadata.setall(TCON(getattr(in_metadata, "genres", ""), encoding=Encoding.UTF8))
         file_metadata.setall(
             TRCK(getattr(in_metadata, "track_number", ""), encoding=Encoding.UTF8))
-        thumbnail = obtain_thumbnail_bytes(in_metadata.thumbnail_url)
-        if not thumbnail:
-            return False
         file_metadata.setall("APIC", [APIC(
             desc="Cover",
             mime=mimetype,
             type=PictureType.COVER_FRONT,
-            data=thumbnail
+            data=obtain_thumbnail_bytes(in_metadata.thumbnail_url)
         )])
         file_metadata.save()
     elif (extension in [".m4a", ".mp4"]):
@@ -187,16 +184,15 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         file_metadata["\xa9alb"] = getattr(in_metadata, "album", "")
         file_metadata["\xa9gen"] = getattr(in_metadata, "genres", "")
         image_format = MP4Cover.FORMAT_JPEG if mimetype == "image/jpeg" else MP4Cover.FORMAT_PNG
-        thumbnail = obtain_thumbnail_bytes(in_metadata.thumbnail_url)
-        if not thumbnail:
-            return False
-        file_metadata["covr"] = [MP4Cover(thumbnail, imageformat=image_format)]
+        file_metadata["covr"] = [MP4Cover(obtain_thumbnail_bytes(
+            in_metadata.thumbnail_url), imageformat=image_format)]
         file_metadata.save()
 
     elif (extension in [".ogg", ".opus", ".flac"]):
         file_metadata = {
             '.opus': OggOpus, '.flac': FLAC, '.ogg': OggVorbis}[extension](in_metadata.path)
 
+        tui_log(f"PATH: {in_metadata.path}")
         file_metadata["title"] = in_metadata.title
         file_metadata["artists"] = in_metadata.artists
         file_metadata["artist"] = in_metadata.artist
@@ -211,8 +207,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         picture.width = in_metadata.thumbnail_width
         picture.height = in_metadata.thumbnail_height
         picture.data = request_thumbnail(in_metadata.thumbnail_url)
-        if (not picture.data):
-            return False
 
         if (".flac" == extension):
             file_metadata.add_picture(picture)
@@ -226,7 +220,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         raise ValueError("Unsupported FileType Passed To Tag Handler. "
                          "Supported Types Are: flac, opus, ogg, mp3, and mp4")
 
-    return True
 
 def parse_youtube_title(title: str, artist: str):
     return (get_artist_title(title, {"defaultArtist": artist, "defaultTitle": title}))
@@ -287,16 +280,16 @@ def replace_metadata(metadata: MetadataCtx):
     """ Replaces metadata and renames filename to new name provided. Metadata path will also be
         updated with the new filepath. """
 
-    if (not tag_file(metadata, True)):
-        return None
+    delete_file_tags(metadata.path)
+
+    tag_file(metadata, True)
 
     ext = pathlib.Path(metadata.path).suffix
+    logger.info(f"{os.path.basename(metadata.path)} -> {metadata.artist}_"
+                f"{sanitize_string(metadata.title)}_{metadata.track_num:02d}_{metadata.title}{ext}")
 
     new_filepath = f"{os.path.dirname(metadata.path)}/{
-        metadata.artist}_{metadata.album}_{metadata.track_num:02d}_{
-        sanitize_string(metadata.title)}{ext}"
-
-    tui_log(f"{os.path.basename(metadata.path)} -> {new_filepath}")
+        metadata.artist}_{metadata.album}_{metadata.track_num:02d}_{metadata.title}{ext}"
 
     shutil.move(metadata.path, new_filepath)
 
