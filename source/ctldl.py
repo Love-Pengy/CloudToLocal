@@ -39,7 +39,6 @@ import json
 import atexit
 import signal
 import shelve
-import logging
 import datetime
 
 import globals
@@ -48,8 +47,8 @@ from tui import ctl_tui
 from playlists import PlaylistHandler
 from downloader import DownloadManager
 from metadata import fill_report_metadata
-from utils.logging import setup_logging, get_log_level
 from music_brainz import musicbrainz_construct_user_agent
+from utils.printing import success, info, warning
 
 from utils.common import (
     check_ytdlp_update,
@@ -57,8 +56,6 @@ from utils.common import (
     clean_ytdlp_artifacts,
     delete_folder_contents,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class CloudToLocal:
@@ -77,7 +74,7 @@ class CloudToLocal:
             with open(self.report_fpath, 'r') as fptr:
                 self.report = json.load(fptr)
         else:
-            logger.debug("No Existing Report, Creating New One...")
+            info("No Existing Report, Creating New One...")
             self.report = {}
 
         self.downloader = DownloadManager({
@@ -94,7 +91,6 @@ class CloudToLocal:
 
     def run_download_sequence(self):
 
-        # TO-DO: continue back from here in moving to logging library. ~ BEF
         for download_info in self.downloader.download_generator():
             fill_report_metadata(self.user_agent,
                                  download_info.title,
@@ -106,10 +102,10 @@ class CloudToLocal:
         clean_ytdlp_artifacts(self.output_dir)
         self.dump_report()
         self.reset_exit_handlers()
-        logger.info("Download Completed")
+        success("Download Completed")
 
     def dump_report(self):
-        logger.info("Dumping Report")
+        info("Dumping Report")
         with open(self.report_fpath, "w") as f:
             json.dump(self.report, f, indent=2)
 
@@ -133,53 +129,48 @@ class CloudToLocal:
 
 def download(arguments):
     if (not connectivity_check()):
-        logging.warning(
-            "Internet Connection Could Not Be Established! Please Check Your Connection")
+        warning("Internet Connection Could Not Be Established! Please Check Your Connection")
         return
 
-    logging.info("Internet connection verified")
+    info("INTERNET CONNECTION VERIFIED")
 
     ctl = CloudToLocal(arguments)
 
     check_ytdlp_update()
-    logging.info("Starting download sequence")
+    info("STARTING DOWNLOAD")
     ctl.run_download_sequence()
 
 
 def clear_shelf():
-    logging.info("Clearing shelf...")
+    info("Clearing shelf...")
     with shelve.open(globals.SHELF_NAME) as db:
         db.clear()
 
 
 def main(arguments):
 
-    setup_logging(arguments.log_config)
-
-    globals.VERBOSE = (True if get_log_level() <= logging.INFO else False)
-
     arguments.outdir = os.path.expanduser(arguments.outdir)
     if (not (arguments.outdir[-1] == '/')):
         arguments.outdir += '/'
 
+    # TO-DO: Add Option To Serve Locally ~ BEF
     if (arguments.start_tui):
-        logger.debug("Starting Tui")
         ctl_tui(arguments).run()
         exit()
     if (arguments.fresh
             and os.path.exists(arguments.outdir)):
-        logging.debug("Cleaning Existing Directory")
+        info("Cleaning Existing Directory")
         delete_folder_contents(arguments.outdir)
         clear_shelf()
 
-    logging.debug(vars(arguments))
+    if (arguments.verbose):
+        info(vars(arguments))
 
     download_loop(arguments)
 
 
 def set_wakeup_time(interval):
     """ Add wakeup time to ctldl shelf. """
-    logging.info("Setting next wakeup time")
     dt_now = datetime.datetime.now()
     dt_future = dt_now + datetime.timedelta(hours=interval)
 
@@ -191,7 +182,6 @@ def set_wakeup_time(interval):
 
 def remove_wakeup_time():
     """ Remove wakeup time from ctldl shelf. """
-    logging.info("Removing previous wakeup time from shelf")
     with shelve.open(globals.SHELF_NAME) as db:
         db.pop("wakeup_time")
 
@@ -203,8 +193,8 @@ def download_loop(arguments):
     if (dl_wakeup_time):
         sleep_time = (dl_wakeup_time - datetime.datetime.now()).total_seconds()
         if (0 < sleep_time):
-            logging.info(f"Previous instance was set to sleep. Continuing to sleep for: {
-                         sleep_time/3600:.2f} hours")
+            info(f"Previous instance was set to sleep. Continuing to sleep for: {
+                 sleep_time/3600:.2f} hours")
             time.sleep(sleep_time)
         remove_wakeup_time()
 
@@ -213,7 +203,7 @@ def download_loop(arguments):
     if (arguments.interval):
         while (True):
             sleep_time = set_wakeup_time(arguments.interval)
-            logging.info(f"Sleeping for {sleep_time/3600} hours...")
+            info(f"Sleeping for {sleep_time/3600} hours...")
             time.sleep(sleep_time)
             remove_wakeup_time()
             download(arguments)
@@ -244,6 +234,15 @@ if __name__ == "__main__":
     parser.add_argument("--start_tui", "-t", action="store_true",
                         help="Start Tui To Edit Metadata")
 
+    parser.add_argument("--fail_on_warning", "-w", action="store_true",
+                        help="Exit Program On Failure")
+
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="Enable Verbose Output")
+
+    parser.add_argument("--quiet", "-q", action="store_true",
+                        help="Suppress Everything But Warnings and Errors")
+
     parser.add_argument("--download_sleep", "-ds", default=5, type=int,
                         help="Maximum Amount Of Seconds To Sleep Before A Download")
 
@@ -251,8 +250,7 @@ if __name__ == "__main__":
                         help="Amount Of Seconds To Sleep Between Requests")
 
     parser.add_argument("--fresh", "-f", action="store_true",
-                        help="Bypass previous sleep records and Delete Directory Before           \
-                        Downloading (Mainly For Testing)")
+                        help="Bypass previous sleep records and Delete Directory Before Downloading (Mainly For Testing)")
 
     parser.add_argument("--interval", type=int, default=None,
                         help="Amount of time between ctldl runs in hours")
@@ -262,10 +260,9 @@ if __name__ == "__main__":
                         required=True,
                         help="Email to be used for MusicBrainz api queries")
 
-    parser.add_argument("--log_config", type=str,
-                        default="configs/ctl_log_config.json",
-                        help="Path to logging config")
-
     args = parser.parse_args()
+    globals.QUIET = args.quiet
+    globals.VERBOSE = args.verbose
+    globals.FAIL_ON_WARNING = args.fail_on_warning
 
     main(args)

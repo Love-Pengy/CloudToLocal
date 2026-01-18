@@ -30,7 +30,6 @@
 #
 #################################################################################
 
-import logging
 import traceback
 from time import sleep
 from dataclasses import dataclass, asdict
@@ -41,8 +40,7 @@ from report import ReportStatus
 from yt_dlp.utils import DownloadError
 from report import add_to_report_pre_search
 from metadata import get_embedded_thumbnail_res
-
-logger = logging.getLogger(__name__)
+from utils.printing import info, warning, error
 
 
 @dataclass
@@ -93,7 +91,7 @@ class DownloadManager:
         ],
 
         # Whether to print to standard output
-        "quiet": not globals.VERBOSE,
+        "quiet": globals.QUIET,
         # Whether to add additional info to standard output
         "verbose": globals.VERBOSE,
         "noplaylist": True,
@@ -131,7 +129,7 @@ class DownloadManager:
                 download_info = DownloadInfo()
                 download_info.url = entry["url"]
                 if not download_info.url:
-                    logger.warning(f"[{index+1}] Skipping: No URL found for {entry['title']}")
+                    warning(f"[{index+1}] Skipping: No URL found for {entry['title']}")
                     continue
 
                 download_info.provider = entry["ie_key"]
@@ -155,7 +153,7 @@ class DownloadManager:
                     download_info.uploader = sc_info[
                         "artist"] if "artist" in sc_info else sc_info["uploader"]
 
-                logger.info(f"[{index+1}/{len(curr_playlist_info['entries'])}] Attempting: {
+                info(f"[{index+1}/{len(curr_playlist_info['entries'])}] Attempting: {
                     download_info.title}")
 
                 download_info.path = None
@@ -174,11 +172,11 @@ class DownloadManager:
                                     break
                             break
                         except DownloadError:
-                            logger.info(f"(#{attempts+1}) Failed to download... Retrying")
+                            info(f"(#{attempts+1}) Failed to download... Retrying")
                             sleep(attempts*10)
-                        except Exception:
+                        except Exception as e:
                             print(traceback.format_exc())
-                            logger.exception(f"Unexpected error for '{download_info.title}'")
+                            error(f"Unexpected error for '{download_info.title}': {e}")
                     else:
                         add_to_report_pre_search({"url": download_info.url},
                                                  self.report,
