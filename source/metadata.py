@@ -81,6 +81,11 @@ class MetadataCtx:
     artists: list[str] = field(default_factory=list)
     playlists: list[str] = field(default_factory=list)
 
+
+def set_musicbrainz_user_agent(input: str):
+    globals.MUSICBRAINZ_USER_AGENT = input
+
+
 def get_embedded_thumbnail_res(path: str) -> tuple:
     """ Get resolution of a thumbnail from its embedded metadata. """
     ext = pathlib.Path(path).suffix
@@ -142,7 +147,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
             desc="Cover",
             mime=mimetype,
             type=PictureType.COVER_FRONT,
-            # TO-DO: this should handle retries ~ BEF
             data=urllib.request.urlopen(in_metadata.thumbnail_url).read()
         )])
         file_metadata.save()
@@ -154,7 +158,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         file_metadata["\xa9day"] = getattr(in_metadata, "date", "")
         file_metadata["\xa9alb"] = getattr(in_metadata, "album", "")
         file_metadata["\xa9gen"] = getattr(in_metadata, "genres", "")
-        # TO-DO: this should handle retries ~ BEF
         header = urllib.request.urlopen(in_metadata.thumbnail_url)
         image_format = MP4Cover.FORMAT_JPEG if mimetype == "image/jpeg" else MP4Cover.FORMAT_PNG
         file_metadata["covr"] = [MP4Cover(header.read(), imageformat=image_format)]
@@ -179,7 +182,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool):
         picture.type = PictureType.COVER_FRONT
         picture.width = in_metadata.thumbnail_width
         picture.height = in_metadata.thumbnail_height
-        # TO-DO: this should handle retries ~ BEF
         picture.data = urllib.request.urlopen(in_metadata.thumbnail_url).read()
 
         if (".flac" == extension):
@@ -240,10 +242,7 @@ def fill_report_metadata(user_agent: str,
         "release_date": meta.release_date,
         "track_num": meta.track_count,
         "total_tracks": meta.total_tracks,
-        "mbid": meta.release_mbid,
-        "thumbnail_url": meta.thumbnail_url,
-        "thumbnail_width": meta.thumbnail_resolution,
-        "thumbnail_height": meta.thumbnail_resolution
+        "mbid": meta.release_mbid
     },
         report,
         url,

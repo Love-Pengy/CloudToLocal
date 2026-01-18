@@ -34,7 +34,6 @@ import json
 import textwrap
 import urllib.request
 from datetime import datetime
-from dataclasses import dataclass
 
 from textual import work
 from utils.printing import tui_log
@@ -63,10 +62,9 @@ from textual.widgets import (
     Select
 )
 
+
 MAX_THUMBNAIL_RETRIES = 5
-DEFAULT_IMAGE_SIZE = (1200, 1200)
-FAILURE_IMAGE_PATH = "assets/failure_white.png"
-THUMBNAIL_SIZE_PRIO_LIST = ["1200", "500", "250"]
+DEFAULT_IMAGE_SIZE = (500, 500)
 
 
 def initialize_image(in_id: str) -> Image:
@@ -76,15 +74,8 @@ def initialize_image(in_id: str) -> Image:
     return (output_image)
 
 
-async def obtain_image_from_url(url: str, in_image: Image):
-    if (not in_image):
-        tui_log("Image passed to obtain image is None")
-        return
-
-    elif (not url):
-        tui_log("Setting failure image...")
-        in_image.image = FAILURE_IMAGE_PATH
-        in_image.loading = False
+async def obtain_image(url: str, in_image: Image):
+    if ((not url) or (not in_image)):
         return
 
     for i in range(0, MAX_THUMBNAIL_RETRIES):
@@ -97,8 +88,7 @@ async def obtain_image_from_url(url: str, in_image: Image):
             # TO-DO: verbose debug here ~ BEF
             continue
     else:
-        tui_log("Setting failure image...")
-        in_image.image = FAILURE_IMAGE_PATH
+        in_image.image = "assets/failure_white.png"
 
     in_image.loading = False
 
@@ -499,15 +489,14 @@ class HelpMenu(ModalScreen):
                 Thumbnail Link: Link Of Thumbnail
 
 
-                Press q To Exit This Help Menu
+                Press Q To Exit This Help Menu
                 """), id="EditHelpStatic")
 
     def action_quit_menu(self):
-        tui_log("Quit menu dismissing")
         self.dismiss()
 
 
-class EditInputMenu(ModalScreen[MetadataCtx]):
+class EditInputMenu(ModalScreen[dict]):
 
     MAX_GENRE_AMT = 3
     DATE_FORMAT = "%Y-%m-%d"
@@ -518,7 +507,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
         self.metadata = metadata[type]
         self.output = MetadataCtx()
-        self.output.path = self.app.report_dict[self.app.current_report_key]["pre"]["path"]
+        self.output.path = metadata["pre"]["path"]
 
         self.default_validator = [Function(self.validator_is_empty, "Is Empty")]
         self.album_len_validator = self.default_validator + [Number(minimum=1)]
@@ -531,26 +520,13 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         ]
 
         super().__init__()
-        tui_log(f"metadata: {self.metadata}")
 
-    @work
-    async def action_help_menu(self):
-        tui_log("Help menu called")
-        await self.app.push_screen(HelpMenu(), wait_for_dismiss=True)
-
-    def convert_for_input(self, value):
-        if (value):
-            return str(value)
-        else:
-            return None
+    def action_help_menu(self):
+        self.app.push_screen(HelpMenu(), None)
 
     def compose(self) -> ComposeResult:
 
-        tui_log("Compose Started")
-
-        pre = self.app.report_dict[self.app.current_report_key]["pre"]
-
-        with VerticalScroll(id="InputMenuScrollContainer", can_focus=True):
+        with VerticalScroll(id="InputMenuScrollContainer"):
             # TO-DO: Add loading here for the image ~ BEF
             yield Label("Title", classes="EditPageLabel")
             yield Input(placeholder="Name of Song", value=self.metadata["title"],
@@ -571,8 +547,8 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
             yield Label("Duration", classes="EditPageLabel")
             yield Input(placeholder="Duration Of Song In Seconds",
-                        value=self.convert_for_input(pre.get("duration", None)), type="integer",
-                        id="duration", validators=self.default_validator,
+                        value=str(self.metadata["duration"]), type="integer", id="duration",
+                        validators=self.default_validator,
                         classes="EditPageInput")
 
             yield Label("Album Date", classes="EditPageLabel")
@@ -586,20 +562,16 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
             yield Label("Album Length", classes="EditPageLabel")
             yield Input(placeholder="Amount Of Tracks In Album", type="integer",
-                        value=self.convert_for_input(self.metadata.get("total_tracks", None)),
-                        id="album_len", validators=self.album_len_validator,
-                        classes="EditPageInput")
+                        value=self.metadata.get("total_tracks", None), id="album_len",
+                        validators=self.album_len_validator, classes="EditPageInput")
 
             yield Label("Track Number", classes="EditPageLabel")
             yield Input(placeholder="This Song's Track Number Within Album",
-                        value=self.convert_for_input(self.metadata.get("track_num", None)),
-                        type="integer", id="track_num", validators=self.track_num_validator,
-                        classes="EditPageInput")
+                        value=self.metadata.get("track_num", None), type="integer", id="track_num",
+                        validators=self.track_num_validator, classes="EditPageInput")
 
             yield Label("Genres", classes="EditPageLabel")
             # TO-DO: yeahhh...lets fix this please ~ BEF
-            # TO-DO: just allow non musicbrainz genres and maybe clean them up with ending
-            #        whitespace and all lowercase. This mapping thing is stupid ~ BEF
             for i in range(0, self.MAX_GENRE_AMT):
                 if (self.metadata.get("genres", None)):
                     if ((i < len(self.metadata["genres"]))
@@ -625,18 +597,16 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
             yield preview_image
             self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
 
+            pre = self.app.report_dict[self.app.current_report_key]["pre"]
             for playlist in self.app.playlist_handler.list_playlists_str():
                 if (playlist in [play[1] for play in pre["playlists"]]):
                     yield Checkbox(playlist, True, name=playlist, classes="EditPageCheckbox")
                 else:
                     yield Checkbox(playlist, False, name=playlist, classes="EditPageCheckbox")
 
-        yield Button("All Done!", variant="primary", id="completion_button")
-        # TO-DO: change this to self.app.notify ~ BEF
-        yield Static("", disabled=True, id="EditInputErr")
-
-        yield Footer()
-        tui_log("Compose completed")
+            yield Button("All Done!", variant="primary", id="completion_button")
+            yield Static("", disabled=True, id="EditInputErr")
+            yield Footer()
 
     def get_musicbrainz_mapping(self, input: str):
         """ Get Musicbrainz genre name from Soundcloud name. """
@@ -688,10 +658,10 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         return (output)
 
     def validate_all(self, container):
-        tui_log("Validating all elements")
+        tui_log(container.children)
         for widget in container.children:
             if hasattr(widget, "validate") and callable(widget.validate):
-                tui_log(widget.validate(widget.value))
+                widget.validate(widget.value)
 
     def check_input_validity(self) -> bool:
 
@@ -730,7 +700,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                 preview_image.loading = True
                 self._obtain_image(blurred_widget.value, preview_image)
             else:
-                preview_image.image = FAILURE_IMAGE_PATH
+                preview_image.image = "assets/failure_white.png"
 
         elif (not (blurred_widget.input.id == "artists")):
             if (not blurred_widget.input.type == "integer"):
@@ -754,23 +724,11 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if (not self.check_input_validity()):
             return
-        tui_log("EXITING INPUT MENU")
         self.dismiss(self.output)
 
     @work
     async def _obtain_image(self, url: str, image: Image):
-        tui_log("attempting to obtain image")
-        await obtain_image_from_url(url, image)
-        tui_log("Image obtained")
-
-    def on_mount(self) -> None:
-        tui_log("Mounting input menu")
-        container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
-        self.validate_all(container)
-        # self.set_focus(self.query_one("#InputMenuScrollContainer", VerticalScroll))
-        # self.screen.query_one("#InputMenuScrollContainer").trap_focus()
-        # tui_log("FOCUS PRIO:")
-        # tui_log([node.id for node in self.app.screen.focus_chain])
+        await obtain_image(url, image)
 
 
 class EditSelectionMenu(ModalScreen):
@@ -839,6 +797,7 @@ class ctl_tui(App):
 
         with open(self.report_path, "r") as fptr:
             self.report_dict = json.load(fptr)
+        self.right_info = self.right_type = None
         self.current_report_key_iter = iter(list(self.report_dict))
         self.current_report_key = next(self.current_report_key_iter)
 
@@ -850,6 +809,8 @@ class ctl_tui(App):
             with open(self.report_path, "w") as f:
                 json.dump(self.report_dict, f, indent=2)
             self.exit()
+        self.right_info = None
+        self.right_type = None
 
     def increment_report_key(self):
         try:
@@ -858,6 +819,8 @@ class ctl_tui(App):
             with open(self.report_path, "w") as f:
                 json.dump(self.report_dict, f, indent=2)
             self.exit()
+        self.right_info = None
+        self.right_type = None
 
     def _get_current_report(self) -> dict:
         return (self.report_dict[self.current_report_key])
@@ -871,7 +834,7 @@ class ctl_tui(App):
 
         if (ReportStatus.DOWNLOAD_FAILURE == current_report["status"]):
             title = "Download Failed"
-            yield Horizontal(Image(FAILURE_IMAGE_PATH, id="full_img"), id="album_art")
+            yield Horizontal(Image("assets/failure_white.png", id="full_img"), id="album_art")
             info_content = [
                 Static(get_report_status_str(
                     current_report["status"]), id="status"),
@@ -891,8 +854,8 @@ class ctl_tui(App):
                 self._obtain_image(current_report["post"]["thumbnail_url"], post_image)
 
                 title = current_report["post"]["title"]
-                post_width = current_report["post"]["thumbnail_width"]
-                post_height = current_report["post"]["thumbnail_height"]
+                post_width = current_report["post"]["thumbnail_info"]["width"]
+                post_height = current_report["post"]["thumbnail_info"]["height"]
 
                 info_content = [
                     Static(get_report_status_str(
@@ -948,31 +911,43 @@ class ctl_tui(App):
             return False
         return True
 
-    @work
-    async def action_accept_original(self):
+    def action_accept_original(self):
+        current_report = self.report_dict[self.current_report_key]
 
-        await self.push_screen(EditInputMenu(self.report_dict[self.current_report_key], "pre"),
-                               self.complete_edit_of_metadata,
-                               wait_for_dismiss=True)
+        def complete_edit_of_metadata(new_metadata: MetadataCtx):
 
-    @work
-    async def action_edit_metadata(self) -> None:
-        if (not ("post" in self.report_dict[self.current_report_key])):
-            await self.push_screen(EditInputMenu(self.report_dict[self.current_report_key], "pre"),
-                                   self.complete_edit_of_metadata,
-                                   wait_for_dismiss=True)
-        else:
-            selected_type = await self.push_screen(EditSelectionMenu(),
-                                                   wait_for_dismiss=True)
+            replace_metadata(new_metadata)
 
+            self.playlist_handler.write_to_playlists(new_metadata, self.outdir, None)
+
+            self.pop_and_increment_report_key()
+
+        self.push_screen(EditInputMenu(current_report, "pre"), complete_edit_of_metadata)
+
+    def action_edit_metadata(self) -> None:
+
+        def complete_edit_of_metadata(meta_ctx: MetadataCtx):
+            replace_metadata(meta_ctx)
+
+            self.playlist_handler.write_to_playlists(meta_ctx, self.outdir, None)
+
+            self.pop_and_increment_report_key()
+
+        def pass_selection_menu_output(selected_type: str) -> None:
             if (selected_type):
-                await self.push_screen(EditInputMenu(self.report_dict[self.current_report_key],
-                                                     selected_type),
-                                       self.complete_edit_of_metadata,
-                                       wait_for_dismiss=True)
+                self.push_screen(EditInputMenu(self.report_dict[self.current_report_key],
+                                               selected_type), complete_edit_of_metadata)
+
+        current_report = self.report_dict[self.current_report_key]
+
+        if (not ("post" in current_report)):
+            self.push_screen(EditInputMenu(self.report_dict[self.current_report_key], "pre"),
+                             complete_edit_of_metadata)
+        else:
+            self.push_screen(EditSelectionMenu(),
+                             pass_selection_menu_output)
 
     # TO-DO: create new screen for this
-
     def action_search_again(self):
         pass
         self.playlist_handler.write_to_playlists()
@@ -987,54 +962,33 @@ class ctl_tui(App):
     def action_skip_entry(self):
         self.increment_report_key()
 
-    def complete_edit_of_metadata(self, meta_ctx: MetadataCtx):
-
-        replace_metadata(meta_ctx)
-
-        self.playlist_handler.write_to_playlists(meta_ctx, self.outdir, None)
-
-        self.pop_and_increment_report_key()
-
-    @work
-    async def action_accept_new(self):
+    def action_accept_new(self):
         """ Accept newly written metadata
             @note currently metadata is written when new album is found with confidence, so this
             doesn't need to do anything"""
 
         current_report = self.report_dict[self.current_report_key]
-        # TO-DO: put this in global ~ BEF
-        required_post_search_keys = ["title", "artist", "artists", "track_num", "total_tracks",
-                                     "release_date", "thumbnail_url", "thumbnail_width",
-                                     "thumbnail_height"]
 
-        if (not all(
-                ((key in current_report["post"]) and current_report["post"][key] is not None)
-                for key in required_post_search_keys)):
-            await self.push_screen(EditInputMenu(self.report_dict[self.current_report_key],
-                                                 "post"),
-                                   self.complete_edit_of_metadata,
-                                   wait_for_dismiss=True)
+        pre = current_report["pre"]
+        post = current_report["post"]
+        meta = MetadataCtx(title=post["title"],
+                           artist=post["artist"],
+                           artists=post["artists"],
+                           path=pre["path"],
+                           album=post["album"],
+                           duration=post["duration"],
+                           track_num=post["track_num"],
+                           album_len=post["album_len"],
+                           album_date=post["album_date"],
+                           thumbnail_url=post["thumbnail_url"],
+                           thumbnail_width=post["thumbnail_width"],
+                           thumbnail_height=post["thumbnail_height"],
+                           playlists=pre["playlists"]
+                           )
 
-        else:
-
-            pre = current_report["pre"]
-            post = current_report["post"]
-            meta = MetadataCtx(title=post["title"],
-                               artist=post["artist"],
-                               artists=post["artists"],
-                               path=pre["path"],
-                               album=post["album"],
-                               duration=pre["duration"],
-                               track_num=post["track_num"],
-                               album_len=post["total_tracks"],
-                               album_date=post["release_date"],
-                               thumbnail_url=post["thumbnail_url"],
-                               thumbnail_width=post["thumbnail_width"],
-                               thumbnail_height=post["thumbnail_height"],
-                               playlists=pre["playlists"]
-                               )
-
-            self.complete_edit_of_metadata(meta)
+        self.playlist_handler.write_to_playlists(meta, self.outdir, None)
+        replace_metadata(meta)
+        self.pop_and_increment_report_key()
 
     # TO-DO: create new screen for this
     def action_retry_download(self):
@@ -1052,4 +1006,4 @@ class ctl_tui(App):
 
     @work
     async def _obtain_image(self, url: str, image: Image):
-        await obtain_image_from_url(url, image)
+        await obtain_image(url, image)

@@ -38,41 +38,41 @@ from textual import log
 
 def pretty_print(*args, **kwargs):
     if (type(*args) is str):
-        print(pformat(*args, **kwargs, width=100)[1:-1], flush=True)
+        print(pformat(*args, **kwargs)[1:-1])
     else:
-        print(pformat(*args, **kwargs, width=100), flush=True)
+        print(pformat(*args, **kwargs))
 
 
 def info(*args, **kwargs):
     if (not globals.QUIET):
-        print("\033[94m", flush=True)
-        print("ⓘ  ", end="", flush=True)
+        print("\033[94m")
+        print("ⓘ  ", end="")
         pretty_print(*args, **kwargs)
-        print("\033[0m", flush=True)
+        print("\033[0m")
 
 
 def warning(*args, **kwargs):
-    print("\033[93m", flush=True)
-    print("⚠️", end="", flush=True)
+    print("\033[93m")
+    print("⚠️", end="")
     pretty_print(*args, **kwargs)
-    print("\033[0m", flush=True)
+    print("\033[0m")
     if (globals.FAIL_ON_WARNING):
         exit()
 
 
 def success(*args, **kwargs):
     if (not globals.QUIET):
-        print("\033[92m", flush=True)
-        print("✅", end="", flush=True)
+        print("\033[92m")
+        print("✅", end="")
         pretty_print(*args, **kwargs)
-        print("\033[0m", flush=True)
+        print("\033[0m")
 
 
 def error(*args, **kwargs):
-    print("\033[91m", flush=True)
-    print("❌", end="", flush=True)
+    print("\033[91m")
+    print("❌", end="")
     pretty_print(*args, **kwargs)
-    print("\033[0m", flush=True)
+    print("\033[0m")
     exit()
 
 
