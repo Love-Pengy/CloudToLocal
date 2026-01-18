@@ -83,7 +83,7 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
             search = mbr.MbzRequestSearch(user_agent, "recording",
                                           f'artist:"{artist}" AND recording:"{title}"')
             content = search.send()
-            info(f"url: {search.url}/{search.entity_type}?query={search.query}&fmt=json")
+            info(f"url: {search.url + '/' + search.entity_type + '?query=' + search.query}")
             break
         except mbzerror.MbzWebServiceError:
             #  TO-DO: Some sort of service error, should debug/verbose log the specifics ~ BEF
@@ -105,9 +105,7 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
 
     recording = recordings[0]
     release = next(
-        (release for release in recording["releases"] if
-            (("Official" == release.get("status", None)) and
-             (recording["title"] == release["title"]))),
+        (release for release in recording["releases"] if "Official" == release.get("status", None)),
         None)
 
     if (not release):
@@ -123,10 +121,7 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
     output.artists = [artist["name"] for artist in artists]
     output.artist = output.artists[0]
 
-    output.release_date = release.get("date", None) or recording.get("first-release-date", None)
-    # info(output.release_date)
-    # info(release.get("date", None))
-    # info(recording.get("first-release-date", None))
+    output.release_date = release.get("date", None)
     assert output.release_date, "Release date missing from musicbrainz query"
 
     if ("Album" == release.get("release-group", {}).get("primary-type", None)):

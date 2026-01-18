@@ -30,7 +30,6 @@
 #
 #################################################################################
 
-interval: 24
 fresh: false
 quiet: false
 retry_amt: 10
@@ -40,8 +39,8 @@ start_tui: false
 outdir: "~/Music"
 download_sleep: 10
 fail_on_warning: false
-email: "example@foo.com"
 playlists: [
   "https://youtube.com/playlist?list=id",
   "https://soundcloud.com/user/playlist/name?si=id"
 ]
+
