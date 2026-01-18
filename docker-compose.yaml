@@ -39,7 +39,6 @@ services:
     volumes:
       # NOTE: these **MUST** be created with the proper permissions **BEFORE** running the
       #       image ~ BEF
-      - ${PWD}/ctldl_conf.yaml:/app/conf.yaml
-      - ~/Music:/app/Music
-      - ${PWD}/logs:/app/logs
-    command: ["/app/conf.yaml"]
+      - ${PWD}/ctldl_conf.yaml:/ctldl/conf.yaml
+      - ~/Music:/home/ctldl/Music
+    command: ["/ctldl/conf.yaml"]
