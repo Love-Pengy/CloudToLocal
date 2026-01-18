@@ -645,6 +645,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         yield Button("All Done!", variant="primary", id="completion_button")
 
         yield Footer()
+        self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
         tui_log("Compose completed")
 
     def get_musicbrainz_mapping(self, input: str):
@@ -908,6 +909,9 @@ class ctl_tui(App):
                     )
                 ]
 
+                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
+                self._obtain_image(current_report["post"]["thumbnail_url"], post_image)
+
             elif (current_report["status"] == ReportStatus.METADATA_NOT_FOUND):
                 pre_image = initialize_image("full_img")
                 yield Horizontal(pre_image, id="album_art")
@@ -920,6 +924,8 @@ class ctl_tui(App):
                         current_report["status"]), id="status"),
                     Pretty(current_report["pre"], id="pre_info")
                 ]
+
+                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
             # TODO: you can cut a download off to end up at download failure for the report status
             #       which will cause this to fail. Allow user to redownload in this case ~ BEF
 
