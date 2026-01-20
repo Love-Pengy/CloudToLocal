@@ -58,7 +58,6 @@ class DownloadInfo:
 
 class DownloadManager:
 
-    # TO-DO: Look into adding the option "use_ad_playback_context" ~ BEF
     YDL_OPTS_DOWNLOAD = {
         "format": "bestaudio/best",
         "postprocessors": [

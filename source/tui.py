@@ -109,6 +109,19 @@ async def obtain_image_from_url(screen, url: str, in_image_id: str):
         image_widget.loading = False
         image_widget.image = retrieved_bytes or FAILURE_IMAGE_PATH
 
+
+def input_widget_change_first_element(widget, value):
+    if (not widget or not value):
+        return
+    split_list = value.split(',')
+    if (1 == len(split_list)):
+        widget.value = value + ', '
+    else:
+        split_list[0] = value
+        output = ', '.join(split_list)
+        widget.value = output
+
+
 # NOTE: It seems as though genres are user inputted into soundcloud and can therefore be malformed
 #       or differently formatted than musicbrainz. To keep consistency mappings will be created
 #       for all found genres ~ BEF
@@ -526,8 +539,8 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
         # Override for if metadata is being passed in again for a retry
         if type == "meta":
-            self.metadata = meta.asdict()
-            self.output = meta
+            self.metadata = metadata.asdict()
+            self.output = metadata
             self.output.path = self.metadata.path
         else:
             self.metadata = metadata[type]
@@ -577,8 +590,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                         type="text", id="artist", validators=self.default_validator,
                         classes="EditPageInput")
 
-            # TO-DO: the contents of this will always have the artist content in the beginning so
-            #       fill this in for the user ~ BEF
             yield Label("Artists", classes="EditPageLabel")
             yield Input(placeholder="Comma Delimited List Of All Artists Involved **Including** "
                         "The Main Artist",
@@ -734,7 +745,35 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
             if (not (Select.BLANK == select.value)):
                 self.output.genres.append(select.value)
 
-    # TO-DO: should be a worker because of the request ~ BEF
+    # Enforce Artist value is the beginning of Artists
+    def on_input_changed(self, changed):
+        if changed.input.id == "artist":
+
+            artists = self.query_one("#artists", Input)
+            if (artists.value == ""):
+                artists.value = changed.value + ', '
+            else:
+                split_list = artists.value.split(',')
+                if (not (split_list[0] == changed.input.value)):
+                    if (1 == len(split_list)):
+                        artists.value = changed.value + ', '
+                    else:
+                        split_list[0] = changed.input.value
+                        split_list = map(str.lstrip, split_list)
+                        output = ', '.join(split_list)
+                        artists.value = output
+
+        elif changed.input.id == "artists":
+            artist = self.query_one("#artist", Input)
+            split_list = changed.value.split(',')
+            if (not split_list[0] == artist.value):
+                split_list[0] = artist.value
+                split_list = map(str.lstrip, split_list)
+                output = ', '.join(split_list)
+                changed.input.value = output
+                if (changed.input.cursor_position < len(artist.value + ', ')):
+                    changed.input.cursor_position = len(artist.value + ', ')
+
     def on_input_blurred(self, blurred_widget):
 
         if (blurred_widget.input.id == "thumb_link"):

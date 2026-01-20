@@ -237,7 +237,6 @@ if __name__ == "__main__":
                         help="List of Playlists To Download"
                              "  Can Be Either Youtube or Soundcloud")
 
-    # TO-DO: find a way for this to be implemented better ~ BEF
     parser.add_argument("--host_outdir", "-o", type=str,
                         required=True, help="Directory To Output Unverified Songs To")
 
