@@ -524,11 +524,17 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
     def __init__(self, metadata: dict, type: str, outdir: str):
 
-        self.metadata = metadata[type]
-        self.output = MetadataCtx()
-        self.output.path = PurePath(outdir,
-                                    self.app.report_dict[
-                                        self.app.current_report_key]["pre"]["short_path"])
+        # Override for if metadata is being passed in again for a retry
+        if type == "meta":
+            self.metadata = meta.asdict()
+            self.output = meta
+            self.output.path = self.metadata.path
+        else:
+            self.metadata = metadata[type]
+            self.output = MetadataCtx()
+            self.output.path = PurePath(outdir,
+                                        self.app.report_dict[
+                                            self.app.current_report_key]["pre"]["short_path"])
 
         self.default_validator = [Function(self.validator_is_empty, "Is Empty")]
         self.album_len_validator = self.default_validator + [Number(minimum=1)]
@@ -571,7 +577,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                         type="text", id="artist", validators=self.default_validator,
                         classes="EditPageInput")
 
-            # TODO: the contents of this will always have the artist content in the beginning so
+            # TO-DO: the contents of this will always have the artist content in the beginning so
             #       fill this in for the user ~ BEF
             yield Label("Artists", classes="EditPageLabel")
             yield Input(placeholder="Comma Delimited List Of All Artists Involved **Including** "
@@ -964,9 +970,14 @@ class ctl_tui(App):
     async def action_accept_original(self):
 
         ok = False
+        meta = None
         while not ok:
-            # TO-DO: Make this fill in the data that was already there ~ BEF
-            meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(), "pre", self.outdir))
+            if not meta:
+                meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(),
+                                                                 "pre", self.outdir))
+            else:
+                meta = await self.push_screen_wait(EditInputMenu(meta, "meta", self.outdir))
+
             ok = replace_metadata(meta, self.lyric_handler)
 
             if (ok):
@@ -987,10 +998,12 @@ class ctl_tui(App):
         if (not selected_type):
             return
 
+        meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(),
+                                                         selected_type, self.outdir))
+
         ok = False
         while not ok:
-            meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(),
-                                                             selected_type, self.outdir))
+
             ok = replace_metadata(meta, self.lyric_handler)
 
             if (ok):
@@ -999,6 +1012,7 @@ class ctl_tui(App):
             else:
                 self.notify("Failed to replace metadata... Returning to metadata screen",
                             severity="error")
+                meta = await self.push_screen_wait(EditInputMenu(meta, "meta", self.outdir))
 
     # TO-DO: create new screen for this
     def action_search_again(self):
@@ -1047,9 +1061,6 @@ class ctl_tui(App):
                                playlists=pre["playlists"]
                                )
 
-        tui_log("DEBUG")
-        tui_log(meta.path)
-        tui_log(self.outdir)
         ok = False
         while not ok:
             ok = replace_metadata(meta, self.lyric_handler)
@@ -1061,8 +1072,7 @@ class ctl_tui(App):
             else:
                 self.notify("Failed to replace metadata... Returning to metadata screen",
                             severity="error")
-                # TO-DO: Make this fill in the data that was already there ~ BEF
-                await self.push_screen_wait(EditInputMenu(current_report, "post", self.outdir))
+                await self.push_screen_wait(EditInputMenu(meta, "meta", self.outdir))
 
     # TO-DO: create new screen for this
 

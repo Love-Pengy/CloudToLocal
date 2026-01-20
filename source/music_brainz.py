@@ -55,7 +55,7 @@ MUSICBRAINZ_STATUS_PRIO_LIST = [
     "Bootleg",
     # Occasionally Status isn't filled out
     None,
-    # NOTE: Promotional content often doesn't have correct release metadata so we ignore it
+    # NOTE: Promotional content often doesn't have correct release metadata so we ignore it ~ BEF
     # Promotion
 ]
 
@@ -91,7 +91,6 @@ def musicbrainz_obtain_caa_image_data(user_agent: str, release_mbid: str) -> (st
                 logger.debug("No images found in CAA query.")
                 return ((None, None))
 
-            # TO-DO: Potentially add front and back? ~ BEF
             thumbnail_spec = next(
                 (element for element in images if "Front" in element.get("types", [])), None)
 
