@@ -1,5 +1,5 @@
 ###
-#  @file    docker-compose.yaml
+#  @file    podman-compose-downloader.yaml
 #  @author  Brandon Elias Frazier
 #  @date    Nov 25, 2025
 #
@@ -35,11 +35,13 @@ services:
   downloader:
     # Specify we build the image locally (leave room for this as well need the entire repo)
     build: .
-    container_name: ctldl
+    image: cloudtolocal_downloader:latest
+    environment:
+        - CONTAINER_OUTDIR=/app/Music
     volumes:
       # NOTE: these **MUST** be created with the proper permissions **BEFORE** running the
       #       image ~ BEF
       - ${PWD}/ctldl_conf.yaml:/app/conf.yaml
-      - ~/Music:/app/Music
       - ${PWD}/logs:/app/logs
+      - /home/bee/Music:${CONTAINER_OUTDIR}
     command: ["/app/conf.yaml"]

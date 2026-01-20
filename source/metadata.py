@@ -309,7 +309,7 @@ def replace_metadata(metadata: MetadataCtx, lyric_handler: LyricHandler):
     """ Replaces metadata and renames filename to new name provided. Metadata path will also be
         updated with the new filepath. """
 
-    if (not tag_file(metadata, True)):
+    if (not tag_file(metadata, True, lyric_handler)):
         return None
 
     ext = pathlib.Path(metadata.path).suffix

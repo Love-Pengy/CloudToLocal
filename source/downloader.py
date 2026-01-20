@@ -33,6 +33,7 @@
 import logging
 import traceback
 from time import sleep
+from pathlib import PurePath
 from dataclasses import dataclass, asdict
 
 import globals
@@ -48,10 +49,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DownloadInfo:
     url: str = None
-    path: str = None
     title: str = None
     uploader: str = None
     provider: str = None
+    src_path: str = None
+    short_path: str = None
 
 
 class DownloadManager:
@@ -158,7 +160,6 @@ class DownloadManager:
                 logger.info(f"[{index+1}/{len(curr_playlist_info['entries'])}] Attempting: {
                     download_info.title}")
 
-                download_info.path = None
                 attempts = 0
                 while (True):
                     if (not (self.retry_amt == attempts-1)):
@@ -167,7 +168,11 @@ class DownloadManager:
                                 video_info = ydl.extract_info(download_info.url, download=True)
                                 if ((video_info) and ("requested_downloads" in video_info)):
                                     video_dl_info = video_info["requested_downloads"][0]
-                                    download_info.path = video_dl_info["filepath"]
+                                    download_info.src_path = video_dl_info["filepath"]
+                                    download_info.short_path = download_info.src_path.removeprefix(
+                                        globals.CONTAINER_MUSIC_PATH)
+                                    if (download_info.short_path.startswith('/')):
+                                        download_info.short_path = download_info.short_path[1:]
                                     duration = int(round(float(video_info["duration"]), 0))
                                 else:
                                     # Video is present in the archive ~ BEF
@@ -188,8 +193,8 @@ class DownloadManager:
                         break
                     attempts += 1
 
-                if (download_info.path):
-                    thumb_dimensions = get_embedded_thumbnail_res(download_info.path)
+                if (download_info.src_path):
+                    thumb_dimensions = get_embedded_thumbnail_res(download_info.src_path)
                     thumbnail_width = thumb_dimensions[0]
                     thumbnail_height = thumb_dimensions[1]
                     add_to_report_pre_search(

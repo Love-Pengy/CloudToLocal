@@ -38,7 +38,7 @@ RUN apt install ffmpeg tzdata -y
 
 WORKDIR /app
 
-RUN pip install --root-user-action ignore --upgrade pip 
+RUN pip install --root-user-action ignore --upgrade pip
 
 COPY . .
 

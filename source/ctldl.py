@@ -41,6 +41,7 @@ import signal
 import shelve
 import logging
 import datetime
+from pathlib import PurePath
 
 import globals
 import configargparse
@@ -64,7 +65,6 @@ logger = logging.getLogger(__name__)
 class CloudToLocal:
     def __init__(self, arguments):
         self.playlists_info = []
-        self.output_dir = arguments.outdir
         self.retries = arguments.retry_amt
         self.user_agent = musicbrainz_construct_user_agent(arguments.email)
         self.playlist_handler = PlaylistHandler(self.retries,
@@ -73,7 +73,7 @@ class CloudToLocal:
                                                 arguments.request_sleep)
         self.lyric_handler = LyricHandler(arguments.genius_api_key,
                                           verbosity=(True if logger.getEffectiveLevel() < logging.INFO else False))
-        self.report_fpath = self.output_dir+"ctl_report"
+        self.report_fpath = PurePath(globals.CONTAINER_MUSIC_PATH, "ctl_report")
 
         if (os.path.exists(self.report_fpath)):
             with open(self.report_fpath, 'r') as fptr:
@@ -84,7 +84,7 @@ class CloudToLocal:
 
         self.downloader = DownloadManager({
             "playlists_info": self.playlists_info,
-            "output_dir": self.output_dir,
+            "output_dir": globals.CONTAINER_MUSIC_PATH,
             "download_sleep": arguments.download_sleep,
             "request_sleep": arguments.request_sleep,
             "retry_amt": arguments.retry_amt,
@@ -105,7 +105,7 @@ class CloudToLocal:
                                  self.report,
                                  self.lyric_handler)
 
-        clean_ytdlp_artifacts(self.output_dir)
+        clean_ytdlp_artifacts()
         self.dump_report()
         self.reset_exit_handlers()
         logger.info("Download Completed")
@@ -160,18 +160,18 @@ def main(arguments):
 
     globals.VERBOSE = (True if get_log_level() <= logging.INFO else False)
 
-    arguments.outdir = os.path.expanduser(arguments.outdir)
-    if (not (arguments.outdir[-1] == '/')):
-        arguments.outdir += '/'
+    arguments.host_outdir = os.path.expanduser(arguments.host_outdir)
+    if (not (arguments.host_outdir[-1] == '/')):
+        arguments.host_outdir += '/'
 
     if (arguments.start_tui):
         logger.debug("Starting Tui")
         ctl_tui(arguments).run()
         exit()
     if (arguments.fresh
-            and os.path.exists(arguments.outdir)):
+            and os.path.exists(arguments.host_outdir)):
         logging.debug("Cleaning Existing Directory")
-        delete_folder_contents(arguments.outdir)
+        delete_folder_contents(arguments.host_outdir)
         clear_shelf()
 
     logging.debug(vars(arguments))
@@ -237,7 +237,8 @@ if __name__ == "__main__":
                         help="List of Playlists To Download"
                              "  Can Be Either Youtube or Soundcloud")
 
-    parser.add_argument("--outdir", "-o", type=str,
+    # TO-DO: find a way for this to be implemented better ~ BEF
+    parser.add_argument("--host_outdir", "-o", type=str,
                         required=True, help="Directory To Output Unverified Songs To")
 
     parser.add_argument("--retry_amt", "-retry", default=10, type=int,
@@ -273,4 +274,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    globals.CONTAINER_MUSIC_PATH = os.environ.get("CONTAINER_OUTDIR", None)
     main(args)

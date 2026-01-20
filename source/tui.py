@@ -32,9 +32,9 @@
 import io
 import json
 import time
-import http
 import textwrap
 import urllib.request
+from pathlib import PurePath
 from datetime import datetime
 
 from textual import work
@@ -45,9 +45,8 @@ from textual.screen import ModalScreen
 from textual_image.widget import Image
 from textual.css.query import NoMatches
 from textual.app import App, ComposeResult
+from textual.worker import get_current_worker
 from textual.validation import Function, Number
-from metadata import replace_metadata, MetadataCtx
-from textual.worker import Worker, get_current_worker
 from report import ReportStatus, get_report_status_str
 from metadata import replace_metadata, MetadataCtx, LyricHandler
 from textual.containers import Horizontal, Grid, Container, VerticalScroll
@@ -523,11 +522,13 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
     CSS_PATH = "css/editInput.tcss"
     BINDINGS = [("ctrl+h", "help_menu", "Help Menu")]
 
-    def __init__(self, metadata: dict, type: str):
+    def __init__(self, metadata: dict, type: str, outdir: str):
 
         self.metadata = metadata[type]
         self.output = MetadataCtx()
-        self.output.path = self.app.report_dict[self.app.current_report_key]["pre"]["path"]
+        self.output.path = PurePath(outdir,
+                                    self.app.report_dict[
+                                        self.app.current_report_key]["pre"]["short_path"])
 
         self.default_validator = [Function(self.validator_is_empty, "Is Empty")]
         self.album_len_validator = self.default_validator + [Number(minimum=1)]
@@ -645,7 +646,9 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
         yield Button("All Done!", variant="primary", id="completion_button")
         yield Footer()
-        self._obtain_image(self.metadata.get("thumbnail_url", None), preview_image)
+        obtain_image_from_url(self,
+                              self.metadata.get("thumbnail_url", None),
+                              "EditInputUrlPreview")
         tui_log("Compose completed")
 
     def get_musicbrainz_mapping(self, input: str):
@@ -770,10 +773,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         tui_log("Exiting input menu")
         self.dismiss(self.output)
 
-    @work(thread=True)
-    async def _obtain_image(self, url: str, image: Image):
-        await obtain_image_from_url(url, image)
-
     def on_mount(self) -> None:
         container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
         self.validate_all(container)
@@ -837,7 +836,7 @@ class ctl_tui(App):
         super().__init__(**kwargs)
 
         self.theme = "textual-dark"
-        self.outdir = arguments.outdir
+        self.outdir = arguments.host_outdir
         self.report_path = self.outdir+"ctl_report"
 
         self.playlists_info = []
@@ -912,8 +911,8 @@ class ctl_tui(App):
                     )
                 ]
 
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
-                self._obtain_image(current_report["post"]["thumbnail_url"], post_image)
+                obtain_image_from_url(self, current_report["pre"]["thumbnail_url"], "pre_image")
+                obtain_image_from_url(self, current_report["post"]["thumbnail_url"], "post_image")
 
             elif (current_report["status"] == ReportStatus.METADATA_NOT_FOUND):
                 pre_image = initialize_image("full_img")
@@ -927,7 +926,7 @@ class ctl_tui(App):
                     Pretty(current_report["pre"], id="pre_info")
                 ]
 
-                self._obtain_image(current_report["pre"]["thumbnail_url"], pre_image)
+                obtain_image_from_url(self, current_report["pre"]["thumbnail_url"], "full_img")
             # TODO: you can cut a download off to end up at download failure for the report status
             #       which will cause this to fail. Allow user to redownload in this case ~ BEF
 
@@ -967,8 +966,8 @@ class ctl_tui(App):
         ok = False
         while not ok:
             # TO-DO: Make this fill in the data that was already there ~ BEF
-            meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(), "pre"))
-            ok = replace_metadata(meta)
+            meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(), "pre", self.outdir))
+            ok = replace_metadata(meta, self.lyric_handler)
 
             if (ok):
                 self.playlist_handler.write_to_playlists(meta, self.outdir, None)
@@ -991,8 +990,8 @@ class ctl_tui(App):
         ok = False
         while not ok:
             meta = await self.push_screen_wait(EditInputMenu(self._get_current_report(),
-                                                             selected_type))
-            ok = replace_metadata(meta)
+                                                             selected_type, self.outdir))
+            ok = replace_metadata(meta, self.lyric_handler)
 
             if (ok):
                 self.playlist_handler.write_to_playlists(meta, self.outdir, None)
@@ -1027,7 +1026,7 @@ class ctl_tui(App):
         if (not all(
                 ((key in current_report["post"]) and current_report["post"][key] is not None)
                 for key in self.REQUIRED_POST_SEARCH_KEYS)):
-            meta = await self.push_screen_wait(EditInputMenu(current_report, "post"))
+            meta = await self.push_screen_wait(EditInputMenu(current_report, "post", self.outdir))
 
         else:
 
@@ -1036,7 +1035,7 @@ class ctl_tui(App):
             meta = MetadataCtx(title=post["title"],
                                artist=post["artist"],
                                artists=post["artists"],
-                               path=pre["path"],
+                               path=PurePath(self.outdir, pre["short_path"]),
                                album=post["album"],
                                duration=pre["duration"],
                                track_num=post["track_num"],
@@ -1048,9 +1047,12 @@ class ctl_tui(App):
                                playlists=pre["playlists"]
                                )
 
+        tui_log("DEBUG")
+        tui_log(meta.path)
+        tui_log(self.outdir)
         ok = False
         while not ok:
-            ok = replace_metadata(meta)
+            ok = replace_metadata(meta, self.lyric_handler)
 
             self.playlist_handler.write_to_playlists(meta, self.outdir, None)
 
@@ -1060,7 +1062,7 @@ class ctl_tui(App):
                 self.notify("Failed to replace metadata... Returning to metadata screen",
                             severity="error")
                 # TO-DO: Make this fill in the data that was already there ~ BEF
-                await self.push_screen_wait(EditInputMenu(current_report, "post"))
+                await self.push_screen_wait(EditInputMenu(current_report, "post", self.outdir))
 
     # TO-DO: create new screen for this
 
@@ -1077,8 +1079,3 @@ class ctl_tui(App):
         with open(self.report_path, "w") as f:
             json.dump(self.report_dict, f, indent=2)
         self.exit()
-
-    @work(thread=True)
-    async def _obtain_image(self, url: str, image: Image):
-
-        await obtain_image_from_url(url, image)
