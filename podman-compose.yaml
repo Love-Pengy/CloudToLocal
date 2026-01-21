@@ -39,8 +39,6 @@ services:
     environment:
         - CONTAINER_OUTDIR=/app/Music
     volumes:
-      # NOTE: these **MUST** be created with the proper permissions **BEFORE** running the
-      #       image ~ BEF
       - ${PWD}/ctldl_conf.yaml:/app/conf.yaml
       - ${PWD}/logs:/app/logs
       - /home/bee/Music:${CONTAINER_OUTDIR}

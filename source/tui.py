@@ -125,6 +125,7 @@ def input_widget_change_first_element(widget, value):
 # NOTE: It seems as though genres are user inputted into soundcloud and can therefore be malformed
 #       or differently formatted than musicbrainz. To keep consistency mappings will be created
 #       for all found genres ~ BEF
+
 # TO-DO: can def find a better way of doing this, butttt do I care atm? Prolly not... ~ BEF
 # TO-DO: I lied to do care... ~ BEF
 SOUNDCLOUD_GENRES = [
@@ -704,8 +705,8 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         except ValueError:
             return False
         except NoMatches:
-            # NOTE: Ordering matters here. Album length is loaded after track number therefore it
-            #       doesn't exist the first time around. ~ BEF
+            # Ordering matters here. Album length is loaded after track number therefore it
+            # doesn't exist the first time around. ~ BEF
             return True
 
     def validator_is_valid_date(self, value) -> bool:
@@ -739,8 +740,6 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         return True
 
     def on_select_changed(self, event: Select.Changed) -> None:
-        # NOTE: When a select is changed we will just update the entire genre list to avoid having
-        #       to keep track of the indices~ BEF
         for select in self.query("Select"):
             if (not (Select.BLANK == select.value)):
                 self.output.genres.append(select.value)

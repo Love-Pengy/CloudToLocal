@@ -120,9 +120,6 @@ def musicbrainz_obtain_caa_image_data(user_agent: str, release_mbid: str) -> (st
     return ((None, None))
 
 
-# NOTE: This is set so high because it seems as though the API randomly throws errors and
-#       then works a bit later, so the thought is to allow exponential backoff to fix this for
-#       the time being ~ BEF
 MUSICBRAINZ_RETRIES = 10
 MUSICBRAINZ_ACCEPTED_FORMATS = ["Digital Media", "CD"]
 
