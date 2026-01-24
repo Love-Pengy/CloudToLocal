@@ -41,7 +41,7 @@ from yt_dlp import YoutubeDL
 from report import ReportStatus
 from yt_dlp.utils import DownloadError
 from report import add_to_report_pre_search
-from metadata import get_embedded_thumbnail_res
+from metadata import get_embedded_thumbnail_res, handle_genre
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +146,12 @@ class DownloadManager:
                     #       Of Song Information For Top Level Entry So We Must
                     #       Query Further ~ BEF
                     sc_info = YoutubeDL({'simulate': True,
-                                         'quiet': globals.QUIET,
+                                         'quiet': not globals.VERBOSE,
                                          'verbose': globals.VERBOSE}
                                         ).extract_info(download_info.url)
 
                     download_info.title = sc_info["title"]
-                    genres = sc_info["genres"] or None
+                    genres = handle_genre(sc_info["genres"])
                     thumbnail_url = sc_info["thumbnail"]
                     download_info.uploader = sc_info[
                         "artist"] if "artist" in sc_info else sc_info["uploader"]

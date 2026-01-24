@@ -32,6 +32,7 @@
 
 import os
 import time
+import json
 import shutil
 import urllib
 import base64
@@ -247,6 +248,7 @@ def tag_file(in_metadata: MetadataCtx, clear: bool, lyric_handler: LyricHandler)
 
     return True
 
+
 def parse_youtube_title(title: str, artist: str):
     return (get_artist_title(title, {"defaultArtist": artist, "defaultTitle": title}))
 
@@ -325,3 +327,52 @@ def replace_metadata(metadata: MetadataCtx, lyric_handler: LyricHandler):
     metadata.path = new_filepath
 
     return (new_filepath)
+
+
+GENRE_MAPPINGS = [
+    ('&', "and"),
+]
+
+
+def handle_genre(in_genre: list):
+    if (not in_genre):
+        logger.debug("No Genres Specified")
+        return None
+
+    # Drum & Bass drum and bass
+    with open(globals.GENRE_PATH, "r") as fptr:
+        genres = json.load(fptr)
+
+    output = []
+    # Remove duplicated and make all lowercase to match musicbrainz
+    in_genre = list(set([genre.lower() for genre in in_genre]))
+    logger.debug(f"Lower In Genres: {in_genre}")
+    for genre in in_genre:
+        if (genre in genres):
+            output.append(genre)
+            logger.debug("Genre Found")
+            continue
+
+        genre = genre.lstrip().rstrip()
+        logger.debug(f"Stripped Genre: {genre}")
+        if (genre in genres):
+            output.append(genre)
+            logger.debug("Genre Found")
+            continue
+
+        for item in GENRE_MAPPINGS:
+            if (item[0] in genre):
+                genre = genre.replace(item[0], item[1])
+                logger.debug(f"Mapping Found: {item[0]}->{item[1]}")
+                if (genre in genres):
+                    output.append(genre)
+                    logger.debug("Genre Found")
+                    break
+        else:
+            logger.debug(f"New Genre Found: {genre}...Adding To Genre List")
+            genres.append(genre)
+            with open(globals.GENRE_PATH, "w") as fptr:
+                json.dump(genres, fptr)
+            output.append(genre)
+
+    return output

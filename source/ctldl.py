@@ -105,7 +105,7 @@ class CloudToLocal:
                                  self.report,
                                  self.lyric_handler)
 
-        clean_ytdlp_artifacts()
+        clean_ytdlp_artifacts(globals.CONTAINER_MUSIC_PATH)
         self.dump_report()
         self.reset_exit_handlers()
         logger.info("Download Completed")
