@@ -36,11 +36,9 @@ import logging
 import globals
 from yt_dlp import YoutubeDL
 from metadata import MetadataCtx
-from utils.logging import tui_log
-
+from utils.ctl_logging import tui_log
 
 logger = logging.getLogger(__name__)
-
 
 class PlaylistHandler:
 

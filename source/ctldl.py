@@ -48,8 +48,8 @@ import configargparse
 from tui import ctl_tui
 from playlists import PlaylistHandler
 from downloader import DownloadManager
+from utils.ctl_logging import setup_logging
 from metadata import fill_report_metadata, LyricHandler
-from utils.logging import setup_logging, get_log_level
 from music_brainz import musicbrainz_construct_user_agent
 
 from utils.common import (
@@ -157,8 +157,6 @@ def clear_shelf():
 def main(arguments):
 
     setup_logging(arguments.log_config)
-
-    globals.VERBOSE = (True if get_log_level() <= logging.INFO else False)
 
     arguments.host_outdir = os.path.expanduser(arguments.host_outdir)
     if (not (arguments.host_outdir[-1] == '/')):
@@ -271,7 +269,12 @@ if __name__ == "__main__":
     parser.add_argument("--genius_api_key", type=str, required=True,
                         help="Genius api key for lyric retrieval")
 
+    parser.add_argument("--log_ytdlp",
+                        action="store_true",
+                        help="Enable YTDLP Logging")
+
     args = parser.parse_args()
 
     globals.CONTAINER_MUSIC_PATH = os.environ.get("CONTAINER_OUTDIR", None)
+    globals.VERBOSE = args.log_ytdlp
     main(args)

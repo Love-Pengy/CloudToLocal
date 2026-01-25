@@ -48,9 +48,9 @@ import lyricsgenius
 from PIL import Image
 from mutagen import File
 from mutagen.mp3 import MP3
-from utils.logging import tui_log
 from utils.common import Providers
 from mutagen.oggopus import OggOpus
+from utils.ctl_logging import tui_log
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
@@ -65,7 +65,6 @@ from mutagen.id3 import (
     TDAT, APIC, ID3, TCON, TXXX,
     USLT, PictureType, Encoding
 )
-
 
 logger = logging.getLogger(__name__)
 

@@ -32,6 +32,7 @@
 import io
 import json
 import time
+import logging
 import textwrap
 import urllib.request
 from pathlib import PurePath
@@ -39,13 +40,14 @@ from datetime import datetime
 
 import globals
 from textual import work
-from utils.logging import tui_log
+from utils.ctl_logging import tui_log
 from playlists import PlaylistHandler
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual_image.widget import Image
 from textual.css.query import NoMatches
 from textual.app import App, ComposeResult
+from utils.ctl_logging import get_log_level
 from textual.worker import get_current_worker
 from textual.validation import Function, Number
 from report import ReportStatus, get_report_status_str
@@ -69,7 +71,6 @@ MAX_THUMBNAIL_RETRIES = 5
 DEFAULT_IMAGE_SIZE = (1200, 1200)
 FAILURE_IMAGE_PATH = "assets/failure_white.png"
 THUMBNAIL_SIZE_PRIO_LIST = ["1200", "500", "250"]
-
 
 def initialize_image(in_id: str) -> Image:
     output_image = Image(id=in_id)

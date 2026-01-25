@@ -1,5 +1,5 @@
 ###
-#  @file    logging.py
+#  @file    ctl_logging.py
 #  @author  Brandon Elias Frazier
 #  @date    Dec 18, 2025
 #
@@ -38,12 +38,18 @@ import logging.config
 from pprint import pformat
 
 from textual import log
-from textual.logging import TextualHandler
+
+# util dir and source dir
+VALID_LOGGER_LIST = [
+    file for file in (os.listdir("source") + os.listdir("source/utils")) if ".py" in file
+]
 
 
-class TextualLoggerNoStdOut(TextualHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, stderr=False, stdout=False)
+class NoExternalLibraryFilter(logging.Filter):
+    def filter(self, record):
+        if record.filename in VALID_LOGGER_LIST:
+            return True
+        return False
 
 
 def setup_logging(in_path: str):

@@ -43,7 +43,6 @@ import globals
 from mbzero import mbzrequest as mbr
 from mbzero import mbzerror, caarequest
 
-logger = logging.getLogger(__name__)
 
 MAX_THUMBNAIL_RETRIES = 10
 THUMBNAIL_SIZE_PRIO_LIST = ["1200", "500", "250"]
@@ -58,6 +57,8 @@ MUSICBRAINZ_STATUS_PRIO_LIST = [
     # NOTE: Promotional content often doesn't have correct release metadata so we ignore it ~ BEF
     # Promotion
 ]
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

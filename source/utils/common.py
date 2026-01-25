@@ -47,7 +47,6 @@ CONNECTIVITY_CHECK_RETRIES = 5
 
 logger = logging.getLogger(__name__)
 
-
 class Providers:
     YT = "Youtube"
     SC = "Soundcloud"

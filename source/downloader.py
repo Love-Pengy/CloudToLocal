@@ -101,10 +101,10 @@ class DownloadManager:
         "outtmpl": "%(title)s.%(ext)s",
         # Do Not Continue If Fragment Fails
         "skip_unavailable_fragments": False,
-        # Write Thumbnail To Disc For Usage With FFMPEG
+        # Write Thumbnail To Disc For Usage With FFmpeg
         "writethumbnail": True,
         "embedthumbnail": True,
-        "sleep_interval": 0,
+        "sleep_interval": 0
     }
 
     VALID_SETTING_KEYS = ["playlists_info", "output_dir", "download_sleep", "request_sleep",

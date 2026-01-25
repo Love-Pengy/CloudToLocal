@@ -6,36 +6,43 @@
             "format": "%(levelname)s: %(message)s"
         },
         "detailed": {
-            "format": "[%(levelname)s|%(module)s|Line %(lineno)d] %(asctime)s: %(message)s",
-            "datefmt": "%Y-%m-%d%T%H:%M%S%z"
+            "datefmt": "%Y-%m-%d%T%H:%M%S%z",
+            "format": "[%(levelname)s|%(module)s|Line %(lineno)d] %(asctime)s: %(message)s"
+        }
+    },
+    "filters": {
+        "no_libraries": {
+            "()": "utils.ctl_logging.NoExternalLibraryFilter"
         }
     },
     "handlers": {
         "stdout": {
-            "class": "logging.StreamHandler",
             "formatter": "detailed",
-            "stream": "ext://sys.stdout"
+            "filters": ["no_libraries"],
+            "stream": "ext://sys.stdout",
+            "class": "logging.StreamHandler"
         },
         "stderr": {
-            "class": "logging.StreamHandler",
             "level": "WARNING",
             "formatter": "simple",
-            "stream": "ext://sys.stderr"
+            "filters": ["no_libraries"],
+            "stream": "ext://sys.stderr",
+            "class": "logging.StreamHandler"
         },
         "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "level": "DEBUG",
-            "formatter": "detailed",
-            "filename": "logs/ctldl.log",
+            "level": "INFO",
+            "backupCount": 3,
             "maxBytes": 10000000,
-            "backupCount": 3
-        },
-        "tui": {
-            "class": "utils.logging.TextualLoggerNoStdOut",
-            "formatter": "detailed"
+            "formatter": "detailed",
+            "filters": ["no_libraries"],
+            "filename": "logs/ctldl.log",
+            "class": "logging.handlers.RotatingFileHandler"
         }
     },
     "loggers": {
-        "root": {"level": "INFO", "handlers": ["stdout", "stderr", "file", "tui"]}
+        "root": {
+            "level": "INFO",
+            "handlers": ["stdout", "stderr", "file"]
+        }
     }
 }
