@@ -32,13 +32,14 @@
 import io
 import json
 import time
-import logging
 import textwrap
 import urllib.request
-from pathlib import PurePath
 from datetime import datetime
+from dataclasses import asdict
+from pathlib import PurePath, Path
 
 import globals
+import downloader
 from textual import work
 from utils.ctl_logging import tui_log
 from playlists import PlaylistHandler
@@ -47,12 +48,12 @@ from textual.screen import ModalScreen
 from textual_image.widget import Image
 from textual.css.query import NoMatches
 from textual.app import App, ComposeResult
-from utils.ctl_logging import get_log_level
 from textual.worker import get_current_worker
 from textual.validation import Function, Number
 from report import ReportStatus, get_report_status_str
-from metadata import replace_metadata, MetadataCtx, LyricHandler
+from music_brainz import musicbrainz_construct_user_agent
 from textual.containers import Horizontal, Grid, Container, VerticalScroll
+from metadata import replace_metadata, MetadataCtx, LyricHandler, fill_report_metadata
 
 from utils.common import (
     get_img_size_url,
@@ -69,8 +70,9 @@ from textual.widgets import (
 
 MAX_THUMBNAIL_RETRIES = 5
 DEFAULT_IMAGE_SIZE = (1200, 1200)
-FAILURE_IMAGE_PATH = "assets/failure_white.png"
 THUMBNAIL_SIZE_PRIO_LIST = ["1200", "500", "250"]
+FAILURE_IMAGE_PATH = Path(globals.PROJECT_ROOT_DIR, "source/assets/failure_white.png")
+
 
 def initialize_image(in_id: str) -> Image:
     output_image = Image(id=in_id)
@@ -86,6 +88,10 @@ async def obtain_image_from_url(screen, url: str, in_image_id: str):
 
     if (not url):
         screen.app.call_from_thread(tui_log, "Url not provided")
+        if (not worker.is_cancelled):
+            image_widget = screen.query_one(f"#{in_image_id}", Image)
+            image_widget.loading = False
+            image_widget.image = FAILURE_IMAGE_PATH
         return
 
     for i in range(0, MAX_THUMBNAIL_RETRIES):
@@ -162,13 +168,13 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
     BINDINGS = [("ctrl+h", "help_menu", "Help Menu")]
     GENRES = json.load(open(globals.GENRE_PATH, 'r'))
 
-    def __init__(self, metadata: dict, type: str, outdir: str):
+    def __init__(self, metadata: dict | MetadataCtx, type: str, outdir: str):
 
         # Override for if metadata is being passed in again for a retry
         if type == "meta":
-            self.metadata = metadata.asdict()
+            self.metadata = asdict(metadata)
             self.output = metadata
-            self.output.path = self.metadata.path
+            self.output.path = self.metadata["path"]
         else:
             self.metadata = metadata[type]
             self.output = MetadataCtx()
@@ -282,7 +288,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
                     yield Checkbox(playlist, False, name=playlist, classes="EditPageCheckbox")
 
             with Collapsible(title="Lyrics", collapsed=True, id="lyrics_collapsible"):
-                yield Static(self.metadata.get("lyrics", ""))
+                yield Static(self.metadata.get("lyrics", None) or "")
 
         yield Button("All Done!", variant="primary", id="completion_button")
         yield Footer()
@@ -483,8 +489,7 @@ class ctl_tui(App):
         # ("s", "search_again", "Search Again"),
         # ("r", "replace_entry", "Retry Download Process With New URL"),
         ("ctrl+s", "skip_entry", "Skip Entry"),
-        # ("ctrl+r", "retry_download", "Retry Download Process"),
-        # ("p", "pick_and_choose", "Pick Elements To Pick From Both Before And After")
+        ("ctrl+r", "retry_download", "Retry Download Process"),
     ]
     CSS_PATH = "css/main.tcss"
 
@@ -510,6 +515,16 @@ class ctl_tui(App):
 
         self.current_report_key_iter = iter(list(self.report_dict))
         self.current_report_key = next(self.current_report_key_iter)
+        self.user_agent = musicbrainz_construct_user_agent(arguments.email)
+
+        self.downloader = downloader.DownloadManager({
+            "playlists_info": self.playlists_info,
+            "output_dir": arguments.host_outdir,
+            "download_sleep": arguments.download_sleep,
+            "request_sleep": arguments.request_sleep,
+            "retry_amt": arguments.retry_amt,
+            "playlist_handler": self.playlist_handler,
+        })
 
     def pop_and_increment_report_key(self):
         self.report_dict.pop(self.current_report_key)
@@ -545,8 +560,8 @@ class ctl_tui(App):
                     current_report["status"]), id="status"),
             ]
         else:
-            pre_width = current_report["pre"]["thumbnail_width"]
-            pre_height = current_report["pre"]["thumbnail_height"]
+            pre_width = current_report["pre"].get("thumbnail_width", None)
+            pre_height = current_report["pre"].get("thumbnail_height", None)
 
             if (current_report["status"] in [ReportStatus.SINGLE, ReportStatus.ALBUM_FOUND]):
 
@@ -586,8 +601,23 @@ class ctl_tui(App):
                 ]
 
                 obtain_image_from_url(self, current_report["pre"]["thumbnail_url"], "full_img")
-            # TODO: you can cut a download off to end up at download failure for the report status
-            #       which will cause this to fail. Allow user to redownload in this case ~ BEF
+            else:
+                # On DOWNLOAD_FAILURE && DOWNLOAD_SUCCESS setup user to just retry the download.
+                #   Something went wrong or was cancelled midway if we are in these statuses.
+                pre_width = None
+                post_width = None
+                title = current_report["pre"]["title"]
+
+                pre_image = initialize_image("full_img")
+                yield Horizontal(pre_image, id="album_art")
+
+                info_content = [
+                    Static(get_report_status_str(
+                        current_report["status"]), id="status"),
+                    Pretty(current_report["pre"], id="pre_info")
+                ]
+
+                obtain_image_from_url(self, None, "full_img")
 
         post_dimension_str = "(X,X)" if not post_width else f"({post_width}px, {post_height}px)"
         pre_dimension_str = "(X,X)" if not pre_width else f"({pre_width}px, {pre_height}px)"
@@ -727,14 +757,42 @@ class ctl_tui(App):
                             severity="error")
                 await self.push_screen_wait(EditInputMenu(meta, "meta", self.outdir))
 
-    # TO-DO: create new screen for this
+    @work
+    async def action_retry_download(self):
 
-    def action_retry_download(self):
-        pass
-        self.pop_and_increment_report_key()
+        self.notify("Attempting to retry download. This can take a while....")
+        tui_log("Retrying download")
+        current_report = self._get_current_report()
+        download_info = self.downloader.download_from_url(current_report["pre"].get("url", None))
 
-    def action_pick_and_choose(self):
-        pass
+        if (not download_info):
+            # failure case
+            tui_log("Download info is None")
+            pass
+
+        tui_log("Filling metadata")
+        download_meta = fill_report_metadata(self.user_agent,
+                                             self.lyric_handler,
+                                             download_info=download_info)
+        tui_log("Done Filling metadata")
+
+        user_input_meta = await self.push_screen_wait(EditInputMenu(download_meta,
+                                                                    "meta", self.outdir))
+
+        ok = False
+        while not ok:
+
+            ok = replace_metadata(user_input_meta, self.lyric_handler)
+
+            if (ok):
+                self.playlist_handler.write_to_playlists(user_input_meta, self.outdir, None)
+                self.pop_and_increment_report_key()
+            else:
+                self.notify("Failed to replace metadata... Returning to metadata screen",
+                            severity="error")
+                user_input_meta = await self.push_screen_wait(EditInputMenu(user_input_meta,
+                                                                            "meta",
+                                                                            self.outdir))
         self.pop_and_increment_report_key()
 
     def action_quit(self):

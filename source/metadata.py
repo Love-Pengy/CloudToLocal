@@ -48,7 +48,6 @@ import lyricsgenius
 from PIL import Image
 from mutagen import File
 from mutagen.mp3 import MP3
-from utils.common import Providers
 from mutagen.oggopus import OggOpus
 from utils.ctl_logging import tui_log
 from mutagen.mp4 import MP4, MP4Cover
@@ -57,6 +56,7 @@ from mutagen.oggvorbis import OggVorbis
 from utils.common import sanitize_string
 from dataclasses import dataclass, field
 from music_brainz import musicbrainz_search
+from utils.common import Providers, DownloadInfo
 from youtube_title_parse import get_artist_title
 from report import ReportStatus, update_report_status, add_to_report_post_search
 
@@ -77,6 +77,7 @@ class MetadataCtx:
     title: str = None
     path: str = None
     album: str = None
+    lyrics: str = None
     artist: str = None
     duration: int = None
     track_num: int = None
@@ -169,6 +170,9 @@ def tag_file(in_metadata: MetadataCtx, clear: bool, lyric_handler: LyricHandler)
 
     mimetype, _ = mimetypes.guess_type(in_metadata.thumbnail_url)
 
+    if (not mimetype):
+        mimetype = "image/jpeg"
+
     if (lyric_handler):
         lyrics = lyric_handler.obtain_lyrics(in_metadata.title, in_metadata.artist)
         tui_log(f"LYRICS: {lyrics}")
@@ -203,7 +207,6 @@ def tag_file(in_metadata: MetadataCtx, clear: bool, lyric_handler: LyricHandler)
         file_metadata["\xa9alb"] = getattr(in_metadata, "album", "")
         file_metadata["\xa9gen"] = getattr(in_metadata, "genres", "")
         file_metadata["\xa9lyr"] = lyrics or ""
-        header = urllib.request.urlopen(in_metadata.thumbnail_url)
         image_format = MP4Cover.FORMAT_JPEG if mimetype == "image/jpeg" else MP4Cover.FORMAT_PNG
         thumbnail = obtain_thumbnail_bytes(in_metadata.thumbnail_url)
         if not thumbnail:
@@ -221,6 +224,7 @@ def tag_file(in_metadata: MetadataCtx, clear: bool, lyric_handler: LyricHandler)
         file_metadata["date"] = getattr(in_metadata, "date", "")
         file_metadata["album"] = getattr(in_metadata, "album", "")
         file_metadata["tracknumber"] = getattr(in_metadata, "track_number", "")
+        file_metadata["genres"] = getattr(in_metadata, "genres", "")
         file_metadata["lyrics"] = lyrics or ""
 
         picture = Picture()
@@ -253,12 +257,13 @@ def parse_youtube_title(title: str, artist: str):
 
 
 def fill_report_metadata(user_agent: str,
-                         title: str,
-                         uploader: str,
-                         provider: str,
-                         url: str,
-                         report: dict,
-                         lyric_handler: LyricHandler):
+                         lyric_handler: LyricHandler,
+                         title: str = None,
+                         uploader: str = None,
+                         provider: str = None,
+                         url: str = None,
+                         report: dict = {},
+                         download_info: DownloadInfo = None):
     """
         Arguments:
             user_agent:    Musicbrainz user agent
@@ -266,44 +271,81 @@ def fill_report_metadata(user_agent: str,
             uploader:      Uploader of song
             provider:      Provider or download
             url:           URL of song
-            report:        Dictionary of download status reports
+            report:        Dictionary of download status reports. Optional.
             lyric_handler: Handler of lyric retrieval
-
-
+            path:          Path of file. Only required if report is None.
     """
 
-    title = title
-    artist = uploader
-    if (Providers.YT == provider):
-        artist, title = parse_youtube_title(title, artist)
-        if (not (artist and title)):
-            title = title
-            artist = uploader
+    if (not download_info):
+        parsed_title = title
+        parsed_artist = uploader
+        if (Providers.YT == provider):
+            parsed_artist, parsed_title = parse_youtube_title(title, uploader)
+            if (not (parsed_artist and parsed_title)):
+                parsed_title = title
+                parsed_artist = uploader
 
-    meta = musicbrainz_search(user_agent, title, artist)
+        meta = musicbrainz_search(user_agent, parsed_title, parsed_artist)
 
-    if (not meta):
-        update_report_status(report, url, ReportStatus.METADATA_NOT_FOUND)
-        return
+        if (not meta):
+            update_report_status(report, url, ReportStatus.METADATA_NOT_FOUND)
+            return
 
-    add_to_report_post_search({
-        "title": meta.title,
-        "artist": meta.artist,
-        "artists": meta.artists,
-        "album": meta.album,
-        "single": meta.is_single,
-        "release_date": meta.release_date,
-        "track_num": meta.track_count,
-        "total_tracks": meta.total_tracks,
-        "mbid": meta.release_mbid,
-        "thumbnail_url": meta.thumbnail_url,
-        "thumbnail_width": meta.thumbnail_resolution,
-        "thumbnail_height": meta.thumbnail_resolution,
-        "lyrics": lyric_handler.obtain_lyrics(meta.title, meta.artist)
-    },
-        report,
-        url,
-        ReportStatus.SINGLE if meta.is_single else ReportStatus.ALBUM_FOUND)
+        add_to_report_post_search({
+            "title": meta.title,
+            "artist": meta.artist,
+            "artists": meta.artists,
+            "album": meta.album,
+            "single": meta.is_single,
+            "release_date": meta.release_date,
+            "track_num": meta.track_count,
+            "total_tracks": meta.total_tracks,
+            "mbid": meta.release_mbid,
+            "thumbnail_url": meta.thumbnail_url,
+            "thumbnail_width": meta.thumbnail_resolution,
+            "thumbnail_height": meta.thumbnail_resolution,
+            "lyrics": lyric_handler.obtain_lyrics(meta.title, meta.artist)
+        },
+            report,
+            url,
+            ReportStatus.SINGLE if meta.is_single else ReportStatus.ALBUM_FOUND)
+    else:
+        parsed_title = download_info.title
+        parsed_artist = download_info.uploader
+        if (Providers.YT == download_info.provider):
+            parsed_artist, parsed_title = parse_youtube_title(
+                download_info.title, download_info.uploader)
+            if (not (parsed_artist and parsed_title)):
+                parsed_title = title
+                parsed_artist = uploader
+
+        meta = musicbrainz_search(user_agent,
+                                  parsed_title,
+                                  parsed_artist)
+        if (meta):
+            output = MetadataCtx(title=meta.title,
+                                 artist=meta.artist,
+                                 artists=meta.artists,
+                                 path=download_info.path,
+                                 album=meta.album,
+                                 duration=download_info.duration,
+                                 track_num=meta.track_count,
+                                 album_len=meta.total_tracks,
+                                 album_date=meta.release_date,
+                                 thumbnail_url=meta.thumbnail_url,
+                                 thumbnail_width=meta.thumbnail_width,
+                                 thumbnail_height=meta.thumbnail_height,
+                                 lyrics=lyric_handler.obtain_lyrics(meta.title, meta.artist))
+            return output
+
+        output = MetadataCtx(title=download_info.title,
+                             artist=download_info.uploader,
+                             path=download_info.src_path,
+                             duration=download_info.duration,
+                             lyrics=lyric_handler.obtain_lyrics(download_info.title,
+                                                                download_info.uploader)
+                             )
+        return output
 
 
 def replace_metadata(metadata: MetadataCtx, lyric_handler: LyricHandler):

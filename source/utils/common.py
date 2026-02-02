@@ -38,6 +38,7 @@ import urllib
 import shutil
 import logging
 import requests
+from dataclasses import dataclass
 
 import globals
 from PIL import Image
@@ -47,9 +48,21 @@ CONNECTIVITY_CHECK_RETRIES = 5
 
 logger = logging.getLogger(__name__)
 
+
 class Providers:
     YT = "Youtube"
     SC = "Soundcloud"
+
+
+@dataclass
+class DownloadInfo:
+    url: str = None
+    title: str = None
+    uploader: str = None
+    provider: str = None
+    src_path: str = None
+    short_path: str = None
+    duration: int = None
 
 
 def get_diff_count(in1, in2):

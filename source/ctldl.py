@@ -83,7 +83,6 @@ class CloudToLocal:
             self.report = {}
 
         self.downloader = DownloadManager({
-            "playlists_info": self.playlists_info,
             "output_dir": globals.CONTAINER_MUSIC_PATH,
             "download_sleep": arguments.download_sleep,
             "request_sleep": arguments.request_sleep,
@@ -98,12 +97,12 @@ class CloudToLocal:
 
         for download_info in self.downloader.download_generator():
             fill_report_metadata(self.user_agent,
-                                 download_info.title,
-                                 download_info.uploader,
-                                 download_info.provider,
-                                 download_info.url,
-                                 self.report,
-                                 self.lyric_handler)
+                                 self.lyric_handler,
+                                 title=download_info.title,
+                                 uploader=download_info.uploader,
+                                 provider=download_info.provider,
+                                 url=download_info.url,
+                                 report=self.report)
 
         clean_ytdlp_artifacts(globals.CONTAINER_MUSIC_PATH)
         self.dump_report()
@@ -277,4 +276,5 @@ if __name__ == "__main__":
 
     globals.CONTAINER_MUSIC_PATH = os.environ.get("CONTAINER_OUTDIR", None)
     globals.VERBOSE = args.log_ytdlp
+    globals.PROJECT_ROOT_DIR = os.path.abspath(__file__)
     main(args)

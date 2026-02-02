@@ -30,10 +30,13 @@
 #
 #################################################################################
 
+import pathlib
+
 VERBOSE = False
 CTLDL_VERSION = "0.1.0"
 REQUEST_RESOLUTION = 1200
 SHELF_NAME = "ctldl_shelf"
-GENRE_PATH = "genres.json"
 MUSICBRAINZ_USER_AGENT = None
 CONTAINER_MUSIC_PATH = "/app/Music/"
+PROJECT_ROOT_DIR = pathlib.Path(__file__).parents[1]
+GENRE_PATH = pathlib.Path(PROJECT_ROOT_DIR, "genres.json")

@@ -32,6 +32,7 @@
 
 import os
 import json
+import globals
 import pathlib
 import logging
 import logging.config
@@ -39,9 +40,10 @@ from pprint import pformat
 
 from textual import log
 
-# util dir and source dir
+# util Dir and source Dir
 VALID_LOGGER_LIST = [
-    file for file in (os.listdir("source") + os.listdir("source/utils")) if ".py" in file
+    file for file in (os.listdir(pathlib.Path(globals.PROJECT_ROOT_DIR, "source"))
+                      + os.listdir(pathlib.Path(globals.PROJECT_ROOT_DIR, "source/utils"))) if ".py" in file
 ]
 
 
