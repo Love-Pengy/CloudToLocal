@@ -59,7 +59,7 @@ websocket-client==1.8.0
 websockets==15.0.1
 wsproto==1.2.0
 yarl==1.20.1
-youtube_title_parse @ https://github.com/Love-Pengy/youtube_title_parse/archive/refs/heads/master.zip
-yt-dlp==2025.12.8
-yt-dlp-ejs==0.3.2
+youtube_title_parse @ https://github.com/Love-Pengy/youtube_title_parse/archive/refs/heads/master.zip#sha256=3ff57504287a32284f82acbbeedf10965cbe4368148b8448cec90f605b2b32af
+yt-dlp==2026.1.31
+yt-dlp-ejs==0.4.0
 ytmusicapi==1.11.0

@@ -83,12 +83,13 @@ class CloudToLocal:
             self.report = {}
 
         self.downloader = DownloadManager({
-            "output_dir": globals.CONTAINER_MUSIC_PATH,
-            "download_sleep": arguments.download_sleep,
-            "request_sleep": arguments.request_sleep,
+            "report": self.report,
             "retry_amt": arguments.retry_amt,
+            "playlists_info": self.playlists_info,
+            "request_sleep": arguments.request_sleep,
             "playlist_handler": self.playlist_handler,
-            "report": self.report
+            "output_dir": globals.CONTAINER_MUSIC_PATH,
+            "download_sleep": arguments.download_sleep
         })
 
         self.set_exit_handlers()
