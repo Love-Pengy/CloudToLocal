@@ -172,8 +172,7 @@ class DownloadManager:
                         tui_log(f"(#{attempts+1}) Failed to download... Retrying")
                         sleep(attempts*10)
                     except Exception:
-                        tui_log(f"Unexpected error for '{download_info.title}'",
-                                exc_info=True)
+                        tui_log(f"Unexpected error for '{download_info.title}'")
                 else:
                     break
                 attempts += 1
@@ -182,19 +181,6 @@ class DownloadManager:
                 thumb_dimensions = get_embedded_thumbnail_res(download_info.src_path)
                 thumbnail_width = thumb_dimensions[0]
                 thumbnail_height = thumb_dimensions[1]
-                # add_to_report_pre_search(
-                #     asdict(download_info) |
-                #     {
-                #         "playlists": self.playlist_handler.check_playlists(download_info.url),
-                #         "genres": genres,
-                #         "duration": duration,
-                #         "thumbnail_url": thumbnail_url,
-                #         "thumbnail_width": thumbnail_width,
-                #         "thumbnail_height": thumbnail_height
-                #     },
-                #     self.report,
-                #     download_info.url,
-                #     ReportStatus.DOWNLOAD_SUCCESS)
                 return download_info
             return None
 
@@ -248,6 +234,7 @@ class DownloadManager:
                                     duration = int(round(float(video_info["duration"]), 0))
                                 else:
                                     # Video is present in the archive ~ BEF
+                                    logger.info("Skipping...Song already present in the archive")
                                     break
                             break
                         except DownloadError:

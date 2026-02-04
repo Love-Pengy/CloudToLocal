@@ -40,6 +40,7 @@ from utils.ctl_logging import tui_log
 
 logger = logging.getLogger(__name__)
 
+
 class PlaylistHandler:
 
     def __init__(self,  retries, urls=None, info_ret=None, request_sleep=None):

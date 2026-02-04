@@ -17,6 +17,7 @@
     },
     "handlers": {
         "stdout": {
+            "level": "INFO",
             "formatter": "detailed",
             "filters": ["no_libraries"],
             "stream": "ext://sys.stdout",

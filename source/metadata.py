@@ -51,6 +51,7 @@ from mutagen.mp3 import MP3
 from mutagen.oggopus import OggOpus
 from utils.ctl_logging import tui_log
 from mutagen.mp4 import MP4, MP4Cover
+from playlists import PlaylistHandler
 from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
 from utils.common import sanitize_string
@@ -263,17 +264,19 @@ def fill_report_metadata(user_agent: str,
                          provider: str = None,
                          url: str = None,
                          report: dict = {},
-                         download_info: DownloadInfo = None):
+                         download_info: DownloadInfo = None,
+                         playlist_handler: PlaylistHandler = None):
     """
         Arguments:
-            user_agent:    Musicbrainz user agent
-            title:         Title of song
-            uploader:      Uploader of song
-            provider:      Provider or download
-            url:           URL of song
-            report:        Dictionary of download status reports. Optional.
-            lyric_handler: Handler of lyric retrieval
-            path:          Path of file. Only required if report is None.
+            user_agent:         Musicbrainz user agent
+            title:              Title of song
+            uploader:           Uploader of song
+            provider:           Provider or download
+            url:                URL of song
+            report:             Dictionary of download status reports. Optional.
+            lyric_handler:      Handler of lyric retrieval
+            path:               Path of file. Only required if report is None.
+            playlist_hanlder:   Playlist handler to use to obtain playlists
     """
 
     if (not download_info):
@@ -335,7 +338,8 @@ def fill_report_metadata(user_agent: str,
                                  thumbnail_url=meta.thumbnail_url,
                                  thumbnail_width=meta.thumbnail_width,
                                  thumbnail_height=meta.thumbnail_height,
-                                 lyrics=lyric_handler.obtain_lyrics(meta.title, meta.artist))
+                                 lyrics=lyric_handler.obtain_lyrics(meta.title, meta.artist),
+                                 playlists=playlist_handler.check_playlists(download_info.url))
             return output
 
         output = MetadataCtx(title=download_info.title,
@@ -343,7 +347,8 @@ def fill_report_metadata(user_agent: str,
                              path=download_info.src_path,
                              duration=download_info.duration,
                              lyrics=lyric_handler.obtain_lyrics(download_info.title,
-                                                                download_info.uploader)
+                                                                download_info.uploader),
+                             playlists=playlist_handler.check_playlists(download_info.url)
                              )
         return output
 

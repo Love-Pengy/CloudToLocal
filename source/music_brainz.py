@@ -44,8 +44,10 @@ from mbzero import mbzrequest as mbr
 from mbzero import mbzerror, caarequest
 
 
+MUSICBRAINZ_RETRIES = 10
 MAX_THUMBNAIL_RETRIES = 10
 THUMBNAIL_SIZE_PRIO_LIST = ["1200", "500", "250"]
+MUSICBRAINZ_ACCEPTED_FORMATS = ["Digital Media", "CD"]
 
 # Statuses that are acceptable to use
 MUSICBRAINZ_STATUS_PRIO_LIST = [
@@ -121,10 +123,6 @@ def musicbrainz_obtain_caa_image_data(user_agent: str, release_mbid: str) -> (st
     return ((None, None))
 
 
-MUSICBRAINZ_RETRIES = 10
-MUSICBRAINZ_ACCEPTED_FORMATS = ["Digital Media", "CD"]
-
-
 def musicbrainz_construct_user_agent(email: str) -> str:
     """ Construct expected user agent format given email. """
     if (not email):
@@ -147,7 +145,7 @@ def musicbrainz_search(user_agent: str, title: str, artist: str) -> MusicbrainzM
             break
         except mbzerror.MbzWebServiceError:
             delay = i ** 2
-            logger.error(f"Musicbrainz service error, retrying in {delay}...", exc_info=True)
+            logger.debug(f"Musicbrainz service error, retrying in {delay}...", exc_info=True)
             time.sleep(delay)
             continue
         except mbzerror.MbzNotFoundError:

@@ -130,6 +130,54 @@ def input_widget_change_first_element(widget, value):
         widget.value = output
 
 
+class NewUrlInputMenu(ModalScreen):
+
+    BINDINGS = [("q", "quit_menu", "Quit Menu")]
+
+    CSS_PATH = "css/urlinputmenu.tcss"
+
+    def __init__(self):
+        self.url_validator = [Function(self.validate_url, "Is not a valid Url")]
+
+    def check_input_validity(self) -> bool:
+
+        input_widget = self.query_one("#NewUrlInput", Input)
+        input_widget.validate(input_widget.value)
+        self.validate_all(input_widget)
+        if (not input_widget.is_valid):
+            for validator in input_widget.validators:
+                if (validator.failure_description):
+                    self.notify(f'"{input_widget.id}" field {validator.failure_description}',
+                                severity="error")
+            return False
+        return True
+
+    def compose(self) -> ComposeResult:
+        yield Static("Input Url You would like to download.", id="NewUrlInputStatic")
+        yield Input(id="NewUrlInput", validators=self.url_validator)
+        yield Button("All Done!", variant="primary", id="completion_button")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if (not self.check_input_validity()):
+            return
+        tui_log("Exiting input menu")
+        url = self.query_one("#NewUrlInput", Input).value
+        self.dismiss(url)
+
+    def validate_url(self, url: str):
+        try:
+            with urllib.request.urlopen(url) as response:
+                if response.status == 200:
+                    return True
+        except Exception:
+            return False
+        return False
+
+    def action_quit_menu(self):
+        tui_log("Exiting url input menu")
+        self.dismiss()
+
+
 class HelpMenu(ModalScreen):
 
     BINDINGS = [("q", "quit_menu", "Quit Menu")]
@@ -486,7 +534,6 @@ class ctl_tui(App):
         ("n", "accept_new", "Accept New Metadata"),
         ("o", "accept_original", "Accept Original"),
         ("e", "edit_metadata", "Edit Metadata"),
-        # ("s", "search_again", "Search Again"),
         # ("r", "replace_entry", "Retry Download Process With New URL"),
         ("ctrl+s", "skip_entry", "Skip Entry"),
         ("ctrl+r", "retry_download", "Retry Download Process"),
@@ -697,16 +744,44 @@ class ctl_tui(App):
                             severity="error")
                 meta = await self.push_screen_wait(EditInputMenu(meta, "meta", self.outdir))
 
-    # TO-DO: create new screen for this
-    def action_search_again(self):
-        pass
-        self.playlist_handler.write_to_playlists()
-        self.pop_and_increment_report_key()
-
-    # TO-DO: create new screen for this
     def action_replace_entry(self):
-        pass
-        self.playlist_handler.write_to_playlists()
+
+        url = await self.push_screen_wait(NewUrlInputMenu())
+        if (not url):
+            return
+
+        self.notify("Attempting to download. This can take a while....")
+        tui_log("Retrying download")
+        download_info = self.downloader.download_from_url(url)
+
+        if (not download_info):
+            # failure case
+            tui_log("Download info is None")
+            pass
+
+        tui_log("Filling metadata")
+        download_meta = fill_report_metadata(self.user_agent,
+                                             self.lyric_handler,
+                                             download_info=download_info)
+        tui_log("Done Filling metadata")
+
+        user_input_meta = await self.push_screen_wait(EditInputMenu(download_meta,
+                                                                    "meta", self.outdir))
+
+        ok = False
+        while not ok:
+
+            ok = replace_metadata(user_input_meta, self.lyric_handler)
+
+            if (ok):
+                self.playlist_handler.write_to_playlists(user_input_meta, self.outdir, None)
+                self.pop_and_increment_report_key()
+            else:
+                self.notify("Failed to replace metadata... Returning to metadata screen",
+                            severity="error")
+                user_input_meta = await self.push_screen_wait(EditInputMenu(user_input_meta,
+                                                                            "meta",
+                                                                            self.outdir))
         self.pop_and_increment_report_key()
 
     def action_skip_entry(self):
