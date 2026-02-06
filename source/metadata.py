@@ -49,13 +49,13 @@ from PIL import Image
 from mutagen import File
 from mutagen.mp3 import MP3
 from mutagen.oggopus import OggOpus
+from utils.common import MetadataCtx
 from utils.ctl_logging import tui_log
 from mutagen.mp4 import MP4, MP4Cover
 from playlists import PlaylistHandler
 from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
 from utils.common import sanitize_string
-from dataclasses import dataclass, field
 from music_brainz import musicbrainz_search
 from utils.common import Providers, DownloadInfo
 from youtube_title_parse import get_artist_title
@@ -70,26 +70,6 @@ from mutagen.id3 import (
 logger = logging.getLogger(__name__)
 
 META_MAX_THUMBNAIL_RETRIES = 5
-
-
-@dataclass
-class MetadataCtx:
-    """ All metadata needed for the various metadata operations """
-    title: str = None
-    path: str = None
-    album: str = None
-    lyrics: str = None
-    artist: str = None
-    duration: int = None
-    track_num: int = None
-    album_len: int = None
-    album_date: str = None
-    thumbnail_url: str = None
-    thumbnail_width: int = None
-    thumbnail_height: int = None
-    genres: list[str] = field(default_factory=list)
-    artists: list[str] = field(default_factory=list)
-    playlists: list[str] = field(default_factory=list)
 
 
 class LyricHandler:

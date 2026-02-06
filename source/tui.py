@@ -41,6 +41,7 @@ from pathlib import PurePath, Path
 import globals
 import downloader
 from textual import work
+from utils.common import MetadataCtx
 from utils.ctl_logging import tui_log
 from playlists import PlaylistHandler
 from textual.reactive import reactive
@@ -52,8 +53,8 @@ from textual.worker import get_current_worker
 from textual.validation import Function, Number
 from report import ReportStatus, get_report_status_str
 from music_brainz import musicbrainz_construct_user_agent
+from metadata import replace_metadata, LyricHandler, fill_report_metadata
 from textual.containers import Horizontal, Grid, Container, VerticalScroll
-from metadata import replace_metadata, MetadataCtx, LyricHandler, fill_report_metadata
 
 from utils.common import (
     get_img_size_url,
@@ -744,7 +745,8 @@ class ctl_tui(App):
                             severity="error")
                 meta = await self.push_screen_wait(EditInputMenu(meta, "meta", self.outdir))
 
-    def action_replace_entry(self):
+    @work
+    async def action_replace_entry(self):
 
         url = await self.push_screen_wait(NewUrlInputMenu())
         if (not url):

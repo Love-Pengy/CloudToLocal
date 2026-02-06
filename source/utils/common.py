@@ -38,7 +38,8 @@ import urllib
 import shutil
 import logging
 import requests
-from dataclasses import dataclass
+import subprocess
+from dataclasses import dataclass, field
 
 import globals
 from PIL import Image
@@ -63,6 +64,26 @@ class DownloadInfo:
     src_path: str = None
     short_path: str = None
     duration: int = None
+
+
+@dataclass
+class MetadataCtx:
+    """ All metadata needed for the various metadata operations """
+    title: str = None
+    path: str = None
+    album: str = None
+    lyrics: str = None
+    artist: str = None
+    duration: int = None
+    track_num: int = None
+    album_len: int = None
+    album_date: str = None
+    thumbnail_url: str = None
+    thumbnail_width: int = None
+    thumbnail_height: int = None
+    genres: list[str] = field(default_factory=list)
+    artists: list[str] = field(default_factory=list)
+    playlists: list[str] = field(default_factory=list)
 
 
 def get_diff_count(in1, in2):
