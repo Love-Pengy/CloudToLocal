@@ -139,11 +139,12 @@ def download(arguments):
             "Internet Connection Could Not Be Established! Please Check Your Connection")
         return
 
+    check_ytdlp_update()
+
     logging.info("Internet connection verified")
 
     ctl = CloudToLocal(arguments)
 
-    check_ytdlp_update()
     logging.info("Starting download sequence")
     ctl.run_download_sequence()
 

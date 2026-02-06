@@ -163,9 +163,11 @@ def check_ytdlp_update():
         "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
     latest_release = release_page.json()["tag_name"]
     if (not (local_version == latest_release)):
-        logger.warning(f"Newer yt_dlp Version Available, Please Update "
-                       f"If You Experience Download Issues"
-                       f"({local_version} -> {latest_release})")
+        logger.info(f"Newer yt_dlp Version Available. Attempting to upgrade..."
+                    f"({local_version} -> {latest_release})")
+        subprocess.run(["pip", "install", "--upgrade", "yt_dlp"], check=True)
+        logger.info("Upgrade completed... Restarting")
+        exit(0)
     else:
         logger.info(f"yt_dlp Is Up To Date (Version {latest_release})")
 
