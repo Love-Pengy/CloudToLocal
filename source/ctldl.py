@@ -167,10 +167,11 @@ def main(arguments):
         logger.debug("Starting Tui")
         ctl_tui(arguments).run()
         exit()
+
     if (arguments.fresh
-            and os.path.exists(arguments.host_outdir)):
-        logging.debug("Cleaning Existing Directory")
-        delete_folder_contents(arguments.host_outdir)
+            and os.path.exists(globals.CONTAINER_MUSIC_PATH)):
+        logging.info("Cleaning Existing Directory")
+        delete_folder_contents(globals.CONTAINER_MUSIC_PATH)
         clear_shelf()
 
     logging.debug(vars(arguments))
