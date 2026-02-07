@@ -59,8 +59,8 @@ class PlaylistHandler:
         ydl_opts = {
             "extract_flat": True,
             "skip_download": True,
-            "quiet": not globals.VERBOSE,
-            "verbose": globals.VERBOSE,
+            "quiet": not globals.ENABLE_YTDLP_LOG,
+            "verbose": globals.ENABLE_YTDLP_LOG,
             "sleep_interval_requests": self.request_sleep
         }
 

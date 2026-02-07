@@ -238,7 +238,7 @@ if __name__ == "__main__":
                              "  Can Be Either Youtube or Soundcloud")
 
     parser.add_argument("--host_outdir", "-o", type=str,
-                        required=True, help="Directory To Output Unverified Songs To")
+                        required=True, help="Directory On Host Machine To Output Songs To")
 
     parser.add_argument("--retry_amt", "-retry", default=10, type=int,
                         help="Amount Of Times To Retry Non-Fatal Download Errors")
@@ -278,6 +278,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     globals.CONTAINER_MUSIC_PATH = os.environ.get("CONTAINER_OUTDIR", None)
-    globals.VERBOSE = args.log_ytdlp
+    globals.ENABLE_YTDLP_LOG = args.log_ytdlp
     globals.PROJECT_ROOT_DIR = os.path.abspath(__file__)
     main(args)

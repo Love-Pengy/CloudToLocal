@@ -84,9 +84,9 @@ class DownloadManager:
         ],
 
         # Whether to print to standard output
-        "quiet": not globals.VERBOSE,
+        "quiet": not globals.ENABLE_YTDLP_LOG,
         # Whether to add additional info to standard output
-        "verbose": globals.VERBOSE,
+        "verbose": globals.ENABLE_YTDLP_LOG,
         "noplaylist": True,
         "outtmpl": "%(title)s.%(ext)s",
         # Do Not Continue If Fragment Fails
@@ -134,8 +134,8 @@ class DownloadManager:
             #       Of Song Information For Top Level Entry So We Must
             #       Query Further ~ BEF
             sc_info = YoutubeDL({'simulate': True,
-                                 'quiet': not globals.VERBOSE,
-                                 'verbose': globals.VERBOSE}
+                                 'quiet': not globals.ENABLE_YTDLP_LOG,
+                                 'verbose': globals.ENABLE_YTDLP_LOG}
                                 ).extract_info(download_info.url)
 
             download_info.title = sc_info["title"]
@@ -197,8 +197,8 @@ class DownloadManager:
                     #       Of Song Information For Top Level Entry So We Must
                     #       Query Further ~ BEF
                     sc_info = YoutubeDL({'simulate': True,
-                                         'quiet': not globals.VERBOSE,
-                                         'verbose': globals.VERBOSE}
+                                         'quiet': not globals.ENABLE_YTDLP_LOG,
+                                         'verbose': globals.ENABLE_YTDLP_LOG}
                                         ).extract_info(download_info.url)
 
                     download_info.title = sc_info["title"]

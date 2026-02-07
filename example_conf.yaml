@@ -30,17 +30,16 @@
 #
 #################################################################################
 
-interval: 24
 fresh: false
-quiet: false
+interval: 24
 retry_amt: 10
-verbose: false
-request_sleep: 1
-start_tui: false
-outdir: "~/Music"
+log_ytdlp: true
+request_sleep: 5
 download_sleep: 10
-fail_on_warning: false
+genius_api_key: "..."
+host_outdir: "~/Music"
 email: "example@foo.com"
+log_config: "source/configs/ctl_log_config.json"
 playlists: [
   "https://youtube.com/playlist?list=id",
   "https://soundcloud.com/user/playlist/name?si=id"
