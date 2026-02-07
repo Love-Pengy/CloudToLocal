@@ -127,10 +127,8 @@ class DownloadManager:
         download_info.url = url
         download_info.provider = info["extractor_key"]
         if ("Youtube" == download_info.provider):
-            genres = None
             download_info.title = info["title"]
             download_info.uploader = info["uploader"]
-            thumbnail_url = info["thumbnails"][len(info["thumbnails"])-1]["url"]
         else:
             # NOTE: Soundcloud API Gives References To Song Instead
             #       Of Song Information For Top Level Entry So We Must
@@ -141,8 +139,6 @@ class DownloadManager:
                                 ).extract_info(download_info.url)
 
             download_info.title = sc_info["title"]
-            genres = handle_genre(sc_info["genres"])
-            thumbnail_url = sc_info["thumbnail"]
             download_info.uploader = sc_info[
                 "artist"] if "artist" in sc_info else sc_info["uploader"]
 
@@ -156,7 +152,6 @@ class DownloadManager:
                             video_info = ydl.extract_info(download_info.url, download=True)
                             if ((video_info) and ("requested_downloads" in video_info)):
                                 video_dl_info = video_info["requested_downloads"][0]
-                                # TO-DO: prolly don't need to do all this ~ BEF
                                 download_info.src_path = video_dl_info["filepath"]
                                 download_info.short_path = download_info.src_path.removeprefix(
                                     globals.CONTAINER_MUSIC_PATH)
@@ -178,9 +173,6 @@ class DownloadManager:
                 attempts += 1
 
             if (download_info.src_path):
-                thumb_dimensions = get_embedded_thumbnail_res(download_info.src_path)
-                thumbnail_width = thumb_dimensions[0]
-                thumbnail_height = thumb_dimensions[1]
                 return download_info
             return None
 
