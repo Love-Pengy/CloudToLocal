@@ -32,7 +32,7 @@
 
 import pathlib
 
-CTLDL_VERSION = "0.1.0"
+CTLDL_VERSION = "1.0.0"
 ENABLE_YTDLP_LOG = False
 REQUEST_RESOLUTION = 1200
 SHELF_NAME = "ctldl_shelf"
