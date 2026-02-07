@@ -43,4 +43,5 @@ services:
       - ${PWD}/ctldl_conf.yaml:/app/conf.yaml
       - ${PWD}/logs:/app/logs
       - /home/bee/Music:${CONTAINER_OUTDIR}
+    restart: unless-stopped 
     command: ["/app/conf.yaml"]
