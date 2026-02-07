@@ -205,6 +205,13 @@ def connectivity_check():
                 and (200 == mb_req.status_code)
                     and (200 == sc_req.status_code)):
                 return True
+            else:
+                if (not (200 == yt_req.status_code)):
+                    logging.error(f"Non 200 status code from Youtube: {yt_req.status_code}")
+                if (not (200 == mb_req.status_code)):
+                    logging.error(f"Non 200 status code from Musicbrainz: {mb_req.status_code}")
+                if (not (200 == sc_req.status_code)):
+                    logging.error(f"Non 200 status code from Soundcloud: {sc_req.status_code}")
 
         except requests.exceptions.ConnectionError:
             pass
