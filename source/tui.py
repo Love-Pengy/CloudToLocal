@@ -308,16 +308,19 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
             yield Label("Genres", classes="EditPageLabel")
             genre_list = self.metadata.get("genres", [])
-            for i in range(0, len(genre_list)):
-                if (genre_list[i]):
-                    select_value = genre_list[i]
-                else:
-                    select_value = Select.BLANK
+            if (genre_list):
+                for i in range(0, len(genre_list)):
+                    if (genre_list[i]):
+                        select_value = genre_list[i]
+                    else:
+                        select_value = Select.BLANK
 
-                yield Select(((line, line) for line in self.GENRES), value=select_value,
-                             classes="EditPageListItem", prompt=f"Genre {i+1}")
+                    yield Select(((line, line) for line in self.GENRES), value=select_value,
+                                 classes="EditPageListItem", prompt=f"Genre {i+1}")
+                remainder = self.MAX_GENRE_AMT - len(genre_list)
+            else:
+                remainder = self.MAX_GENRE_AMT
 
-            remainder = self.MAX_GENRE_AMT - len(genre_list)
             for i in range(0, remainder):
                 yield Select(((line, line) for line in self.GENRES), value=Select.BLANK,
                              classes="EditPageListItem", prompt=f"Genre {i+1}")
