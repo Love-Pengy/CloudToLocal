@@ -634,6 +634,7 @@ class ctl_tui(App):
 
         title = None
         pre_height = None
+        pre_width = None
         post_width = None
         post_height = None
         current_report = self._get_current_report()
