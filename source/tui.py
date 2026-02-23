@@ -487,8 +487,42 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if (not self.check_input_validity()):
             return
+        self._update_output()
         tui_log("Exiting input menu")
         self.dismiss(self.output)
+
+    def _update_output(self):
+        container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
+        input_widgets = [widget for widget in container.children if isinstance(widget, Input)]
+        select_widgets = [widget for widget in container.children if isinstance(widget, Select)]
+        checkbox_widgets = [widget for widget in container.children if isinstance(widget, Checkbox)]
+
+        # Input Widgets
+        for widget in input_widgets:
+            if (widget.id == "thumb_link"):
+                dimensions = get_img_size_url(widget.value)
+                self.output.thumbnail_url = widget.value
+                self.output.thumbnail_width = dimensions[0]
+                self.output.thumbnail_height = dimensions[1]
+
+            elif (not (widget.id == "artists")):
+                if (not widget.type == "integer"):
+                    setattr(self.output, widget.id, widget.value)
+                else:
+                    setattr(self.output, widget.id,
+                            None if not widget.value else int(widget.value))
+            else:
+                setattr(self.output, widget.id, comma_str_to_list(widget.value))
+
+        # Select Widgets
+        for widget in select_widgets:
+            if (widget.selection):
+                self.output.genres.append(widget.selection)
+
+        # Checkbox Widgets
+        for widget in checkbox_widgets:
+            if (widget.value):
+                self.output.playlists.append(widget.name)
 
     def on_mount(self) -> None:
         container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
