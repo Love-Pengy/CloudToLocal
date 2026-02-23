@@ -135,16 +135,16 @@ class NewUrlInputMenu(ModalScreen):
 
     BINDINGS = [("q", "quit_menu", "Quit Menu")]
 
-    CSS_PATH = "css/urlinputmenu.tcss"
+    # CSS_PATH = "css/urlinputmenu.tcss"
 
     def __init__(self):
         self.url_validator = [Function(self.validate_url, "Is not a valid Url")]
+        super().__init__()
 
     def check_input_validity(self) -> bool:
 
         input_widget = self.query_one("#NewUrlInput", Input)
         input_widget.validate(input_widget.value)
-        self.validate_all(input_widget)
         if (not input_widget.is_valid):
             for validator in input_widget.validators:
                 if (validator.failure_description):
@@ -535,7 +535,7 @@ class ctl_tui(App):
         ("n", "accept_new", "Accept New Metadata"),
         ("o", "accept_original", "Accept Original"),
         ("e", "edit_metadata", "Edit Metadata"),
-        # ("r", "replace_entry", "Retry Download Process With New URL"),
+        ("ctrl+g", "replace_entry", "Retry Download Process With New URL"),
         ("ctrl+s", "skip_entry", "Skip Entry"),
         ("ctrl+r", "retry_download", "Retry Download Process"),
     ]
@@ -748,27 +748,33 @@ class ctl_tui(App):
     @work
     async def action_replace_entry(self):
 
-        url = await self.push_screen_wait(NewUrlInputMenu())
-        if (not url):
-            return
+        download_info = None
+        while (not download_info):
+            url = await self.push_screen_wait(NewUrlInputMenu())
+            tui_log(f"{url=}")
 
-        self.notify("Attempting to download. This can take a while....")
-        tui_log("Retrying download")
-        download_info = self.downloader.download_from_url(url)
+            if (not url):
+                continue
 
-        if (not download_info):
-            # failure case
-            tui_log("Download info is None")
-            pass
+            self.notify("Attempting to download. This can take a while....")
+            tui_log("Retrying download")
+            download_info = self.downloader.download_from_url(url)
+            tui_log(f"{download_info=}")
+
+            if (not download_info):
+                tui_log("Download info is None")
+                continue
 
         tui_log("Filling metadata")
         download_meta = fill_report_metadata(self.user_agent,
                                              self.lyric_handler,
                                              download_info=download_info)
         tui_log("Done Filling metadata")
+        tui_log(f"{download_meta=}")
 
         user_input_meta = await self.push_screen_wait(EditInputMenu(download_meta,
                                                                     "meta", self.outdir))
+        tui_log(f"{user_input_meta=}")
 
         ok = False
         while not ok:
