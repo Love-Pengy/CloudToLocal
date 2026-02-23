@@ -613,6 +613,7 @@ class ctl_tui(App):
 
     def pop_and_increment_report_key(self):
         self.report_dict.pop(self.current_report_key)
+        self.dump_report()
         self.increment_report_key()
 
     def increment_report_key(self):
@@ -917,6 +918,10 @@ class ctl_tui(App):
 
     def action_quit(self):
         tui_log("Exiting TUI")
+        self.dump_report()
+        self.exit()
+
+    def dump_report(self):
+        tui_log("Dumping report")
         with open(self.report_path, "w") as f:
             json.dump(self.report_dict, f, indent=2)
-        self.exit()
