@@ -333,10 +333,14 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
             preview_image = initialize_image("EditInputUrlPreview")
             yield preview_image
 
-            for playlist in self.app.playlist_handler.list_playlists_str():
-                if (playlist in [play[1] for play in pre["playlists"]]):
-                    yield Checkbox(playlist, True, name=playlist, classes="EditPageCheckbox")
-                else:
+            if ("playlists" in pre):
+                for playlist in self.app.playlist_handler.list_playlists_str():
+                    if (playlist in [play[1] for play in pre["playlists"]]):
+                        yield Checkbox(playlist, True, name=playlist, classes="EditPageCheckbox")
+                    else:
+                        yield Checkbox(playlist, False, name=playlist, classes="EditPageCheckbox")
+            else:
+                for playlist in self.app.playlist_handler.list_playlists_str():
                     yield Checkbox(playlist, False, name=playlist, classes="EditPageCheckbox")
 
             with Collapsible(title="Lyrics", collapsed=True, id="lyrics_collapsible"):
@@ -358,7 +362,9 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
     def validator_is_valid_image(self, image_url: str) -> bool:
 
         try:
+            tui_log("Attempting to validate image...")
             with urllib.request.urlopen(image_url) as response:
+                tui_log(f"Image response status: {response.status}")
                 if response.status == 200:
                     type = response.headers.get("Content-Type")
                     if type and type.startswith("image"):
@@ -807,7 +813,12 @@ class ctl_tui(App):
         tui_log("Filling metadata")
         download_meta = fill_report_metadata(self.user_agent,
                                              self.lyric_handler,
-                                             download_info=download_info)
+                                             title=download_info.title,
+                                             uploader=download_info.uploader,
+                                             url=download_info.url,
+                                             report=self.report_dict,
+                                             download_info=download_info,
+                                             playlist_handler=self.playlist_handler)
         tui_log("Done Filling metadata")
         tui_log(f"{download_meta=}")
 

@@ -123,7 +123,6 @@ class DownloadManager:
         single_dl_opts = self.YDL_OPTS_DOWNLOAD
         single_dl_opts["download_archive"] = None
         info = YoutubeDL(self.YDL_OPTS_DOWNLOAD).extract_info(url, download=False)
-        tui_log(info)
         download_info.url = url
         download_info.provider = info["extractor_key"]
         if ("Youtube" == download_info.provider):
@@ -142,39 +141,40 @@ class DownloadManager:
             download_info.uploader = sc_info[
                 "artist"] if "artist" in sc_info else sc_info["uploader"]
 
-            tui_log(f"Attempting to download: {download_info.title}")
+        tui_log(f"Attempting to download: {download_info.title}")
 
-            attempts = 0
-            while (True):
-                if (not (self.retry_amt == attempts-1)):
-                    try:
-                        with YoutubeDL(self.YDL_OPTS_DOWNLOAD) as ydl:
-                            video_info = ydl.extract_info(download_info.url, download=True)
-                            if ((video_info) and ("requested_downloads" in video_info)):
-                                video_dl_info = video_info["requested_downloads"][0]
-                                download_info.src_path = video_dl_info["filepath"]
-                                download_info.short_path = download_info.src_path.removeprefix(
-                                    globals.CONTAINER_MUSIC_PATH)
-                                if (download_info.short_path.startswith('/')):
-                                    download_info.short_path = download_info.short_path[1:]
-                                download_info.duration = int(round(float(video_info["duration"]),
-                                                                   0))
-                            else:
-                                # Video is present in the archive ~ BEF
-                                break
-                        break
-                    except DownloadError:
-                        tui_log(f"(#{attempts+1}) Failed to download... Retrying")
-                        sleep(attempts*10)
-                    except Exception:
-                        tui_log(f"Unexpected error for '{download_info.title}'")
-                else:
+        attempts = 0
+        while (True):
+            if (not (self.retry_amt == attempts-1)):
+                try:
+                    with YoutubeDL(self.YDL_OPTS_DOWNLOAD) as ydl:
+                        video_info = ydl.extract_info(download_info.url, download=True)
+                        if ((video_info) and ("requested_downloads" in video_info)):
+                            video_dl_info = video_info["requested_downloads"][0]
+                            tui_log(f"Download to: {video_dl_info["filepath"]=}")
+                            download_info.src_path = video_dl_info["filepath"]
+                            download_info.short_path = download_info.src_path.removeprefix(
+                                self.host_outdir)
+                            if (download_info.short_path.startswith('/')):
+                                download_info.short_path = download_info.short_path[1:]
+                            download_info.duration = int(round(float(video_info["duration"]),
+                                                               0))
+                        else:
+                            tui_log("Video is already present in the archive.")
+                            break
                     break
-                attempts += 1
+                except DownloadError:
+                    tui_log(f"(#{attempts+1}) Failed to download... Retrying")
+                    sleep(attempts*10)
+                except Exception:
+                    tui_log(f"Unexpected error for '{download_info.title}'")
+            else:
+                break
+            attempts += 1
 
-            if (download_info.src_path):
-                return download_info
-            return None
+        if (download_info.src_path):
+            return download_info
+        return None
 
     def download_generator(self) -> DownloadInfo:
 
