@@ -603,6 +603,8 @@ class ctl_tui(App):
 
         with open(self.report_path, "r") as fptr:
             self.report_dict = json.load(fptr)
+        self.entries_completed = 1
+        self.total_entries = len(self.report_dict)
 
         self.current_report_key_iter = iter(list(self.report_dict))
         self.current_report_key = next(self.current_report_key_iter)
@@ -618,6 +620,7 @@ class ctl_tui(App):
         })
 
     def pop_and_increment_report_key(self):
+        self.entries_completed += 1
         self.report_dict.pop(self.current_report_key)
         self.dump_report()
         self.increment_report_key()
@@ -627,6 +630,7 @@ class ctl_tui(App):
             # Cancel thumbnail workers
             self.workers.cancel_all()
             self.current_report_key = next(self.current_report_key_iter)
+            self.entries_completed += 1
         except StopIteration:
             tui_log("All songs in report exhausted")
             with open(self.report_path, "w") as f:
@@ -696,7 +700,7 @@ class ctl_tui(App):
                 obtain_image_from_url(self, current_report["pre"]["thumbnail_url"], "full_img")
             else:
                 # On DOWNLOAD_FAILURE && DOWNLOAD_SUCCESS setup user to just retry the download.
-                #   Something went wrong or was cancelled midway if we are in these statuses.
+                #   Something went wrong or was canceled midway if we are in these statuses.
                 pre_width = None
                 post_width = None
                 title = current_report["pre"]["title"]
@@ -715,6 +719,7 @@ class ctl_tui(App):
         post_dimension_str = "(X,X)" if not post_width else f"({post_width}px, {post_height}px)"
         pre_dimension_str = "(X,X)" if not pre_width else f"({pre_width}px, {pre_height}px)"
         self.title = f"{pre_dimension_str} {title} {post_dimension_str}"
+        self.sub_title = f"{self.entries_completed}/{self.total_entries}"
 
         yield Header()
         yield Rule(line_style="ascii", id="divider")
@@ -936,4 +941,4 @@ class ctl_tui(App):
     def dump_report(self):
         tui_log("Dumping report")
         with open(self.report_path, "w") as f:
-            json.dump(self.report_dict, f, indent=2)
+            json.dump(self.report_dict, f, indent=1)
