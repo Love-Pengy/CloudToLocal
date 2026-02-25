@@ -655,6 +655,9 @@ class ctl_tui(App):
             info_content = [
                 Static(get_report_status_str(
                     current_report["status"]), id="status"),
+                Horizontal(
+                    Pretty(current_report["pre"], id="pre_info")
+                )
             ]
         else:
             pre_width = current_report["pre"].get("thumbnail_width", None)
