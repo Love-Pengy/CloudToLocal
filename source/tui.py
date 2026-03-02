@@ -211,7 +211,7 @@ class HelpMenu(ModalScreen):
 
 class EditInputMenu(ModalScreen[MetadataCtx]):
 
-    MAX_GENRE_AMT = 3
+    MAX_GENRE_AMT = 1
     DATE_FORMAT = "%Y-%m-%d"
     CSS_PATH = "css/editInput.tcss"
     BINDINGS = [("ctrl+h", "help_menu", "Help Menu")]
