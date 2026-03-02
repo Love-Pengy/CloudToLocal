@@ -187,6 +187,7 @@ def check_ytdlp_update():
         logger.info(f"Newer yt_dlp Version Available. Attempting to upgrade..."
                     f"({local_version} -> {latest_release})")
         subprocess.run(["pip", "install", "--upgrade", "yt_dlp"], check=True)
+        subprocess.run(["pip", "install", "--upgrade", "yt-dlp-ejs"], check=True)
         logger.info("Upgrade completed... Restarting")
         exit(0)
     else:
