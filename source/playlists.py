@@ -147,6 +147,7 @@ class PlaylistHandler:
             sanitized_path = os.path.basename(metadata.path)
 
         if (url):
+            # Here we are expecting the tuple output from self.check_playlists().
             for playlist_spec in self.check_playlists(url):
                 if (not os.path.exists(f"{outdir}{playlist_spec[1]}.m3u")):
                     with open(f"{outdir}{playlist_spec[1]}.m3u", "w") as f:
@@ -160,6 +161,7 @@ class PlaylistHandler:
                                 metadata.artist} - {metadata.title}\n")
                         f.write(sanitized_path + "\n")
         else:
+            # Here we are expecting to be passed the tuple from metadata.playlists.
             for playlist_spec in metadata.playlists:
                 if (not os.path.exists(f"{outdir}{playlist_spec[1]}.m3u")):
                     tui_log("Creating new playlist file")
