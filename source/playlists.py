@@ -131,7 +131,7 @@ class PlaylistHandler:
     def get_playlist_tuple(self, input):
         """ Get playlist tuple from string name. """
 
-        out_list = [playlist for playlist in self.playlists if playlist[1] == input]
+        out_list = [playlist for playlist in self.playlists if playlist[1] == input] or None
         if (out_list is None):
             return (None)
 
