@@ -287,6 +287,7 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
 
             yield Label("Album Date", classes="EditPageLabel")
             yield Input(placeholder="YYYY-MM-DD", type="text", id="album_date",
+                        value=self.metadata.get("album_date", None),
                         validators=self.date_validator, classes="EditPageInput")
 
             yield Label("Album", classes="EditPageLabel")
