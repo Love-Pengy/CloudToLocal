@@ -529,7 +529,9 @@ class EditInputMenu(ModalScreen[MetadataCtx]):
         # Checkbox Widgets
         for widget in checkbox_widgets:
             if (widget.value):
-                self.output.playlists.append(widget.name)
+                self.output.playlists.append(
+                    self.app.playlist_handler.get_playlist_tuple(widget.name)
+                )
 
     def on_mount(self) -> None:
         container = self.query_one("#InputMenuScrollContainer", VerticalScroll)
